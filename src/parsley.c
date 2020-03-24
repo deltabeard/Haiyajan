@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
 	if(argc != 2)
 		return EXIT_FAILURE;
 
-	initialise_libretro_core(argv[1], &fn);
+	load_libretro_core(argv[1], &fn);
 
 	return EXIT_SUCCESS;
 }

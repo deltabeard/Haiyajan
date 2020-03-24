@@ -1,4 +1,6 @@
-CFLAGS := -std=c99 -pedantic -g3 -Og -Wall -Wextra -Werror -I../inc
+CFLAGS := -std=c99 -pedantic -g3 -Og -Wall -Wextra -Werror -I../inc \
+	$(shell sdl2-config --cflags)
+LDLIBS := $(shell sdl2-config --libs)
 
 all: test run
 test: test.o ../src/load.o
@@ -12,4 +14,6 @@ run: libretro-init test
 
 clean:
 	$(RM) ./test
+	$(RM) ./*.o
+	$(RM) ../src/*.o
 	$(MAKE) -C ./libretro_init clean

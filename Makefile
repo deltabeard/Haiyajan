@@ -1,5 +1,7 @@
 OPT ?= -g3 -Og
-CFLAGS := -std=c99 -pedantic $(OPT) -Wall -Wextra -Werror -I./inc
+CFLAGS := $(OPT) -std=c99 -pedantic -Wall -Wextra -Werror -I./inc \
+	$(shell sdl2-config --cflags)
+	LDLIBS := $(shell sdl2-config --libs)
 
 all: parsley
 parsley: ./src/parsley.o ./src/load.o

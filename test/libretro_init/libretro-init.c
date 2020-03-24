@@ -94,10 +94,6 @@ void retro_reset(void)
 {
 }
 
-static void check_variables(void)
-{
-}
-
 void retro_run(void)
 {
    environ_cb(RETRO_ENVIRONMENT_SHUTDOWN, NULL);

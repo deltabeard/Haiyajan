@@ -2,7 +2,8 @@
 
 #include <libretro.h>
 
-struct libretro_fn_s {
+struct libretro_fn_s
+{
 	void (*retro_init)(void);
 	void (*retro_deinit)(void);
 	unsigned (*retro_api_version)(void);
@@ -15,6 +16,29 @@ struct libretro_fn_s {
 	void (*retro_set_input_state)(retro_input_state_t);
 
 	void (*retro_get_system_info)(struct retro_system_info *info);
+	void (*retro_get_system_av_info)(struct retro_system_av_info *info);
+	void (*retro_set_controller_port_device)(
+		unsigned port, unsigned device);
+
+	void (*retro_reset)(void);
+	void (*retro_run)(void);
+	size_t (*retro_serialize_size)(void);
+	bool (*retro_serialize)(void *data, size_t size);
+	bool (*retro_unserialize)(const void *data, size_t size);
+
+	void (*retro_cheat_reset)(void);
+	void (*retro_cheat_set)(unsigned index, bool enabled, const char *code);
+	bool (*retro_load_game)(const struct retro_game_info *game);
+	bool (*retro_load_game_special)(unsigned game_type,
+		const struct retro_game_info *info, size_t num_info);
+	void (*retro_unload_game)(void);
+	unsigned (*retro_get_region)(void);
+
+	void *(*retro_get_memory_data)(unsigned id);
+	size_t (*retro_get_memory_size)(unsigned id);
+
+	/* SDL2 object handle. */
+	void *handle;
 };
 
 /**
@@ -22,7 +46,7 @@ struct libretro_fn_s {
  *
  * \param so_file	File path to libretro object.
  * \param fn		Struct of libretro function pointers to initialise.
- * \return		0 on error, else success.
+ * \return		0 on success, else failure.
  */
-uint_fast8_t initialise_libretro_core(const char *so_file,
-		struct libretro_fn_s *fn);
+uint_fast8_t load_libretro_core(
+	const char *so_file, struct libretro_fn_s *fn);
