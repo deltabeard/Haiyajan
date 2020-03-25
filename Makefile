@@ -1,5 +1,5 @@
 OPT ?= -g3 -Og
-CFLAGS := $(OPT) -std=c99 -pedantic -Wall -Wextra -Werror -I./inc \
+CFLAGS := $(OPT) -std=c99 -Wall -Wextra -Werror -I./inc \
 	$(shell sdl2-config --cflags)
 	LDLIBS := $(shell sdl2-config --libs)
 

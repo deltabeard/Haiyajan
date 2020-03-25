@@ -40,7 +40,7 @@ static uint_fast8_t prerun_checks(void)
 
 int main(int argc, char *argv[])
 {
-	struct libretro_fn_s fn;
+	struct core_ctx_s fn;
 
 	if(SDL_Init(SDL_INIT_EVERYTHING) != 0)
 	{

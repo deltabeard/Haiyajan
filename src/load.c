@@ -9,7 +9,7 @@
 
 #define NUM_ELEMS(x) (sizeof(x) / sizeof(*x))
 
-uint_fast8_t load_libretro_core(const char *so_file, struct libretro_fn_s *fn)
+uint_fast8_t load_libretro_core(const char *so_file, struct core_ctx_s *fn)
 {
 	struct fn_links_s
 	{
@@ -106,7 +106,7 @@ uint_fast8_t load_libretro_core(const char *so_file, struct libretro_fn_s *fn)
 	return 0;
 }
 
-void unload_libretro_core(struct libretro_fn_s *fn)
+void unload_libretro_core(struct core_ctx_s *fn)
 {
 	SDL_UnloadObject(fn->handle);
 }
