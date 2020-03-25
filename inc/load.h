@@ -17,8 +17,8 @@ struct libretro_fn_s
 
 	void (*retro_get_system_info)(struct retro_system_info *info);
 	void (*retro_get_system_av_info)(struct retro_system_av_info *info);
-	void (*retro_set_controller_port_device)(
-		unsigned port, unsigned device);
+	void (*retro_set_controller_port_device)(unsigned port,
+						 unsigned device);
 
 	void (*retro_reset)(void);
 	void (*retro_run)(void);
@@ -30,7 +30,8 @@ struct libretro_fn_s
 	void (*retro_cheat_set)(unsigned index, bool enabled, const char *code);
 	bool (*retro_load_game)(const struct retro_game_info *game);
 	bool (*retro_load_game_special)(unsigned game_type,
-		const struct retro_game_info *info, size_t num_info);
+					const struct retro_game_info *info,
+					size_t num_info);
 	void (*retro_unload_game)(void);
 	unsigned (*retro_get_region)(void);
 
@@ -42,11 +43,20 @@ struct libretro_fn_s
 };
 
 /**
- * Initialises a libretro core.
+ * Loads a libretro core and assigns its functions to the given libretro
+ * function pointer struct.
  *
  * \param so_file	File path to libretro object.
  * \param fn		Struct of libretro function pointers to initialise.
  * \return		0 on success, else failure.
  */
-uint_fast8_t load_libretro_core(
-	const char *so_file, struct libretro_fn_s *fn);
+uint_fast8_t load_libretro_core(const char *so_file, struct libretro_fn_s *fn);
+
+/**
+ * Unloads a libretro core.
+ * Calling any libretro function inside the given libretro_fn_s struct after
+ * calling this function is undefined.
+ *
+ * \param fn Struct of initialised libretro function pointers.
+ */
+void unload_libretro_core(struct libretro_fn_s *fn);
