@@ -4,7 +4,7 @@
 #include <libretro.h>
 #include <load.h>
 
-static int prerun_checks(const char *app_name)
+static uint_fast8_t prerun_checks(void)
 {
 	SDL_version compiled;
 	SDL_version linked;
@@ -16,23 +16,23 @@ static int prerun_checks(const char *app_name)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_SYSTEM,
 				"The version of SDL2 loaded (%d) does"
-				"not match the version from which %s was "
+				"not match the version from which Parsley was "
 				"compiled with (%d).\n"
-				"Please recompile %s and try again.\n",
-				linked.major, app_name, compiled.major,
-				app_name);
-		return -1;
+				"Please recompile Parsley and try again.\n",
+				linked.major, compiled.major);
+		return 1;
 	}
 
 	if((compiled.major + compiled.minor + compiled.patch) !=
 	   (linked.major + linked.minor + linked.patch))
 	{
-		SDL_LogWarn(SDL_LOG_CATEGORY_SYSTEM,
-			    "The version of SDL2 loaded (%d.%d.%d) is "
-			    "different to the "
-			    "version that %s was compiled with (%d.%d.%d).",
-			    linked.major, linked.minor, linked.patch, app_name,
-			    compiled.major, compiled.minor, compiled.patch);
+		SDL_LogWarn(
+			SDL_LOG_CATEGORY_SYSTEM,
+			"The version of SDL2 loaded (%d.%d.%d) is "
+			"different to the "
+			"version that Parsley was compiled with (%d.%d.%d).",
+			linked.major, linked.minor, linked.patch,
+			compiled.major, compiled.minor, compiled.patch);
 	}
 
 	return 0;
@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	if(prerun_checks(argv[0]) != 0)
+	if(prerun_checks())
 		goto err;
 
 	if(argc != 2)
@@ -63,6 +63,14 @@ int main(int argc, char *argv[])
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "%s\n",
 				SDL_GetError());
+		goto err;
+	}
+
+	if(fn.retro_api_version() != RETRO_API_VERSION)
+	{
+		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
+				"The loaded libretro core is not compatible "
+				"with Parsley.\n");
 		goto err;
 	}
 
