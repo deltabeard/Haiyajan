@@ -15,22 +15,22 @@ static uint_fast8_t prerun_checks(void)
 	if(compiled.major != linked.major)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_SYSTEM,
-				"The version of SDL2 loaded (%d) does"
+				"The major version of SDL2 loaded (%d) does "
 				"not match the version from which Parsley was "
-				"compiled with (%d).\n"
-				"Please recompile Parsley and try again.\n",
+				"compiled with (%d). "
+				"Please recompile Parsley and try again.",
 				linked.major, compiled.major);
 		return 1;
 	}
 
-	if((compiled.major + compiled.minor + compiled.patch) !=
-	   (linked.major + linked.minor + linked.patch))
+	if(SDL_VERSIONNUM(compiled.major, compiled.minor, compiled.patch) !=
+	   SDL_VERSIONNUM(linked.major, linked.minor, linked.patch))
 	{
 		SDL_LogWarn(
 			SDL_LOG_CATEGORY_SYSTEM,
-			"The version of SDL2 loaded (%d.%d.%d) is "
-			"different to the "
-			"version that Parsley was compiled with (%d.%d.%d).",
+			"The version of SDL2 loaded (%d.%d.%d) is different to "
+			"the version that Parsley was compiled with "
+			"(%d.%d.%d).",
 			linked.major, linked.minor, linked.patch,
 			compiled.major, compiled.minor, compiled.patch);
 	}
