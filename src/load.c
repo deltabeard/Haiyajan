@@ -9,6 +9,11 @@
 
 #define NUM_ELEMS(x) (sizeof(x) / sizeof(*x))
 
+unsigned load_compiled_retro_api_version(void)
+{
+	return RETRO_API_VERSION;
+}
+
 uint_fast8_t load_libretro_core(const char *so_file, struct core_ctx_s *fn)
 {
 	struct fn_links_s

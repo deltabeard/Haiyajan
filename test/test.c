@@ -3,13 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <libretro.h>
 #include <parsley.h>
 #include <load.h>
 
 #include "minctest.h"
-
-#define LIBRETRO_INIT_SO_PATH "./libretro_init/libretro-init.so"
 
 /**
  * Tests basic functionality:
@@ -20,10 +17,11 @@
 void test_retro_init(void)
 {
 	struct core_ctx_s fn;
+	const char init_so_path[] = "./libretro_init/libretro-init.so";
 
 	/* Continuing tests will result in seg fault.
 	 * Abort() for severe failure. */
-	if(load_libretro_core(LIBRETRO_INIT_SO_PATH, &fn))
+	if(load_libretro_core(init_so_path, &fn))
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "%s\n",
 				SDL_GetError());
@@ -31,7 +29,7 @@ void test_retro_init(void)
 	}
 
 	fn.retro_init();
-	lok(fn.retro_api_version() == RETRO_API_VERSION);
+	lok(fn.retro_api_version() == load_compiled_retro_api_version());
 
 	{
 		struct retro_system_info info;

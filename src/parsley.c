@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
 		goto err;
 	}
 
-	if(fn.retro_api_version() != RETRO_API_VERSION)
+	if(fn.retro_api_version() != load_compiled_retro_api_version())
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
 				"The loaded libretro core is not compatible "
