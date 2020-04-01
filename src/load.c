@@ -1,6 +1,17 @@
 /**
  * Handles the loading of files, including libretro cores and emulator files.
+ * Copyright (C) 2020  Mahyar Koshkouei
+ *
+ * This is free software, and you are welcome to redistribute it under the terms
+ * of the GNU General Public License version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.
+ *
+ * See the LICENSE file for more details.
  */
+
 #include <SDL2/SDL.h>
 #include <stdint.h>
 
@@ -14,7 +25,7 @@ unsigned load_compiled_retro_api_version(void)
 	return RETRO_API_VERSION;
 }
 
-uint_fast8_t load_libretro_core(const char *so_file, struct core_ctx_s *fn)
+uint_fast8_t load_libretro_core(const char *so_file, struct core_ctx_s *ctx)
 {
 	struct fn_links_s
 	{
@@ -58,52 +69,52 @@ uint_fast8_t load_libretro_core(const char *so_file, struct core_ctx_s *fn)
 			void *(**retro_get_memory_data)(unsigned id);
 			size_t (**retro_get_memory_size)(unsigned id);
 		} fn_ptr;
-	} fn_links[] = {
-		{ "retro_init", { .retro_init = &fn->retro_init } },
-		{ "retro_deinit", { .retro_init = &fn->retro_deinit } },
-		{ "retro_api_version", { .retro_api_version = &fn->retro_api_version } },
+	} const fn_links[] = {
+		{ "retro_init",			{ .retro_init = &ctx->retro_init } },
+		{ "retro_deinit",		{ .retro_init = &ctx->retro_deinit } },
+		{ "retro_api_version",		{ .retro_api_version = &ctx->retro_api_version } },
 
-		{ "retro_set_environment", { .retro_set_environment = &fn->retro_set_environment } },
-		{ "retro_set_video_refresh", { .retro_set_video_refresh = &fn->retro_set_video_refresh } },
-		{ "retro_set_audio_sample", { .retro_set_audio_sample = &fn->retro_set_audio_sample } },
-		{ "retro_set_audio_sample_batch", { .retro_set_audio_sample_batch = &fn->retro_set_audio_sample_batch } },
-		{ "retro_set_input_poll", { .retro_set_input_poll = &fn->retro_set_input_poll } },
-		{ "retro_set_input_state", { .retro_set_input_state = &fn->retro_set_input_state } },
+		{ "retro_set_environment",	{ .retro_set_environment = &ctx->retro_set_environment } },
+		{ "retro_set_video_refresh",	{ .retro_set_video_refresh = &ctx->retro_set_video_refresh } },
+		{ "retro_set_audio_sample",	{ .retro_set_audio_sample = &ctx->retro_set_audio_sample } },
+		{ "retro_set_audio_sample_batch", { .retro_set_audio_sample_batch = &ctx->retro_set_audio_sample_batch } },
+		{ "retro_set_input_poll",	{ .retro_set_input_poll = &ctx->retro_set_input_poll } },
+		{ "retro_set_input_state",	{ .retro_set_input_state = &ctx->retro_set_input_state } },
 
-		{ "retro_get_system_info", { .retro_get_system_info = &fn->retro_get_system_info } },
-		{ "retro_get_system_av_info", { .retro_get_system_av_info = &fn->retro_get_system_av_info } },
-		{ "retro_set_controller_port_device", { .retro_set_controller_port_device = &fn->retro_set_controller_port_device } },
+		{ "retro_get_system_info",	{ .retro_get_system_info = &ctx->retro_get_system_info } },
+		{ "retro_get_system_av_info",	{ .retro_get_system_av_info = &ctx->retro_get_system_av_info } },
+		{ "retro_set_controller_port_device", { .retro_set_controller_port_device = &ctx->retro_set_controller_port_device } },
 
-		{ "retro_reset", { .retro_reset = &fn->retro_reset } },
-		{ "retro_run", { .retro_run = &fn->retro_run } },
-		{ "retro_serialize_size", { .retro_serialize_size = &fn->retro_serialize_size } },
-		{ "retro_serialize", { .retro_serialize = &fn->retro_serialize } },
-		{ "retro_unserialize", { .retro_unserialize = &fn->retro_unserialize } },
+		{ "retro_reset",		{ .retro_reset = &ctx->retro_reset } },
+		{ "retro_run",			{ .retro_run = &ctx->retro_run } },
+		{ "retro_serialize_size",	{ .retro_serialize_size = &ctx->retro_serialize_size } },
+		{ "retro_serialize",		{ .retro_serialize = &ctx->retro_serialize } },
+		{ "retro_unserialize",		{ .retro_unserialize = &ctx->retro_unserialize } },
 
-		{ "retro_cheat_reset", { .retro_cheat_reset = &fn->retro_cheat_reset } },
-		{ "retro_cheat_set", { .retro_cheat_set = &fn->retro_cheat_set } },
-		{ "retro_load_game", { .retro_load_game = &fn->retro_load_game } },
-		{ "retro_load_game_special", { .retro_load_game_special = &fn->retro_load_game_special } },
-		{ "retro_unload_game", { .retro_unload_game = &fn->retro_unload_game } },
-		{ "retro_get_region", { .retro_get_region = &fn->retro_get_region } },
+		{ "retro_cheat_reset",		{ .retro_cheat_reset = &ctx->retro_cheat_reset } },
+		{ "retro_cheat_set",		{ .retro_cheat_set = &ctx->retro_cheat_set } },
+		{ "retro_load_game",		{ .retro_load_game = &ctx->retro_load_game } },
+		{ "retro_load_game_special",	{ .retro_load_game_special = &ctx->retro_load_game_special } },
+		{ "retro_unload_game",		{ .retro_unload_game = &ctx->retro_unload_game } },
+		{ "retro_get_region",		{ .retro_get_region = &ctx->retro_get_region } },
 
-		{ "retro_get_memory_data", { .retro_get_memory_data = &fn->retro_get_memory_data } },
-		{ "retro_get_memory_size", { .retro_get_memory_size = &fn->retro_get_memory_size } }
+		{ "retro_get_memory_data",	{ .retro_get_memory_data = &ctx->retro_get_memory_data } },
+		{ "retro_get_memory_size",	{ .retro_get_memory_size = &ctx->retro_get_memory_size } }
 		/* clang-format on */
 	};
 
-	fn->handle = SDL_LoadObject(so_file);
-	if(fn->handle == NULL)
+	ctx->handle = SDL_LoadObject(so_file);
+	if(ctx->handle == NULL)
 		return 1;
 
 	for(uint_fast8_t i = 0; i < NUM_ELEMS(fn_links); i++)
 	{
 		*fn_links[i].fn_ptr.sdl_fn =
-			SDL_LoadFunction(fn->handle, fn_links[i].fn_str);
+			SDL_LoadFunction(ctx->handle, fn_links[i].fn_str);
 
 		if(*fn_links[i].fn_ptr.sdl_fn == NULL)
 		{
-			SDL_UnloadObject(&fn->handle);
+			SDL_UnloadObject(&ctx->handle);
 			return 2;
 		}
 	}
@@ -111,7 +122,7 @@ uint_fast8_t load_libretro_core(const char *so_file, struct core_ctx_s *fn)
 	return 0;
 }
 
-void unload_libretro_core(struct core_ctx_s *fn)
+void unload_libretro_core(struct core_ctx_s *ctx)
 {
-	SDL_UnloadObject(fn->handle);
+	SDL_UnloadObject(ctx->handle);
 }

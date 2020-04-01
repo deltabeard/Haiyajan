@@ -1,3 +1,17 @@
+/**
+ * Handles the loading of files, including libretro cores and emulator files.
+ * Copyright (C) 2020  Mahyar Koshkouei
+ *
+ * This is free software, and you are welcome to redistribute it under the terms
+ * of the GNU General Public License version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.
+ *
+ * See the LICENSE file for more details.
+ */
+
 #pragma once
 
 #include <parsley.h>
@@ -26,4 +40,4 @@ uint_fast8_t load_libretro_core(const char *so_file, struct core_ctx_s *ctx);
  *
  * \param ctx Libretro core context to unload.
  */
-void unload_libretro_core(struct core_ctx_s *ctx)
+void unload_libretro_core(struct core_ctx_s *ctx);
