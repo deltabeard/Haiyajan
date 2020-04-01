@@ -14,16 +14,16 @@ unsigned load_compiled_retro_api_version(void);
  * function pointer struct.
  *
  * \param so_file	File path to libretro object.
- * \param fn		Struct of libretro function pointers to initialise.
+ * \param ctx		Libretro core context to initialise.
  * \return		0 on success, else failure. Use SDL_GetError().
  */
-uint_fast8_t load_libretro_core(const char *so_file, struct core_ctx_s *fn);
+uint_fast8_t load_libretro_core(const char *so_file, struct core_ctx_s *ctx);
 
 /**
  * Unloads a libretro core.
  * Calling any libretro function inside the given context after calling this
  * function is undefined.
  *
- * \param fn Struct of initialised libretro function pointers.
+ * \param ctx Libretro core context to unload.
  */
-void unload_libretro_core(struct core_ctx_s *fn);
+void unload_libretro_core(struct core_ctx_s *ctx)

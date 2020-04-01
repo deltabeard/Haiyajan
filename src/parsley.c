@@ -40,7 +40,7 @@ static uint_fast8_t prerun_checks(void)
 
 int main(int argc, char *argv[])
 {
-	struct core_ctx_s fn;
+	struct core_ctx_s ctx;
 
 	if(SDL_Init(SDL_INIT_EVERYTHING) != 0)
 	{
@@ -59,14 +59,14 @@ int main(int argc, char *argv[])
 		goto err;
 	}
 
-	if(load_libretro_core(argv[1], &fn))
+	if(load_libretro_core(argv[1], &ctx))
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "%s\n",
 				SDL_GetError());
 		goto err;
 	}
 
-	if(fn.retro_api_version() != load_compiled_retro_api_version())
+	if(ctx.retro_api_version() != load_compiled_retro_api_version())
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
 				"The loaded libretro core is not compatible "
@@ -76,13 +76,13 @@ int main(int argc, char *argv[])
 
 	{
 		struct retro_system_info info;
-		fn.retro_get_system_info(&info);
+		ctx.retro_get_system_info(&info);
 		SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
 			    "Libretro core \"%s\" loaded successfully.\n",
 			    info.library_name);
 	}
 
-	unload_libretro_core(&fn);
+	unload_libretro_core(&ctx);
 	SDL_Quit();
 	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Exiting gracefully.\n");
 
