@@ -14,37 +14,18 @@
 
 #include <libretro.h>
 
-bool cb_retro_environment(unsigned cmd, void *data)
-{
-	(void)cmd;
-	(void)data;
+#pragma once
 
-	return false;
-}
+bool cb_retro_environment(unsigned cmd, void *data);
 
 void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
-			    size_t pitch)
-{
-	return;
-}
+			    size_t pitch);
 
-void cb_retro_audio_sample(int16_t left, int16_t right)
-{
-	return;
-}
+void cb_retro_audio_sample(int16_t left, int16_t right);
 
-size_t cb_retro_audio_sample_batch(const int16_t *data, size_t frames)
-{
-	return 0;
-}
+size_t cb_retro_audio_sample_batch(const int16_t *data, size_t frames);
 
-void cb_retro_input_poll(void)
-{
-	return;
-}
+void cb_retro_input_poll(void);
 
 int16_t cb_retro_input_state(unsigned port, unsigned device, unsigned index,
-			     unsigned id)
-{
-	return 0;
-}
+			     unsigned id);

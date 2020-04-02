@@ -17,6 +17,7 @@
 
 #include <libretro.h>
 #include <load.h>
+#include <play.h>
 
 #define NUM_ELEMS(x) (sizeof(x) / sizeof(*x))
 
@@ -135,6 +136,15 @@ uint_fast8_t load_libretro_core(const char *so_file, struct core_ctx_s *ctx)
 		return 3;
 	}
 
+	ctx->fn.retro_set_environment(cb_retro_environment);
+	ctx->fn.retro_set_video_refresh(cb_retro_video_refresh);
+	ctx->fn.retro_set_audio_sample(cb_retro_audio_sample);
+	ctx->fn.retro_set_audio_sample_batch(cb_retro_audio_sample_batch);
+	ctx->fn.retro_set_input_poll(cb_retro_input_poll);
+	ctx->fn.retro_set_input_state(cb_retro_input_state);
+
+	/* Error in libretro core dev overview: retro_init() should be called
+	 * after retro_set_*() functions. */
 	ctx->fn.retro_init();
 
 	return 0;
