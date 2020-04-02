@@ -55,12 +55,40 @@ struct core_ctx_s
 		/* clang-format on */
 	} fn;
 
-	/* SDL2 object handle for libretro core. */
-	void *handle;
-
-	/* Libretro core environment configuration. */
+	/* SDL2 handles. */
 	struct
 	{
-		int unused;
+		/* SDL2 function object handle for libretro core. */
+		void *handle;
+
+		/* For cores which require the game to be loaded into memory. */
+		Uint8 *game_data;
+
+		SDL_Surface *game_surface;
+		SDL_Texture *game_texture;
+		void *game_pixels;
+		size_t game_pixels_sz;
 	};
+
+	/* Libretro core information. */
+	struct retro_system_info sys_info;
+	struct retro_system_av_info av_info;
+
+	/* Libretro core environment status. */
+	struct
+	{
+		union {
+			struct
+			{
+				unsigned char core_init : 1;
+				unsigned char shutdown : 1;
+				unsigned char game_loaded : 1;
+				unsigned char running : 1;
+			} status_bits;
+			Uint8 status;
+		};
+
+		unsigned perf_lvl;
+		Uint32 pixel_fmt;
+	} env;
 };

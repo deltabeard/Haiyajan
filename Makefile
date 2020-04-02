@@ -2,7 +2,7 @@ CFLAGS := -std=c99 -Wall -Wextra -I./inc $(shell sdl2-config --cflags)
 LDLIBS := $(shell sdl2-config --libs)
 
 ifeq ($(DEBUG),1)
-	OPT := -g3 -Og
+	OPT := -g3 -Og -D DEBUG=1
 else
 	# I don't want any warnings in release builds
 	CFLAGS += -Werror
@@ -16,8 +16,6 @@ CFLAGS += $(OPT)
 all: parsley test
 parsley: ./src/parsley.o ./src/load.o ./src/play.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
-
-./src/load.o: ./src/play.o
 
 test:
 	$(MAKE) -C ./test run

@@ -21,7 +21,7 @@
 
 #define NUM_ELEMS(x) (sizeof(x) / sizeof(*x))
 
-uint_fast8_t load_libretro_file(const char *file)
+uint_fast8_t load_libretro_file(const char *file, struct core_ctx_s *ctx)
 {
 	/* TODO:
 	 * - Check whether file must be loaded into RAM, or is read straight
@@ -32,8 +32,60 @@ uint_fast8_t load_libretro_file(const char *file)
 	 * ROM into memory. If false, then Parsley must load the ROM image into
 	 * memory.
 	 */
-	(void)file;
-	return 1;
+	struct retro_game_info game = { .path = file, .meta = NULL };
+
+	SDL_assert_paranoid(ctx != NULL);
+	SDL_assert(ctx->env.status_bits.core_init == 1);
+
+	if(ctx->sys_info.need_fullpath == true)
+	{
+		ctx->game_data = NULL;
+		game.data = NULL;
+	}
+	else
+	{
+		/* Read file to memory. */
+		SDL_RWops *game_file;
+
+		game_file = SDL_RWFromFile(file, "rb");
+		if(game_file == NULL)
+			return 1;
+
+	        game.size = SDL_RWsize(game_file);
+		ctx->game_data = malloc(game.size);
+		if(ctx->game_data == NULL)
+		{
+			SDL_SetError("Unable to allocate memory for game.");
+			return 1;
+		}
+
+		if(SDL_RWread(game_file, ctx->game_data, game.size, 1) == 0)
+		{
+			free(ctx->game_data);
+			return 1;
+		}
+
+		game.data = ctx->game_data;
+		SDL_RWclose(game_file);
+	}
+
+	if(ctx->fn.retro_load_game(&game) == false)
+		return 1;
+
+	ctx->fn.retro_get_system_av_info(&ctx->av_info);
+	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
+		"Core is requesting %.2f FPS, %.0f Hz",
+		ctx->av_info.timing.fps, ctx->av_info.timing.sample_rate);
+
+	ctx->env.status_bits.shutdown = 0;
+
+	return 0;
+}
+
+void unload_libretro_file(struct core_ctx_s *ctx)
+{
+	free(ctx->game_data);
+	ctx->game_data = NULL;
 }
 
 uint_fast8_t load_libretro_core(const char *so_file, struct core_ctx_s *ctx)
@@ -136,6 +188,9 @@ uint_fast8_t load_libretro_core(const char *so_file, struct core_ctx_s *ctx)
 		return 3;
 	}
 
+	play_set_ctx(ctx);
+
+	ctx->fn.retro_get_system_info(&ctx->sys_info);
 	ctx->fn.retro_set_environment(cb_retro_environment);
 	ctx->fn.retro_set_video_refresh(cb_retro_video_refresh);
 	ctx->fn.retro_set_audio_sample(cb_retro_audio_sample);
@@ -147,11 +202,17 @@ uint_fast8_t load_libretro_core(const char *so_file, struct core_ctx_s *ctx)
 	 * after retro_set_*() functions. */
 	ctx->fn.retro_init();
 
+	/* Initialise ctx status information to zero. */
+	ctx->env.status = 0;
+	ctx->env.status_bits.core_init = 1;
+
 	return 0;
 }
 
 void unload_libretro_core(struct core_ctx_s *ctx)
 {
 	ctx->fn.retro_deinit();
+	free(ctx->game_data);
+	ctx->game_data = NULL;
 	SDL_UnloadObject(ctx->handle);
 }

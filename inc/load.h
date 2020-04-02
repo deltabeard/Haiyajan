@@ -16,6 +16,9 @@
 
 #include <parsley.h>
 
+uint_fast8_t load_libretro_file(const char *file, struct core_ctx_s *ctx);
+void unload_libretro_file(struct core_ctx_s *ctx);
+
 /**
  * Loads a libretro core and assigns its functions to the given libretro
  * function pointer struct.

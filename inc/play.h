@@ -16,6 +16,14 @@
 
 #pragma once
 
+/* Functions in this file are not threadsafe. */
+
+void play_set_ctx(struct core_ctx_s *c);
+void play_frame(void);
+
+/**
+ * Libretro environment callbacks.
+ */
 bool cb_retro_environment(unsigned cmd, void *data);
 
 void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
