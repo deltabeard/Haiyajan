@@ -15,7 +15,6 @@
 #include <SDL2/SDL.h>
 #include <stdlib.h>
 
-#include <libretro.h>
 #include <load.h>
 
 static uint_fast8_t prerun_checks(void)
@@ -59,7 +58,7 @@ int main(int argc, char *argv[])
 	if(SDL_Init(SDL_INIT_EVERYTHING) != 0)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-				"SDL initialisation failed: %s\n",
+				"SDL initialisation failed: %s",
 				SDL_GetError());
 		exit(EXIT_FAILURE);
 	}
@@ -67,38 +66,35 @@ int main(int argc, char *argv[])
 	if(prerun_checks())
 		goto err;
 
-	if(argc != 2)
+	if(argc != 3)
 	{
-		SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "%s CORE\n", argv[0]);
+		SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "%s CORE FILE", argv[0]);
 		goto err;
 	}
 
 	if(load_libretro_core(argv[1], &ctx))
 	{
-		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "%s\n",
+		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "%s",
 				SDL_GetError());
 		goto err;
 	}
 
-	if(ctx.retro_api_version() != load_compiled_retro_api_version())
-	{
-		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-				"The loaded libretro core is not compatible "
-				"with Parsley.\n");
-		goto err;
-	}
+	/* TODO:
+	 * - Load file
+	 * - Check that input file is supported by core
+	 */
 
 	{
 		struct retro_system_info info;
-		ctx.retro_get_system_info(&info);
+		ctx.fn.retro_get_system_info(&info);
 		SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-			    "Libretro core \"%s\" loaded successfully.\n",
+			    "Libretro core \"%.32s\" loaded successfully.",
 			    info.library_name);
 	}
 
 	unload_libretro_core(&ctx);
 	SDL_Quit();
-	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Exiting gracefully.\n");
+	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Exiting gracefully.");
 
 	exit(EXIT_SUCCESS);
 

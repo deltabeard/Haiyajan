@@ -20,9 +20,19 @@
 
 #define NUM_ELEMS(x) (sizeof(x) / sizeof(*x))
 
-unsigned load_compiled_retro_api_version(void)
+uint_fast8_t load_libretro_file(const char *file)
 {
-	return RETRO_API_VERSION;
+	/* TODO:
+	 * - Check whether file must be loaded into RAM, or is read straight
+	 * from disk.
+	 * - Read file.
+	 *
+	 * If need_fullpath in retro_system_info is true, then don't load the
+	 * ROM into memory. If false, then Parsley must load the ROM image into
+	 * memory.
+	 */
+	(void)file;
+	return 1;
 }
 
 uint_fast8_t load_libretro_core(const char *so_file, struct core_ctx_s *ctx)
@@ -70,36 +80,36 @@ uint_fast8_t load_libretro_core(const char *so_file, struct core_ctx_s *ctx)
 			size_t (**retro_get_memory_size)(unsigned id);
 		} fn_ptr;
 	} const fn_links[] = {
-		{ "retro_init",			{ .retro_init = &ctx->retro_init } },
-		{ "retro_deinit",		{ .retro_init = &ctx->retro_deinit } },
-		{ "retro_api_version",		{ .retro_api_version = &ctx->retro_api_version } },
+		{ "retro_init",			{ .retro_init = &ctx->fn.retro_init } },
+		{ "retro_deinit",		{ .retro_init = &ctx->fn.retro_deinit } },
+		{ "retro_api_version",		{ .retro_api_version = &ctx->fn.retro_api_version } },
 
-		{ "retro_set_environment",	{ .retro_set_environment = &ctx->retro_set_environment } },
-		{ "retro_set_video_refresh",	{ .retro_set_video_refresh = &ctx->retro_set_video_refresh } },
-		{ "retro_set_audio_sample",	{ .retro_set_audio_sample = &ctx->retro_set_audio_sample } },
-		{ "retro_set_audio_sample_batch", { .retro_set_audio_sample_batch = &ctx->retro_set_audio_sample_batch } },
-		{ "retro_set_input_poll",	{ .retro_set_input_poll = &ctx->retro_set_input_poll } },
-		{ "retro_set_input_state",	{ .retro_set_input_state = &ctx->retro_set_input_state } },
+		{ "retro_set_environment",	{ .retro_set_environment = &ctx->fn.retro_set_environment } },
+		{ "retro_set_video_refresh",	{ .retro_set_video_refresh = &ctx->fn.retro_set_video_refresh } },
+		{ "retro_set_audio_sample",	{ .retro_set_audio_sample = &ctx->fn.retro_set_audio_sample } },
+		{ "retro_set_audio_sample_batch", { .retro_set_audio_sample_batch = &ctx->fn.retro_set_audio_sample_batch } },
+		{ "retro_set_input_poll",	{ .retro_set_input_poll = &ctx->fn.retro_set_input_poll } },
+		{ "retro_set_input_state",	{ .retro_set_input_state = &ctx->fn.retro_set_input_state } },
 
-		{ "retro_get_system_info",	{ .retro_get_system_info = &ctx->retro_get_system_info } },
-		{ "retro_get_system_av_info",	{ .retro_get_system_av_info = &ctx->retro_get_system_av_info } },
-		{ "retro_set_controller_port_device", { .retro_set_controller_port_device = &ctx->retro_set_controller_port_device } },
+		{ "retro_get_system_info",	{ .retro_get_system_info = &ctx->fn.retro_get_system_info } },
+		{ "retro_get_system_av_info",	{ .retro_get_system_av_info = &ctx->fn.retro_get_system_av_info } },
+		{ "retro_set_controller_port_device", { .retro_set_controller_port_device = &ctx->fn.retro_set_controller_port_device } },
 
-		{ "retro_reset",		{ .retro_reset = &ctx->retro_reset } },
-		{ "retro_run",			{ .retro_run = &ctx->retro_run } },
-		{ "retro_serialize_size",	{ .retro_serialize_size = &ctx->retro_serialize_size } },
-		{ "retro_serialize",		{ .retro_serialize = &ctx->retro_serialize } },
-		{ "retro_unserialize",		{ .retro_unserialize = &ctx->retro_unserialize } },
+		{ "retro_reset",		{ .retro_reset = &ctx->fn.retro_reset } },
+		{ "retro_run",			{ .retro_run = &ctx->fn.retro_run } },
+		{ "retro_serialize_size",	{ .retro_serialize_size = &ctx->fn.retro_serialize_size } },
+		{ "retro_serialize",		{ .retro_serialize = &ctx->fn.retro_serialize } },
+		{ "retro_unserialize",		{ .retro_unserialize = &ctx->fn.retro_unserialize } },
 
-		{ "retro_cheat_reset",		{ .retro_cheat_reset = &ctx->retro_cheat_reset } },
-		{ "retro_cheat_set",		{ .retro_cheat_set = &ctx->retro_cheat_set } },
-		{ "retro_load_game",		{ .retro_load_game = &ctx->retro_load_game } },
-		{ "retro_load_game_special",	{ .retro_load_game_special = &ctx->retro_load_game_special } },
-		{ "retro_unload_game",		{ .retro_unload_game = &ctx->retro_unload_game } },
-		{ "retro_get_region",		{ .retro_get_region = &ctx->retro_get_region } },
+		{ "retro_cheat_reset",		{ .retro_cheat_reset = &ctx->fn.retro_cheat_reset } },
+		{ "retro_cheat_set",		{ .retro_cheat_set = &ctx->fn.retro_cheat_set } },
+		{ "retro_load_game",		{ .retro_load_game = &ctx->fn.retro_load_game } },
+		{ "retro_load_game_special",	{ .retro_load_game_special = &ctx->fn.retro_load_game_special } },
+		{ "retro_unload_game",		{ .retro_unload_game = &ctx->fn.retro_unload_game } },
+		{ "retro_get_region",		{ .retro_get_region = &ctx->fn.retro_get_region } },
 
-		{ "retro_get_memory_data",	{ .retro_get_memory_data = &ctx->retro_get_memory_data } },
-		{ "retro_get_memory_size",	{ .retro_get_memory_size = &ctx->retro_get_memory_size } }
+		{ "retro_get_memory_data",	{ .retro_get_memory_data = &ctx->fn.retro_get_memory_data } },
+		{ "retro_get_memory_size",	{ .retro_get_memory_size = &ctx->fn.retro_get_memory_size } }
 		/* clang-format on */
 	};
 
@@ -119,10 +129,19 @@ uint_fast8_t load_libretro_core(const char *so_file, struct core_ctx_s *ctx)
 		}
 	}
 
+	if(ctx->fn.retro_api_version() != RETRO_API_VERSION)
+	{
+		SDL_SetError("Incompatible retro API version");
+		return 3;
+	}
+
+	ctx->fn.retro_init();
+
 	return 0;
 }
 
 void unload_libretro_core(struct core_ctx_s *ctx)
 {
+	ctx->fn.retro_deinit();
 	SDL_UnloadObject(ctx->handle);
 }

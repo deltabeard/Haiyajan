@@ -17,13 +17,6 @@
 #include <parsley.h>
 
 /**
- * Returns the retro API version that load.c was compiled with.
- *
- * \return 1 always.
- */
-unsigned load_compiled_retro_api_version(void);
-
-/**
  * Loads a libretro core and assigns its functions to the given libretro
  * function pointer struct.
  *
