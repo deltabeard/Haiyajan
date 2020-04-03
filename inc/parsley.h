@@ -64,7 +64,7 @@ struct core_ctx_s
 		/* For cores which require the game to be loaded into memory. */
 		Uint8 *game_data;
 
-		SDL_Surface *game_surface;
+		SDL_Renderer *disp_rend;
 		SDL_Texture *game_texture;
 		void *game_pixels;
 		size_t game_pixels_sz;

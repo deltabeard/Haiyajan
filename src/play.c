@@ -25,7 +25,6 @@ void play_set_ctx(struct core_ctx_s *c)
 
 	/* Set default pixel format. */
 	ctx->env.pixel_fmt = SDL_PIXELFORMAT_RGB555;
-	ctx->game_surface = NULL;
 	ctx->game_texture = NULL;
 	ctx->game_pixels = NULL;
 	ctx->game_pixels_sz = 0;
@@ -131,16 +130,49 @@ void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 #else
 	void *pixels;
 	int tex_pitch;
+	int tex_w, tex_h;
 	size_t sz;
+
+	if(ctx->game_texture != NULL)
+	{
+		SDL_QueryTexture(ctx->game_texture, NULL, NULL, &tex_w, &tex_h);
+		if(tex_w != width || tex_h != height)
+		{
+			SDL_DestroyTexture(ctx->game_texture);
+			ctx->game_texture = NULL;
+		}
+	}
+
+	if(ctx->game_texture == NULL)
+	{
+		ctx->game_texture = SDL_CreateTexture(ctx->disp_rend,
+			ctx->env.pixel_fmt, SDL_TEXTUREACCESS_STREAMING,
+			width, height);
+
+		if(ctx->game_texture == NULL)
+		{
+			/* TODO: Limit logging here .*/
+			SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
+					"Unable to create texture: %s",
+					SDL_GetError());
+			return;
+		}
+	}
+	else
+	{
+		SDL_QueryTexture(ctx->game_texture, NULL, NULL, &tex_w, &tex_h);
+
+	}
 
 	if(SDL_LockTexture(ctx->game_texture, NULL, &pixels, &tex_pitch) != 0)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-			"Texture could not be locked: %s", SDL_GetError());
+				"Texture could not be locked: %s",
+				SDL_GetError());
 		return;
 	}
 
-	sz = (tex_pitch/width) * width * height;
+	sz = (tex_pitch / width) * width * height;
 	memcpy(pixels, data, sz);
 	SDL_UnlockTexture(ctx->game_texture);
 #endif
