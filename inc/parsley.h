@@ -16,6 +16,10 @@
 
 #include <libretro.h>
 
+#define PROG_NAME     "Parsley"
+#define PROG_NAME_LEN strlen(PROG_NAME)
+#define MAX_TITLE_LEN 56
+
 struct core_ctx_s
 {
 	/* Libretro core functions. */
@@ -66,8 +70,7 @@ struct core_ctx_s
 
 		SDL_Renderer *disp_rend;
 		SDL_Texture *game_texture;
-		void *game_pixels;
-		size_t game_pixels_sz;
+		SDL_Rect game_logical_res;
 	};
 
 	/* Libretro core information. */

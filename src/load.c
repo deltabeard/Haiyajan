@@ -17,7 +17,6 @@
 
 #include <libretro.h>
 #include <load.h>
-#include <play.h>
 
 #define NUM_ELEMS(x) (sizeof(x) / sizeof(*x))
 
@@ -72,11 +71,7 @@ uint_fast8_t load_libretro_file(const char *file, struct core_ctx_s *ctx)
 	if(ctx->fn.retro_load_game(&game) == false)
 		return 1;
 
-	ctx->fn.retro_get_system_av_info(&ctx->av_info);
-	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
-		"Core is requesting %.2f FPS, %.0f Hz",
-		ctx->av_info.timing.fps, ctx->av_info.timing.sample_rate);
-
+	ctx->env.status_bits.game_loaded = 1;
 	ctx->env.status_bits.shutdown = 0;
 
 	return 0;
@@ -86,6 +81,7 @@ void unload_libretro_file(struct core_ctx_s *ctx)
 {
 	free(ctx->game_data);
 	ctx->game_data = NULL;
+	ctx->env.status_bits.game_loaded = 0;
 }
 
 uint_fast8_t load_libretro_core(const char *so_file, struct core_ctx_s *ctx)
@@ -188,23 +184,8 @@ uint_fast8_t load_libretro_core(const char *so_file, struct core_ctx_s *ctx)
 		return 3;
 	}
 
-	play_set_ctx(ctx);
-
-	ctx->fn.retro_get_system_info(&ctx->sys_info);
-	ctx->fn.retro_set_environment(cb_retro_environment);
-	ctx->fn.retro_set_video_refresh(cb_retro_video_refresh);
-	ctx->fn.retro_set_audio_sample(cb_retro_audio_sample);
-	ctx->fn.retro_set_audio_sample_batch(cb_retro_audio_sample_batch);
-	ctx->fn.retro_set_input_poll(cb_retro_input_poll);
-	ctx->fn.retro_set_input_state(cb_retro_input_state);
-
-	/* Error in libretro core dev overview: retro_init() should be called
-	 * after retro_set_*() functions. */
-	ctx->fn.retro_init();
-
 	/* Initialise ctx status information to zero. */
 	ctx->env.status = 0;
-	ctx->env.status_bits.core_init = 1;
 
 	return 0;
 }

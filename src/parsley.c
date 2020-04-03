@@ -55,8 +55,9 @@ static uint_fast8_t prerun_checks(void)
 int main(int argc, char *argv[])
 {
 	struct core_ctx_s ctx;
+	char *core_path;
 	char *file;
-	SDL_Window *win;
+	SDL_Window *win = NULL;
 
 	if(SDL_Init(SDL_INIT_EVERYTHING) != 0)
 	{
@@ -78,24 +79,17 @@ int main(int argc, char *argv[])
 	{
 		SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "%s CORE FILE",
 			    argv[0]);
-		goto err;
+		SDL_Quit();
+		exit(EXIT_FAILURE);
 	}
 
+	core_path = argv[1];
 	file = argv[2];
 
-	if(load_libretro_core(argv[1], &ctx))
-	{
-		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "%s",
-				SDL_GetError());
+	if(load_libretro_core(core_path, &ctx))
 		goto err;
-	}
 
-	if(load_libretro_file(file, &ctx) != 0)
-	{
-		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "%s",
-				SDL_GetError());
-		goto err;
-	}
+	play_init_cb(&ctx);
 
 	/* TODO:
 	 * - Check that input file is supported by core
@@ -104,19 +98,43 @@ int main(int argc, char *argv[])
 		    "Libretro core \"%.32s\" loaded successfully.",
 		    ctx.sys_info.library_name);
 
-	SDL_CreateWindowAndRenderer(ctx.av_info.geometry.max_width,
-				    ctx.av_info.geometry.max_height, 0, &win,
-				    &ctx.disp_rend);
-	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
-		       "Created window and renderer %u*%u",
-		       ctx.av_info.geometry.max_width,
-		       ctx.av_info.geometry.max_height);
-
 	{
-		char title[56];
-		snprintf(title, 56, "Parsley: %.32s", ctx.sys_info.library_name);
-		SDL_SetWindowTitle(win, title);
+		char title[MAX_TITLE_LEN];;
+		SDL_snprintf(title, MAX_TITLE_LEN, "%s: %s", PROG_NAME,
+			     ctx.sys_info.library_name);
+
+		win = SDL_CreateWindow(
+			title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+			320, 240, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+
+		if(win == NULL)
+			goto err;
+
+		ctx.disp_rend = SDL_CreateRenderer(
+			win, -1,
+			SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+
+		if(ctx.disp_rend == NULL)
+		{
+			unload_libretro_core(&ctx);
+			SDL_DestroyWindow(win);
+			goto err;
+		}
 	}
+
+	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
+		       "Created window and renderer");
+
+	if(load_libretro_file(file, &ctx) != 0)
+		goto err;
+
+	if(play_init_av() != 0)
+		goto err;
+
+	SDL_SetWindowMinimumSize(win, ctx.game_logical_res.w,
+				 ctx.game_logical_res.h);
+	SDL_RenderSetLogicalSize(ctx.disp_rend, ctx.game_logical_res.w,
+			ctx.game_logical_res.h);
 
 	SDL_Event event;
 	while(1)
@@ -128,28 +146,34 @@ int main(int argc, char *argv[])
 		}
 
 		play_frame();
-#if 0
-		SDL_Texture *tex =
-			SDL_CreateTextureFromSurface(rend, ctx.game_surface);
-#endif
+
 		if(ctx.game_texture != NULL)
 		{
 			SDL_RenderClear(ctx.disp_rend);
-			SDL_RenderCopy(ctx.disp_rend, ctx.game_texture, NULL, NULL);
+			SDL_RenderCopy(ctx.disp_rend, ctx.game_texture, NULL,
+				       NULL);
 		}
 
 		SDL_RenderPresent(ctx.disp_rend);
-		SDL_Delay(15);
 	}
 
 	unload_libretro_file(&ctx);
 	unload_libretro_core(&ctx);
-	SDL_Quit();
+	play_deinit_display();
+	SDL_DestroyRenderer(ctx.disp_rend);
+	SDL_DestroyWindow(win);
 	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Exiting gracefully.");
+	SDL_Quit();
 
 	exit(EXIT_SUCCESS);
 
 err:
+	SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "%s", SDL_GetError());
+	unload_libretro_file(&ctx);
+	unload_libretro_core(&ctx);
+	play_deinit_display();
+	SDL_DestroyRenderer(ctx.disp_rend);
+	SDL_DestroyWindow(win);
 	SDL_Quit();
 	exit(EXIT_FAILURE);
 }
