@@ -23,7 +23,10 @@
 static struct core_ctx_s *ctx = NULL;
 
 /* Forward declarations. */
-static uint_fast8_t play_reinit_texture(struct core_ctx_s *c, Uint32 format);
+static uint_fast8_t play_reinit_texture(struct core_ctx_s *c,
+					const Uint32 *req_format,
+					const unsigned int *req_width,
+					const unsigned int *req_height);
 
 void play_frame(void)
 {
@@ -83,7 +86,7 @@ bool cb_retro_environment(unsigned cmd, void *data)
 			return false;
 		}
 
-		if(play_reinit_texture(ctx, fmt_tran[*fmt]) != 0)
+		if(play_reinit_texture(ctx, &fmt_tran[*fmt], NULL, NULL) != 0)
 			return false;
 
 		SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
@@ -101,12 +104,9 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		SDL_assert_paranoid(geo->base_width <=
 				    ctx->av_info.geometry.max_width);
 
-		/* TODO: Only set if texture creation successful. */
-		ctx->av_info.geometry.base_height = geo->base_height;
-		ctx->av_info.geometry.base_width = geo->base_width;
 		ctx->av_info.geometry.aspect_ratio = geo->aspect_ratio;
 
-		if(play_reinit_texture(ctx, ctx->env.pixel_fmt) != 0)
+		if(play_reinit_texture(ctx, NULL, geo->base_width, geo->base_width) != 0)
 			return false;
 
 		SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
@@ -126,9 +126,10 @@ bool cb_retro_environment(unsigned cmd, void *data)
 void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 			    size_t pitch)
 {
-	SDL_assert_paranoid(width <= ctx->av_info.geometry.max_width);
-	SDL_assert_paranoid(height <= ctx->av_info.geometry.max_height);
-
+	SDL_assert(width <= ctx->av_info.geometry.max_width);
+	SDL_assert(height <= ctx->av_info.geometry.max_height);
+	SDL_assert_paranoid(width <= ctx->av_info.geometry.base_width);
+	SDL_assert_paranoid(height <= ctx->av_info.geometry.base_height);
 	// SDL_Rect rect = { .w = width, .h = height, .x = 0, .y = 0 };
 
 #if SDL_ASSERT_LEVEL == 3
@@ -174,15 +175,21 @@ int16_t cb_retro_input_state(unsigned port, unsigned device, unsigned index,
 	return 0;
 }
 
-static uint_fast8_t play_reinit_texture(struct core_ctx_s *c, Uint32 format)
+static uint_fast8_t play_reinit_texture(struct core_ctx_s *c,
+					const Uint32 *req_format,
+					const unsigned int *req_width,
+					const unsigned int *req_height)
 {
 	float aspect;
 	SDL_Texture *test_texture;
+	Uint32 format = req_format != NULL ? *req_format : c->env.pixel_fmt;
+	unsigned width = req_width != NULL ? *req_width
+					   : c->av_info.geometry.base_width;
+	unsigned height = req_height != NULL ? *req_height
+					     : c->av_info.geometry.base_height;
 
 	test_texture = SDL_CreateTexture(c->disp_rend, format,
-					 SDL_TEXTUREACCESS_STREAMING,
-					 c->av_info.geometry.base_width,
-					 c->av_info.geometry.base_height);
+				  SDL_TEXTUREACCESS_STREAMING, width, height);
 
 	if(test_texture == NULL)
 	{
@@ -200,6 +207,8 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *c, Uint32 format)
 
 	c->game_texture = test_texture;
 	c->env.pixel_fmt = format;
+	c->av_info.geometry.base_width = width;
+	c->av_info.geometry.base_height = height;
 
 	aspect = c->av_info.geometry.aspect_ratio;
 
@@ -222,6 +231,9 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *c, Uint32 format)
 		c->game_logical_res.h = c->av_info.geometry.base_height;
 	}
 
+	SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO, "Created texture: %s %d*%d",
+			SDL_GetPixelFormatName(format), width, height);
+
 	return 0;
 }
 
@@ -233,7 +245,7 @@ uint_fast8_t play_init_av(void)
 
 	ctx->fn.retro_get_system_av_info(&ctx->av_info);
 	SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO,
-		       "Core is requesting %.1f FPS, %.1f Hz, "
+		       "Core is requesting %.2f FPS, %.0f Hz, "
 		       "%u*%u, %u*%u, %.1f ratio",
 		       ctx->av_info.timing.fps, ctx->av_info.timing.sample_rate,
 		       ctx->av_info.geometry.base_width,
@@ -242,16 +254,12 @@ uint_fast8_t play_init_av(void)
 		       ctx->av_info.geometry.max_height,
 		       ctx->av_info.geometry.aspect_ratio);
 
-	if(play_reinit_texture(ctx, ctx->env.pixel_fmt) != 0)
+	if(play_reinit_texture(ctx, &ctx->env.pixel_fmt, NULL, NULL) != 0)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_VIDEO,
 				"Unable to create texture: %s", SDL_GetError());
 		return 1;
 	}
-
-	SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO,
-		       "Created texture with dimensions %d*%d",
-		       ctx->game_logical_res.w, ctx->game_logical_res.h);
 
 	return 0;
 }

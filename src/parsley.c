@@ -68,8 +68,7 @@ int main(int argc, char *argv[])
 	}
 
 #ifdef DEBUG
-	SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION,
-			   SDL_LOG_PRIORITY_VERBOSE);
+	SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE);
 #endif
 
 	if(prerun_checks())
