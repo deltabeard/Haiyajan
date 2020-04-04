@@ -23,7 +23,7 @@
 static struct core_ctx_s *ctx = NULL;
 
 /* Forward declarations. */
-static SDL_Texture *play_reinit_texture(void);
+static uint_fast8_t play_reinit_texture(struct core_ctx_s *c, Uint32 format);
 
 void play_frame(void)
 {
@@ -62,29 +62,29 @@ bool cb_retro_environment(unsigned cmd, void *data)
 	{
 		enum retro_pixel_format *fmt = data;
 		const Uint32 fmt_tran[] = { SDL_PIXELFORMAT_RGB555,
-					    SDL_PIXELFORMAT_RGB24,
+					    SDL_PIXELFORMAT_RGB888,
 					    SDL_PIXELFORMAT_RGB565 };
 
 		/* Check that the game hasn't called retro_run() yet. */
 		SDL_assert_paranoid(ctx->env.status_bits.running == 0);
 
 		if(*fmt >= NUM_ELEMS(fmt_tran))
-			return false;
-
-		if(ctx->env.status_bits.running != 0)
-			return false;
-
-		ctx->env.pixel_fmt = fmt_tran[*fmt];
-
-		if(play_reinit_texture() != NULL)
 		{
-			SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-					"Unable to create texture with pixel "
-					"format %s: %s",
-					SDL_GetPixelFormatName(ctx->env.pixel_fmt),
-					SDL_GetError());
+			SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO,
+				    "Invalid format requested from core.");
 			return false;
 		}
+
+		if(ctx->env.status_bits.running != 0)
+		{
+			SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+				    "Pixel format change was requested, but "
+				    "not from within retro_run().");
+			return false;
+		}
+
+		if(play_reinit_texture(ctx, fmt_tran[*fmt]) != 0)
+			return false;
 
 		SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 			       "Core request for pixel format %s was accepted",
@@ -101,11 +101,13 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		SDL_assert_paranoid(geo->base_width <=
 				    ctx->av_info.geometry.max_width);
 
+		/* TODO: Only set if texture creation successful. */
 		ctx->av_info.geometry.base_height = geo->base_height;
 		ctx->av_info.geometry.base_width = geo->base_width;
 		ctx->av_info.geometry.aspect_ratio = geo->aspect_ratio;
 
-		play_reinit_texture();
+		if(play_reinit_texture(ctx, ctx->env.pixel_fmt) != 0)
+			return false;
 
 		SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 			       "Modified geometry to %u*%u (%.1f)",
@@ -172,35 +174,55 @@ int16_t cb_retro_input_state(unsigned port, unsigned device, unsigned index,
 	return 0;
 }
 
-static SDL_Texture *play_reinit_texture(void)
+static uint_fast8_t play_reinit_texture(struct core_ctx_s *c, Uint32 format)
 {
-	float aspect = ctx->av_info.geometry.aspect_ratio;
+	float aspect;
+	SDL_Texture *test_texture;
 
-	if(ctx->game_texture != NULL)
-		SDL_DestroyTexture(ctx->game_texture);
+	test_texture = SDL_CreateTexture(c->disp_rend, format,
+					 SDL_TEXTUREACCESS_STREAMING,
+					 c->av_info.geometry.base_width,
+					 c->av_info.geometry.base_height);
 
-	ctx->game_texture = SDL_CreateTexture(
-		ctx->disp_rend, ctx->env.pixel_fmt, SDL_TEXTUREACCESS_STREAMING,
-		ctx->av_info.geometry.base_width,
-		ctx->av_info.geometry.base_height);
+	if(test_texture == NULL)
+	{
+		SDL_LogInfo(SDL_LOG_CATEGORY_VIDEO,
+			    "Unable to create texture for the requested "
+			    "format %s: %s",
+			    SDL_GetPixelFormatName(format), SDL_GetError());
+		return 1;
+	}
+
+	/* If we have previously created a texture, destroy it and assign the
+	 * newly created texture to it. */
+	if(c->game_texture != NULL)
+		SDL_DestroyTexture(c->game_texture);
+
+	c->game_texture = test_texture;
+	c->env.pixel_fmt = format;
+
+	aspect = c->av_info.geometry.aspect_ratio;
 
 	if(aspect <= 0.0)
 	{
-		ctx->game_logical_res.w = ctx->av_info.geometry.base_width;
-		ctx->game_logical_res.h = ctx->av_info.geometry.base_height;
+		c->game_logical_res.w = c->av_info.geometry.base_width;
+		c->game_logical_res.h = c->av_info.geometry.base_height;
 	}
-	else if(ctx->av_info.geometry.base_height > ctx->av_info.geometry.base_width)
+	else if(c->av_info.geometry.base_height >
+		c->av_info.geometry.base_width)
 	{
-		ctx->game_logical_res.w = ctx->av_info.geometry.base_width;
-		ctx->game_logical_res.h = SDL_ceilf((float)ctx->av_info.geometry.base_width / aspect);
+		c->game_logical_res.w = c->av_info.geometry.base_width;
+		c->game_logical_res.h = SDL_ceilf(
+			(float)c->av_info.geometry.base_width / aspect);
 	}
 	else
 	{
-		ctx->game_logical_res.w = SDL_ceilf(ctx->av_info.geometry.base_height * aspect);
-		ctx->game_logical_res.h = ctx->av_info.geometry.base_height;
+		c->game_logical_res.w =
+			SDL_ceilf(c->av_info.geometry.base_height * aspect);
+		c->game_logical_res.h = c->av_info.geometry.base_height;
 	}
 
-	return ctx->game_texture;
+	return 0;
 }
 
 uint_fast8_t play_init_av(void)
@@ -210,7 +232,7 @@ uint_fast8_t play_init_av(void)
 	SDL_assert(ctx->env.status_bits.game_loaded == 1);
 
 	ctx->fn.retro_get_system_av_info(&ctx->av_info);
-	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
+	SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO,
 		       "Core is requesting %.1f FPS, %.1f Hz, "
 		       "%u*%u, %u*%u, %.1f ratio",
 		       ctx->av_info.timing.fps, ctx->av_info.timing.sample_rate,
@@ -220,16 +242,16 @@ uint_fast8_t play_init_av(void)
 		       ctx->av_info.geometry.max_height,
 		       ctx->av_info.geometry.aspect_ratio);
 
-	if(play_reinit_texture() == NULL)
+	if(play_reinit_texture(ctx, ctx->env.pixel_fmt) != 0)
 	{
-		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
+		SDL_LogCritical(SDL_LOG_CATEGORY_VIDEO,
 				"Unable to create texture: %s", SDL_GetError());
 		return 1;
 	}
 
-	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
+	SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO,
 		       "Created texture with dimensions %d*%d",
-		ctx->game_logical_res.w, ctx->game_logical_res.h);
+		       ctx->game_logical_res.w, ctx->game_logical_res.h);
 
 	return 0;
 }

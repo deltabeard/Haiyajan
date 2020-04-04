@@ -86,23 +86,8 @@ int main(int argc, char *argv[])
 	core_path = argv[1];
 	file = argv[2];
 
-	if(load_libretro_core(core_path, &ctx))
-		goto err;
-
-	/* TODO:
-	 * - Check that input file is supported by core
-	 */
-	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-		    "Libretro core \"%.32s\" loaded successfully.",
-		    ctx.sys_info.library_name);
-
-	{
-		char title[MAX_TITLE_LEN];
-		SDL_snprintf(title, MAX_TITLE_LEN, "%s: %s", PROG_NAME,
-			     ctx.sys_info.library_name);
-
 		win = SDL_CreateWindow(
-			title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+			PROG_NAME, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 			320, 240, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
 		if(win == NULL)
@@ -117,10 +102,27 @@ int main(int argc, char *argv[])
 			SDL_DestroyWindow(win);
 			goto err;
 		}
-	}
 
 	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 		       "Created window and renderer");
+
+
+	if(load_libretro_core(core_path, &ctx))
+		goto err;
+
+	/* TODO:
+	 * - Check that input file is supported by core
+	 */
+	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+		    "Libretro core \"%.32s\" loaded successfully.",
+	     ctx.sys_info.library_name);
+
+	{
+		char title[MAX_TITLE_LEN];
+		SDL_snprintf(title, MAX_TITLE_LEN, "%s: %s", PROG_NAME,
+			     ctx.sys_info.library_name);
+		SDL_SetWindowTitle(win, title);
+	}
 
 	play_init_cb(&ctx);
 
@@ -167,7 +169,8 @@ int main(int argc, char *argv[])
 	exit(EXIT_SUCCESS);
 
 err:
-	SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "%s", SDL_GetError());
+	SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
+			"Exiting due to an error. %s", SDL_GetError());
 	unload_libretro_file(&ctx);
 	unload_libretro_core(&ctx);
 	play_deinit_display();
