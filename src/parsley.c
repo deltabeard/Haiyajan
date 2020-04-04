@@ -89,8 +89,6 @@ int main(int argc, char *argv[])
 	if(load_libretro_core(core_path, &ctx))
 		goto err;
 
-	play_init_cb(&ctx);
-
 	/* TODO:
 	 * - Check that input file is supported by core
 	 */
@@ -99,7 +97,7 @@ int main(int argc, char *argv[])
 		    ctx.sys_info.library_name);
 
 	{
-		char title[MAX_TITLE_LEN];;
+		char title[MAX_TITLE_LEN];
 		SDL_snprintf(title, MAX_TITLE_LEN, "%s: %s", PROG_NAME,
 			     ctx.sys_info.library_name);
 
@@ -110,8 +108,7 @@ int main(int argc, char *argv[])
 		if(win == NULL)
 			goto err;
 
-		ctx.disp_rend = SDL_CreateRenderer(
-			win, -1,
+		ctx.disp_rend = SDL_CreateRenderer(win, -1,
 			SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
 		if(ctx.disp_rend == NULL)
@@ -124,6 +121,8 @@ int main(int argc, char *argv[])
 
 	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 		       "Created window and renderer");
+
+	play_init_cb(&ctx);
 
 	if(load_libretro_file(file, &ctx) != 0)
 		goto err;

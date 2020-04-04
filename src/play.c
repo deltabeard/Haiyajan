@@ -67,6 +67,7 @@ bool cb_retro_environment(unsigned cmd, void *data)
 
 		/* Check that the game hasn't called retro_run() yet. */
 		SDL_assert_paranoid(ctx->env.status_bits.running == 0);
+
 		if(*fmt >= NUM_ELEMS(fmt_tran))
 			return false;
 
@@ -78,7 +79,9 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		if(play_reinit_texture() != NULL)
 		{
 			SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-					"Unable to create texture: %s",
+					"Unable to create texture with pixel "
+					"format %s: %s",
+					SDL_GetPixelFormatName(ctx->env.pixel_fmt),
 					SDL_GetError());
 			return false;
 		}
@@ -205,7 +208,6 @@ uint_fast8_t play_init_av(void)
 	SDL_assert(ctx->env.status_bits.core_init == 1);
 	SDL_assert(ctx->env.status_bits.shutdown == 0);
 	SDL_assert(ctx->env.status_bits.game_loaded == 1);
-	SDL_assert(ctx->game_texture == NULL);
 
 	ctx->fn.retro_get_system_av_info(&ctx->av_info);
 	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
@@ -236,6 +238,7 @@ void play_init_cb(struct core_ctx_s *c)
 {
 	SDL_assert_paranoid(ctx == NULL);
 
+	/* TODO: Move to load.c? */
 	ctx = c;
 
 	/* Set default pixel format. */
@@ -252,8 +255,6 @@ void play_init_cb(struct core_ctx_s *c)
 	/* Error in libretro core dev overview: retro_init() should be called
 	 * after retro_set_*() functions. */
 	ctx->fn.retro_init();
-
-	ctx->fn.retro_get_system_info(&ctx->sys_info);
 
 	ctx->env.status_bits.core_init = 1;
 }
