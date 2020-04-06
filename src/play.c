@@ -106,7 +106,8 @@ bool cb_retro_environment(unsigned cmd, void *data)
 
 		ctx->av_info.geometry.aspect_ratio = geo->aspect_ratio;
 
-		if(play_reinit_texture(ctx, NULL, geo->base_width, geo->base_width) != 0)
+		if(play_reinit_texture(ctx, NULL, &geo->base_width,
+				       &geo->base_width) != 0)
 			return false;
 
 		SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
@@ -182,10 +183,17 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *c,
 {
 	float aspect;
 	SDL_Texture *test_texture;
-	Uint32 format = req_format != NULL ? *req_format : c->env.pixel_fmt;
-	unsigned width = req_width != NULL ? *req_width
-					   : c->av_info.geometry.base_width;
-	unsigned height = req_height != NULL ? *req_height
+	Uint32 format;
+	unsigned width;
+	unsigned height;
+
+	/* Only initialise video if the core hasn't requested it earlier. */
+	if(c->game_texture == NULL)
+		c->fn.retro_get_system_av_info(&c->av_info);
+
+	format = req_format != NULL ? *req_format : c->env.pixel_fmt;
+	width = req_width != NULL ? *req_width : c->av_info.geometry.base_width;
+	height = req_height != NULL ? *req_height
 					     : c->av_info.geometry.base_height;
 
 	test_texture = SDL_CreateTexture(c->disp_rend, format,
@@ -242,6 +250,10 @@ uint_fast8_t play_init_av(void)
 	SDL_assert(ctx->env.status_bits.core_init == 1);
 	SDL_assert(ctx->env.status_bits.shutdown == 0);
 	SDL_assert(ctx->env.status_bits.game_loaded == 1);
+
+	/* If texture is already initialised, don't recreate it. */
+	if(ctx->game_texture != NULL)
+		return 0;
 
 	ctx->fn.retro_get_system_av_info(&ctx->av_info);
 	SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO,

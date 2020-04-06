@@ -54,7 +54,7 @@ static uint_fast8_t prerun_checks(void)
 
 int main(int argc, char *argv[])
 {
-	struct core_ctx_s ctx;
+	struct core_ctx_s ctx = { 0 };
 	char *core_path;
 	char *file;
 	SDL_Window *win = NULL;
