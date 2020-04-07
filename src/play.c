@@ -61,6 +61,18 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		break;
 	}
 
+	/* FIXME: Set this to something better. */
+	case RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY:
+	{
+		/* FIXME: Fix memory leak. */
+		const char **sys_dir = data;
+		*sys_dir = SDL_GetBasePath();
+		if(*sys_dir == NULL)
+			return false;
+
+		break;
+	}
+
 	case RETRO_ENVIRONMENT_SET_PIXEL_FORMAT:
 	{
 		enum retro_pixel_format *fmt = data;
