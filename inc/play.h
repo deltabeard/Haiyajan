@@ -18,7 +18,26 @@
 
 /* Functions in this file are not threadsafe. */
 
+/**
+ * Initialise callback functions of libretro core.
+ *
+ * \param c	Libretro core context.
+ */
 void play_init_cb(struct core_ctx_s *c);
+
+/**
+ * Play a single frame of the libretro core.
+ */
 void play_frame(void);
+
+/**
+ * Initialise the audio and video contexts for libretro core.
+ *
+ * \returns 0 on success, else failure. Use SDL_GetError().
+ */
 uint_fast8_t play_init_av(void);
+
+/**
+ * Free audio and video contexts for libretro core.
+ */
 void play_deinit_display(void);

@@ -20,6 +20,9 @@
 #define PROG_NAME_LEN strlen(PROG_NAME)
 #define MAX_TITLE_LEN 56
 
+/**
+ * Context of libretro core.
+ */
 struct core_ctx_s
 {
 	/* Libretro core functions. */

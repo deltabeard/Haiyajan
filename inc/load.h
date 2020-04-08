@@ -16,7 +16,20 @@
 
 #include <parsley.h>
 
+/**
+ * Loads a file for the libretro core.
+ *
+ * \param file	File path of file.
+ * \param ctx	Libretro core context.
+ * \return	0 on success, else failure. Use SDL_GetError().
+ */
 uint_fast8_t load_libretro_file(const char *file, struct core_ctx_s *ctx);
+
+/**
+ * Unloads any file that was opened for the libretro core.
+ *
+ * \param ctx	Libretro core context.
+ */
 void unload_libretro_file(struct core_ctx_s *ctx);
 
 /**
