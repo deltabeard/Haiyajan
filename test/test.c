@@ -56,6 +56,32 @@ void test_retro_init(void)
 	ctx.fn.retro_deinit();
 }
 
+void test_retro_init(void)
+{
+	struct core_ctx_s ctx;
+	const char av_so_path[] = "./libretro_av/libretro-av.so";
+
+	/* Continuing tests will result in seg fault.
+	 * Abort() for severe failure. */
+	if(load_libretro_core(av_so_path, &ctx))
+	{
+		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "%s",
+				SDL_GetError());
+		abort();
+	}
+
+	{
+		struct retro_system_info info;
+		ctx.fn.retro_get_system_info(&info);
+		lok(strcmp(info.library_name, "Test AV") == 0);
+		lok(strcmp(info.library_version, "1") == 0);
+		lok(info.need_fullpath == false);
+		lok(info.valid_extensions == NULL);
+	}
+
+	ctx.fn.retro_deinit();
+}
+
 int main(void)
 {
 	if(SDL_Init(SDL_INIT_EVERYTHING) != 0)
