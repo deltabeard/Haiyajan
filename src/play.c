@@ -169,11 +169,15 @@ void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 
 void cb_retro_audio_sample(int16_t left, int16_t right)
 {
+	(void) left;
+	(void) right;
 	return;
 }
 
 size_t cb_retro_audio_sample_batch(const int16_t *data, size_t frames)
 {
+	(void) data;
+	(void) frames;
 	return 0;
 }
 
@@ -185,6 +189,10 @@ void cb_retro_input_poll(void)
 int16_t cb_retro_input_state(unsigned port, unsigned device, unsigned index,
 			     unsigned id)
 {
+	(void) port;
+	(void) device;
+	(void) index;
+	(void) id;
 	return 0;
 }
 
