@@ -74,6 +74,8 @@ struct core_ctx_s
 		SDL_Renderer *disp_rend;
 		SDL_Texture *game_texture;
 		SDL_Rect game_logical_res;
+
+		SDL_AudioDeviceID audio_dev;
 	};
 
 	/* Libretro core information. */
@@ -96,5 +98,6 @@ struct core_ctx_s
 
 		unsigned perf_lvl;
 		Uint32 pixel_fmt;
+		struct retro_audio_callback audio_cb;
 	} env;
 };

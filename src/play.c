@@ -20,7 +20,7 @@
 
 #define NUM_ELEMS(x) (sizeof(x) / sizeof(*x))
 
-static struct core_ctx_s *ctx = NULL;
+static struct core_ctx_s *ctx_retro = NULL;
 
 /* Forward declarations. */
 static uint_fast8_t play_reinit_texture(struct core_ctx_s *c,
@@ -28,7 +28,7 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *c,
 					const unsigned int *req_width,
 					const unsigned int *req_height);
 
-void play_frame(void)
+void play_frame(struct core_ctx_s *ctx)
 {
 	ctx->env.status_bits.running = 1;
 	ctx->fn.retro_run();
@@ -37,12 +37,12 @@ void play_frame(void)
 
 bool cb_retro_environment(unsigned cmd, void *data)
 {
-	SDL_assert_release(ctx != NULL);
+	SDL_assert_release(ctx_retro != NULL);
 
 	switch(cmd)
 	{
 	case RETRO_ENVIRONMENT_SHUTDOWN:
-		ctx->env.status_bits.shutdown = 1;
+		ctx_retro->env.status_bits.shutdown = 1;
 		break;
 
 	case RETRO_ENVIRONMENT_SET_PERFORMANCE_LEVEL:
@@ -51,13 +51,13 @@ bool cb_retro_environment(unsigned cmd, void *data)
 
 		/* Check that this is called in retro_load_game(). */
 		/* Abort if this a paranoid debug build. */
-		SDL_assert_paranoid(ctx->env.status_bits.core_init == 1);
-		SDL_assert_paranoid(ctx->env.status_bits.game_loaded == 0);
+		SDL_assert_paranoid(ctx_retro->env.status_bits.core_init == 1);
+		SDL_assert_paranoid(ctx_retro->env.status_bits.game_loaded == 0);
 
 		SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 			       "Set performance level to %u", *perf);
 
-		ctx->env.perf_lvl = *perf;
+		ctx_retro->env.perf_lvl = *perf;
 		break;
 	}
 
@@ -81,7 +81,7 @@ bool cb_retro_environment(unsigned cmd, void *data)
 					    SDL_PIXELFORMAT_RGB565 };
 
 		/* Check that the game hasn't called retro_run() yet. */
-		SDL_assert_paranoid(ctx->env.status_bits.running == 0);
+		SDL_assert_paranoid(ctx_retro->env.status_bits.running == 0);
 
 		if(*fmt >= NUM_ELEMS(fmt_tran))
 		{
@@ -90,7 +90,7 @@ bool cb_retro_environment(unsigned cmd, void *data)
 			return false;
 		}
 
-		if(ctx->env.status_bits.running != 0)
+		if(ctx_retro->env.status_bits.running != 0)
 		{
 			SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
 				    "Pixel format change was requested, but "
@@ -98,27 +98,36 @@ bool cb_retro_environment(unsigned cmd, void *data)
 			return false;
 		}
 
-		if(play_reinit_texture(ctx, &fmt_tran[*fmt], NULL, NULL) != 0)
+		if(play_reinit_texture(ctx_retro, &fmt_tran[*fmt], NULL, NULL) != 0)
 			return false;
 
 		SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 			       "Core request for pixel format %s was accepted",
-			       SDL_GetPixelFormatName(ctx->env.pixel_fmt));
+			       SDL_GetPixelFormatName(ctx_retro->env.pixel_fmt));
 		break;
 	}
+
+#if 0
+	case RETRO_ENVIRONMENT_SET_AUDIO_CALLBACK:
+	{
+		struct retro_audio_callback *audio_cb = data;
+		ctx_retro->env.audio_cb = *audio_cb;
+		break;
+	}
+#endif
 
 	case RETRO_ENVIRONMENT_SET_GEOMETRY:
 	{
 		const struct retro_game_geometry *geo = data;
 
 		SDL_assert_paranoid(geo->base_height <=
-				    ctx->av_info.geometry.max_height);
+				    ctx_retro->av_info.geometry.max_height);
 		SDL_assert_paranoid(geo->base_width <=
-				    ctx->av_info.geometry.max_width);
+				    ctx_retro->av_info.geometry.max_width);
 
-		ctx->av_info.geometry.aspect_ratio = geo->aspect_ratio;
+		ctx_retro->av_info.geometry.aspect_ratio = geo->aspect_ratio;
 
-		if(play_reinit_texture(ctx, NULL, &geo->base_width,
+		if(play_reinit_texture(ctx_retro, NULL, &geo->base_width,
 				       &geo->base_width) != 0)
 			return false;
 
@@ -139,10 +148,10 @@ bool cb_retro_environment(unsigned cmd, void *data)
 void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 			    size_t pitch)
 {
-	SDL_assert(width <= ctx->av_info.geometry.max_width);
-	SDL_assert(height <= ctx->av_info.geometry.max_height);
-	SDL_assert_paranoid(width <= ctx->av_info.geometry.base_width);
-	SDL_assert_paranoid(height <= ctx->av_info.geometry.base_height);
+	SDL_assert(width <= ctx_retro->av_info.geometry.max_width);
+	SDL_assert(height <= ctx_retro->av_info.geometry.max_height);
+	SDL_assert_paranoid(width <= ctx_retro->av_info.geometry.base_width);
+	SDL_assert_paranoid(height <= ctx_retro->av_info.geometry.base_height);
 	// SDL_Rect rect = { .w = width, .h = height, .x = 0, .y = 0 };
 
 #if SDL_ASSERT_LEVEL == 3
@@ -150,14 +159,14 @@ void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 	int tex_w, tex_h;
 	Uint32 format;
 
-	SDL_QueryTexture(ctx->game_texture, &format, NULL, &tex_w, &tex_h);
+	SDL_QueryTexture(ctx_retro->game_texture, &format, NULL, &tex_w, &tex_h);
 	tex_pitch = tex_w * SDL_BYTESPERPIXEL(format);
 
 	SDL_assert_paranoid(pitch <= tex_pitch);
-	SDL_assert_paranoid(format == ctx->env.pixel_fmt);
+	SDL_assert_paranoid(format == ctx_retro->env.pixel_fmt);
 #endif
 
-	if(SDL_UpdateTexture(ctx->game_texture, NULL, data, pitch) != 0)
+	if(SDL_UpdateTexture(ctx_retro->game_texture, NULL, data, pitch) != 0)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
 				"Texture could not updated: %s",
@@ -169,16 +178,15 @@ void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 
 void cb_retro_audio_sample(int16_t left, int16_t right)
 {
-	(void) left;
-	(void) right;
+	(void)left;
+	(void)right;
 	return;
 }
 
 size_t cb_retro_audio_sample_batch(const int16_t *data, size_t frames)
 {
-	(void) data;
-	(void) frames;
-	return 0;
+	SDL_QueueAudio(ctx_retro->audio_dev, data, frames * sizeof(Uint16) * 2);
+	return frames;
 }
 
 void cb_retro_input_poll(void)
@@ -189,14 +197,14 @@ void cb_retro_input_poll(void)
 int16_t cb_retro_input_state(unsigned port, unsigned device, unsigned index,
 			     unsigned id)
 {
-	(void) port;
-	(void) device;
-	(void) index;
-	(void) id;
+	(void)port;
+	(void)device;
+	(void)index;
+	(void)id;
 	return 0;
 }
 
-static uint_fast8_t play_reinit_texture(struct core_ctx_s *c,
+static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 					const Uint32 *req_format,
 					const unsigned int *req_width,
 					const unsigned int *req_height)
@@ -208,15 +216,16 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *c,
 	unsigned height;
 
 	/* Only initialise video if the core hasn't requested it earlier. */
-	if(c->game_texture == NULL)
-		c->fn.retro_get_system_av_info(&c->av_info);
+	if(ctx->game_texture == NULL)
+		ctx->fn.retro_get_system_av_info(&ctx->av_info);
 
-	format = req_format != NULL ? *req_format : c->env.pixel_fmt;
-	width = req_width != NULL ? *req_width : c->av_info.geometry.base_width;
+	format = req_format != NULL ? *req_format : ctx->env.pixel_fmt;
+	width = req_width != NULL ? *req_width : ctx->av_info.geometry.base_width;
 	height = req_height != NULL ? *req_height
-					     : c->av_info.geometry.base_height;
+				    : ctx->av_info.geometry.base_height;
 
-	test_texture = SDL_CreateTexture(c->disp_rend, format,
+	test_texture =
+		SDL_CreateTexture(ctx->disp_rend, format,
 				  SDL_TEXTUREACCESS_STREAMING, width, height);
 
 	if(test_texture == NULL)
@@ -230,78 +239,102 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *c,
 
 	/* If we have previously created a texture, destroy it and assign the
 	 * newly created texture to it. */
-	if(c->game_texture != NULL)
-		SDL_DestroyTexture(c->game_texture);
+	if(ctx->game_texture != NULL)
+		SDL_DestroyTexture(ctx->game_texture);
 
-	c->game_texture = test_texture;
-	c->env.pixel_fmt = format;
-	c->av_info.geometry.base_width = width;
-	c->av_info.geometry.base_height = height;
+	ctx->game_texture = test_texture;
+	ctx->env.pixel_fmt = format;
+	ctx->av_info.geometry.base_width = width;
+	ctx->av_info.geometry.base_height = height;
 
-	aspect = c->av_info.geometry.aspect_ratio;
+	aspect = ctx->av_info.geometry.aspect_ratio;
 
 	if(aspect <= 0.0)
 	{
-		c->game_logical_res.w = c->av_info.geometry.base_width;
-		c->game_logical_res.h = c->av_info.geometry.base_height;
+		ctx->game_logical_res.w = ctx->av_info.geometry.base_width;
+		ctx->game_logical_res.h = ctx->av_info.geometry.base_height;
 	}
-	else if(c->av_info.geometry.base_height >
-		c->av_info.geometry.base_width)
+	else if(ctx->av_info.geometry.base_height >
+		ctx->av_info.geometry.base_width)
 	{
-		c->game_logical_res.w = c->av_info.geometry.base_width;
-		c->game_logical_res.h = SDL_ceilf(
-			(float)c->av_info.geometry.base_width / aspect);
+		ctx->game_logical_res.w = ctx->av_info.geometry.base_width;
+		ctx->game_logical_res.h = SDL_ceilf(
+			(float)ctx->av_info.geometry.base_width / aspect);
 	}
 	else
 	{
-		c->game_logical_res.w =
-			SDL_ceilf(c->av_info.geometry.base_height * aspect);
-		c->game_logical_res.h = c->av_info.geometry.base_height;
+		ctx->game_logical_res.w =
+			SDL_ceilf(ctx->av_info.geometry.base_height * aspect);
+		ctx->game_logical_res.h = ctx->av_info.geometry.base_height;
 	}
 
 	SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO, "Created texture: %s %d*%d",
-			SDL_GetPixelFormatName(format), width, height);
+		       SDL_GetPixelFormatName(format), width, height);
 
 	return 0;
 }
 
-uint_fast8_t play_init_av(void)
+uint_fast8_t play_init_av(struct core_ctx_s *ctx)
 {
+	SDL_AudioSpec want = { 0 };
+
 	SDL_assert(ctx->env.status_bits.core_init == 1);
 	SDL_assert(ctx->env.status_bits.shutdown == 0);
 	SDL_assert(ctx->env.status_bits.game_loaded == 1);
 
 	/* If texture is already initialised, don't recreate it. */
-	if(ctx->game_texture != NULL)
-		return 0;
-
-	ctx->fn.retro_get_system_av_info(&ctx->av_info);
-	SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO,
-		       "Core is requesting %.2f FPS, %.0f Hz, "
-		       "%u*%u, %u*%u, %.1f ratio",
-		       ctx->av_info.timing.fps, ctx->av_info.timing.sample_rate,
-		       ctx->av_info.geometry.base_width,
-		       ctx->av_info.geometry.base_height,
-		       ctx->av_info.geometry.max_width,
-		       ctx->av_info.geometry.max_height,
-		       ctx->av_info.geometry.aspect_ratio);
-
-	if(play_reinit_texture(ctx, &ctx->env.pixel_fmt, NULL, NULL) != 0)
+	if(ctx->game_texture == NULL)
 	{
-		SDL_LogCritical(SDL_LOG_CATEGORY_VIDEO,
-				"Unable to create texture: %s", SDL_GetError());
-		return 1;
+		ctx->fn.retro_get_system_av_info(&ctx->av_info);
+		SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO,
+			       "Core is requesting %.2f FPS, %.0f Hz, "
+			       "%u*%u, %u*%u, %.1f ratio",
+			       ctx->av_info.timing.fps,
+			       ctx->av_info.timing.sample_rate,
+			       ctx->av_info.geometry.base_width,
+			       ctx->av_info.geometry.base_height,
+			       ctx->av_info.geometry.max_width,
+			       ctx->av_info.geometry.max_height,
+			       ctx->av_info.geometry.aspect_ratio);
+
+		if(play_reinit_texture(ctx, &ctx->env.pixel_fmt, NULL, NULL) !=
+		   0)
+		{
+			SDL_SetError("Unable to create texture: %s",
+				     SDL_GetError());
+			return 1;
+		}
+	}
+
+	want.freq = ctx->av_info.timing.sample_rate;
+	want.format = AUDIO_S16SYS;
+	want.channels = 2;
+	want.samples = 2048;
+	want.callback = NULL;
+
+	ctx->audio_dev = SDL_OpenAudioDevice(NULL, 0, &want, NULL,
+					     SDL_AUDIO_ALLOW_FORMAT_CHANGE);
+	if(ctx->audio_dev == 0)
+	{
+		SDL_LogWarn(SDL_LOG_CATEGORY_AUDIO, "Failed to open audio: %s",
+			    SDL_GetError());
+	}
+	else
+	{
+		SDL_LogInfo(SDL_LOG_CATEGORY_AUDIO,
+			    "Audio driver %s initialised",
+			    SDL_GetCurrentAudioDriver());
+		SDL_PauseAudioDevice(ctx->audio_dev, 0);
 	}
 
 	return 0;
 }
 
-void play_init_cb(struct core_ctx_s *c)
+void play_init_cb(struct core_ctx_s *ctx)
 {
 	SDL_assert_paranoid(ctx == NULL);
 
-	/* TODO: Move to load.c? */
-	ctx = c;
+	ctx_retro = ctx;
 
 	/* Set default pixel format. */
 	ctx->env.pixel_fmt = SDL_PIXELFORMAT_RGB555;
@@ -321,11 +354,17 @@ void play_init_cb(struct core_ctx_s *c)
 	ctx->env.status_bits.core_init = 1;
 }
 
-void play_deinit_display(void)
+void play_deinit_cb(struct core_ctx_s *ctx)
 {
-	if(ctx->game_texture != NULL)
-		SDL_DestroyTexture(ctx->game_texture);
+	if(ctx == NULL)
+		return;
 
-	ctx->game_texture = NULL;
-	ctx = NULL;
+	if(ctx->game_texture != NULL)
+	{
+		SDL_DestroyTexture(ctx->game_texture);
+		ctx->game_texture = NULL;
+	}
+
+	SDL_CloseAudioDevice(ctx->audio_dev);
+	ctx_retro = NULL;
 }

@@ -85,26 +85,23 @@ int main(int argc, char *argv[])
 	core_path = argv[1];
 	file = argv[2];
 
-		win = SDL_CreateWindow(
-			PROG_NAME, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-			320, 240, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+	win = SDL_CreateWindow(PROG_NAME, SDL_WINDOWPOS_UNDEFINED,
+			       SDL_WINDOWPOS_UNDEFINED, 320, 240,
+			       SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
-		if(win == NULL)
-			goto err;
+	if(win == NULL)
+		goto err;
 
-		ctx.disp_rend = SDL_CreateRenderer(win, -1,
-			SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+	ctx.disp_rend = SDL_CreateRenderer(
+		win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
-		if(ctx.disp_rend == NULL)
-		{
-			unload_libretro_core(&ctx);
-			SDL_DestroyWindow(win);
-			goto err;
-		}
+	if(ctx.disp_rend == NULL)
+	{
+		goto err;
+	}
 
 	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 		       "Created window and renderer");
-
 
 	if(load_libretro_core(core_path, &ctx))
 		goto err;
@@ -114,7 +111,7 @@ int main(int argc, char *argv[])
 	 */
 	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
 		    "Libretro core \"%.32s\" loaded successfully.",
-	     ctx.sys_info.library_name);
+		    ctx.sys_info.library_name);
 
 	{
 		char title[MAX_TITLE_LEN];
@@ -128,13 +125,13 @@ int main(int argc, char *argv[])
 	if(load_libretro_file(file, &ctx) != 0)
 		goto err;
 
-	if(play_init_av() != 0)
+	if(play_init_av(&ctx) != 0)
 		goto err;
 
 	SDL_SetWindowMinimumSize(win, ctx.game_logical_res.w,
 				 ctx.game_logical_res.h);
 	SDL_RenderSetLogicalSize(ctx.disp_rend, ctx.game_logical_res.w,
-			ctx.game_logical_res.h);
+				 ctx.game_logical_res.h);
 
 	SDL_Event event;
 	while(1)
@@ -145,7 +142,7 @@ int main(int argc, char *argv[])
 			break;
 		}
 
-		play_frame();
+		play_frame(&ctx);
 
 		if(ctx.game_texture != NULL)
 		{
@@ -159,7 +156,7 @@ int main(int argc, char *argv[])
 
 	unload_libretro_file(&ctx);
 	unload_libretro_core(&ctx);
-	play_deinit_display();
+	play_deinit_cb(&ctx);
 	SDL_DestroyRenderer(ctx.disp_rend);
 	SDL_DestroyWindow(win);
 	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Exiting gracefully.");
@@ -172,7 +169,7 @@ err:
 			"Exiting due to an error. %s", SDL_GetError());
 	unload_libretro_file(&ctx);
 	unload_libretro_core(&ctx);
-	play_deinit_display();
+	play_deinit_cb(&ctx);
 	SDL_DestroyRenderer(ctx.disp_rend);
 	SDL_DestroyWindow(win);
 	SDL_Quit();

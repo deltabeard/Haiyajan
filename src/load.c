@@ -77,13 +77,6 @@ uint_fast8_t load_libretro_file(const char *file, struct core_ctx_s *ctx)
 	return 0;
 }
 
-void unload_libretro_file(struct core_ctx_s *ctx)
-{
-	free(ctx->game_data);
-	ctx->game_data = NULL;
-	ctx->env.status_bits.game_loaded = 0;
-}
-
 uint_fast8_t load_libretro_core(const char *so_file, struct core_ctx_s *ctx)
 {
 	struct fn_links_s
@@ -173,7 +166,10 @@ uint_fast8_t load_libretro_core(const char *so_file, struct core_ctx_s *ctx)
 
 		if(*fn_links[i].fn_ptr.sdl_fn == NULL)
 		{
-			SDL_UnloadObject(&ctx->handle);
+			if(ctx->handle != NULL)
+				SDL_UnloadObject(&ctx->handle);
+
+			ctx->handle = NULL;
 			return 2;
 		}
 	}
@@ -192,10 +188,30 @@ uint_fast8_t load_libretro_core(const char *so_file, struct core_ctx_s *ctx)
 	return 0;
 }
 
+void unload_libretro_file(struct core_ctx_s *ctx)
+{
+	if(ctx->game_data != NULL)
+	{
+		free(ctx->game_data);
+		ctx->game_data = NULL;
+	}
+
+	ctx->env.status_bits.game_loaded = 0;
+}
+
 void unload_libretro_core(struct core_ctx_s *ctx)
 {
-	ctx->fn.retro_deinit();
-	free(ctx->game_data);
-	ctx->game_data = NULL;
-	SDL_UnloadObject(ctx->handle);
+	if(ctx->env.status_bits.game_loaded)
+		unload_libretro_file(ctx);
+
+	if(ctx->fn.retro_deinit != NULL)
+		ctx->fn.retro_deinit();
+
+	ctx->env.status_bits.core_init = 0;
+
+	if(ctx->handle != NULL)
+	{
+		SDL_UnloadObject(ctx->handle);
+		ctx->handle = NULL;
+	}
 }

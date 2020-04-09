@@ -16,28 +16,33 @@
 
 #pragma once
 
-/* Functions in this file are not threadsafe. */
+/* Functions in this file are not thread safe. */
 
 /**
  * Initialise callback functions of libretro core.
  *
- * \param c	Libretro core context.
+ * \param ctx	Libretro core context.
  */
-void play_init_cb(struct core_ctx_s *c);
+void play_init_cb(struct core_ctx_s *ctx);
 
 /**
  * Play a single frame of the libretro core.
+ *
+ * \param ctx	Libretro core context.
  */
-void play_frame(void);
+void play_frame(struct core_ctx_s *ctx);
 
 /**
  * Initialise the audio and video contexts for libretro core.
  *
- * \returns 0 on success, else failure. Use SDL_GetError().
+ * \param ctx	Libretro core context.
+ * \returns	0 on success, else failure. Use SDL_GetError().
  */
-uint_fast8_t play_init_av(void);
+uint_fast8_t play_init_av(struct core_ctx_s *ctx);
 
 /**
  * Free audio and video contexts for libretro core.
+ *
+ * \param ctx	Libretro core context.
  */
-void play_deinit_display(void);
+void play_deinit_cb(struct core_ctx_s *ctx);
