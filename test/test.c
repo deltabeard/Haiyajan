@@ -56,7 +56,7 @@ void test_retro_init(void)
 	ctx.fn.retro_deinit();
 }
 
-void test_retro_init(void)
+void test_retro_av(void)
 {
 	struct core_ctx_s ctx;
 	const char av_so_path[] = "./libretro_av/libretro-av.so";
