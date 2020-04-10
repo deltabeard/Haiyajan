@@ -155,7 +155,7 @@ void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 	// SDL_Rect rect = { .w = width, .h = height, .x = 0, .y = 0 };
 
 #if SDL_ASSERT_LEVEL == 3
-	int tex_pitch;
+	size_t tex_pitch;
 	int tex_w, tex_h;
 	Uint32 format;
 
