@@ -332,7 +332,7 @@ uint_fast8_t play_init_av(struct core_ctx_s *ctx)
 
 void play_init_cb(struct core_ctx_s *ctx)
 {
-	SDL_assert_paranoid(ctx == NULL);
+	SDL_assert_paranoid(ctx != NULL);
 
 	ctx_retro = ctx;
 
