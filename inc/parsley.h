@@ -82,6 +82,10 @@ struct core_ctx_s
 	struct retro_system_info sys_info;
 	struct retro_system_av_info av_info;
 
+	struct {
+		char core_log_name[8];
+	};
+
 	/* Libretro core environment status. */
 	struct
 	{

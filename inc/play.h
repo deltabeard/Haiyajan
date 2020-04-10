@@ -12,11 +12,17 @@
  * See the LICENSE file for more details.
  */
 
+#include <SDL2/SDL.h>
+
 #include <libretro.h>
 
 #pragma once
 
 /* Functions in this file are not thread safe. */
+
+enum {
+	PLAY_LOG_CATEGORY_CORE = SDL_LOG_CATEGORY_CUSTOM,
+};
 
 /**
  * Initialise callback functions of libretro core.

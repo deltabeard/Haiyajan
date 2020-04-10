@@ -35,6 +35,29 @@ void play_frame(struct core_ctx_s *ctx)
 	ctx->env.status_bits.running = 0;
 }
 
+/**
+ * Converts libretro logging to SDL2 logging.
+ */
+void play_libretro_log(enum retro_log_level level, const char *fmt, ...)
+{
+	va_list ap;
+	SDL_LogPriority priority;
+
+	if(level > RETRO_LOG_ERROR)
+		return;
+
+	/* Map libretro priorities to SDL log priorities. */
+	priority = level + 2;
+
+	/* FIXME: This is a bit of a hack to add the core name. Change this. */
+	fprintf(stderr, "%.*s: ", (int)sizeof(ctx_retro->core_log_name),
+		ctx_retro->core_log_name);
+
+	va_start(ap, fmt);
+	SDL_LogMessageV(PLAY_LOG_CATEGORY_CORE, priority, fmt, ap);
+	va_end(ap);
+}
+
 bool cb_retro_environment(unsigned cmd, void *data)
 {
 	SDL_assert_release(ctx_retro != NULL);
@@ -52,7 +75,8 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		/* Check that this is called in retro_load_game(). */
 		/* Abort if this a paranoid debug build. */
 		SDL_assert_paranoid(ctx_retro->env.status_bits.core_init == 1);
-		SDL_assert_paranoid(ctx_retro->env.status_bits.game_loaded == 0);
+		SDL_assert_paranoid(ctx_retro->env.status_bits.game_loaded ==
+				    0);
 
 		SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 			       "Set performance level to %u", *perf);
@@ -98,12 +122,14 @@ bool cb_retro_environment(unsigned cmd, void *data)
 			return false;
 		}
 
-		if(play_reinit_texture(ctx_retro, &fmt_tran[*fmt], NULL, NULL) != 0)
+		if(play_reinit_texture(ctx_retro, &fmt_tran[*fmt], NULL,
+				       NULL) != 0)
 			return false;
 
-		SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
-			       "Core request for pixel format %s was accepted",
-			       SDL_GetPixelFormatName(ctx_retro->env.pixel_fmt));
+		SDL_LogVerbose(
+			SDL_LOG_CATEGORY_APPLICATION,
+			"Core request for pixel format %s was accepted",
+			SDL_GetPixelFormatName(ctx_retro->env.pixel_fmt));
 		break;
 	}
 
@@ -115,6 +141,13 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		break;
 	}
 #endif
+
+	case RETRO_ENVIRONMENT_GET_LOG_INTERFACE:
+	{
+		struct retro_log_callback *log_cb = data;
+		log_cb->log = play_libretro_log;
+		break;
+	}
 
 	case RETRO_ENVIRONMENT_SET_GEOMETRY:
 	{
@@ -159,7 +192,8 @@ void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 	int tex_w, tex_h;
 	Uint32 format;
 
-	SDL_QueryTexture(ctx_retro->game_texture, &format, NULL, &tex_w, &tex_h);
+	SDL_QueryTexture(ctx_retro->game_texture, &format, NULL, &tex_w,
+			 &tex_h);
 	tex_pitch = tex_w * SDL_BYTESPERPIXEL(format);
 
 	SDL_assert_paranoid(pitch <= tex_pitch);
@@ -220,7 +254,8 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 		ctx->fn.retro_get_system_av_info(&ctx->av_info);
 
 	format = req_format != NULL ? *req_format : ctx->env.pixel_fmt;
-	width = req_width != NULL ? *req_width : ctx->av_info.geometry.base_width;
+	width = req_width != NULL ? *req_width
+				  : ctx->av_info.geometry.base_width;
 	height = req_height != NULL ? *req_height
 				    : ctx->av_info.geometry.base_height;
 
@@ -335,6 +370,35 @@ void play_init_cb(struct core_ctx_s *ctx)
 	SDL_assert_paranoid(ctx != NULL);
 
 	ctx_retro = ctx;
+
+	/* Set log name for core. */
+	{
+		size_t len;
+		int printed;
+		char *c = SDL_strchr(ctx->sys_info.library_name, ' ');
+
+		if(c == NULL)
+			len = SDL_strlen(ctx->sys_info.library_name);
+		else
+			len = c - ctx->sys_info.library_name;
+
+		printed = SDL_snprintf(ctx->core_log_name,
+				       sizeof(ctx->core_log_name), "%.*s",
+				       (int)len, ctx->sys_info.library_name);
+
+		if(printed < 0)
+		{
+			SDL_strlcpy(ctx->core_log_name, "CORE",
+				    sizeof(ctx->core_log_name));
+		}
+
+		while(printed > 0)
+		{
+			ctx->core_log_name[printed] =
+				SDL_toupper(ctx->core_log_name[printed]);
+			printed--;
+		}
+	}
 
 	/* Set default pixel format. */
 	ctx->env.pixel_fmt = SDL_PIXELFORMAT_RGB555;
