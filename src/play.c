@@ -42,6 +42,7 @@ void play_libretro_log(enum retro_log_level level, const char *fmt, ...)
 {
 	va_list ap;
 	SDL_LogPriority priority;
+	char buf[128];
 
 	if(level > RETRO_LOG_ERROR)
 		return;
@@ -49,13 +50,16 @@ void play_libretro_log(enum retro_log_level level, const char *fmt, ...)
 	/* Map libretro priorities to SDL log priorities. */
 	priority = level + 2;
 
-	/* FIXME: This is a bit of a hack to add the core name. Change this. */
-	fprintf(stderr, "%.*s: ", (int)sizeof(ctx_retro->core_log_name),
-		ctx_retro->core_log_name);
-
 	va_start(ap, fmt);
-	SDL_LogMessageV(PLAY_LOG_CATEGORY_CORE, priority, fmt, ap);
+	if(SDL_vsnprintf(buf, sizeof(buf), fmt, ap) < 0)
+		SDL_strlcpy(buf, "Unknown log message\n", sizeof(buf));
+
 	va_end(ap);
+
+	SDL_LogMessage(PLAY_LOG_CATEGORY_CORE, priority,
+		       "%.*s: %s",
+			(int)sizeof(ctx_retro->core_log_name),
+			ctx_retro->core_log_name, buf);
 }
 
 bool cb_retro_environment(unsigned cmd, void *data)
