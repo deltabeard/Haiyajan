@@ -33,3 +33,14 @@ clean:
 	$(RM) ./parsley
 	$(MAKE) -C ./test clean
 
+help:
+	@echo "Options:"
+	@echo "  DEBUG=1    Enables all asserts and reduces optimisation"
+	@echo "  STATIC=1   Enables static build"
+	@echo
+	@echo "  Example: make DEBUG=1"
+	@echo
+	@echo "Copyright (C) 2020 Mahyar Koshkouei"
+	@echo "Parsley is free software; see the LICENSE file for copying conditions. There is "
+	@echo "NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
+	@echo ""
