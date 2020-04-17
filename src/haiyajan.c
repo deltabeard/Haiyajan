@@ -123,7 +123,10 @@ int main(int argc, char *argv[])
 	play_init_cb(&ctx);
 
 	if(load_libretro_file(file, &ctx) != 0)
+	{
+		unload_libretro_core(&ctx);
 		goto err;
+	}
 
 	if(play_init_av(&ctx) != 0)
 		goto err;
