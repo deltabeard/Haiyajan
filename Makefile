@@ -1,4 +1,4 @@
-CFLAGS := -std=c99 -g3 -Wall -Wextra -pipe -I./inc $(shell sdl2-config --cflags)
+CFLAGS := -std=c99 -g3 -fPIE -Wall -Wextra -pipe -I./inc $(shell sdl2-config --cflags)
 
 ifeq ($(DEBUG),1)
 	CFLAGS += -D DEBUG=1 -D SDL_ASSERT_LEVEL=3
@@ -6,7 +6,8 @@ ifeq ($(DEBUG),1)
 else
 	# I don't want any warnings in release builds
 	CFLAGS += -Werror -D SDL_ASSERT_LEVEL=1 -fPIE -flto=auto -fno-fat-lto-objects
-	OPT ?= -Ofast
+	OPT ?= -O2
+	COND_TARGETS := haiyajan.debug
 endif
 
 ifeq ($(STATIC),1)
@@ -16,16 +17,21 @@ else
 	LDLIBS := $(shell sdl2-config --libs)
 endif
 
-
 CFLAGS += $(OPT)
 
 .PHONY: test
 
-all: haiyajan test
+all: haiyajan $(COND_TARGETS)
 haiyajan: ./src/haiyajan.o ./src/load.o ./src/play.o
+	+$(CC) $(CFLAGS) -s -o $@ $^ $(LDLIBS)
+
+# Produces a separate executable with debug symbols intact, and strips the
+# main executable.
+# To get information from stack trace: `addr2line -e haiyajan.debug addr`
+haiyajan.debug: ./src/haiyajan.o ./src/load.o ./src/play.o
 	+$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
-test:
+test: haiyajan
 	$(MAKE) -C ./test run
 
 clean:
@@ -37,8 +43,9 @@ help:
 	@echo "Options:"
 	@echo "  DEBUG=1    Enables all asserts and reduces optimisation"
 	@echo "  STATIC=1   Enables static build"
+	@echo "  OPT=\"\"     Set custom optimisation options"
 	@echo
-	@echo "  Example: make DEBUG=1"
+	@echo "  Example: make DEBUG=1 OPT=\"-Ofast -march=native\""
 	@echo
 	@echo "Copyright (C) 2020 Mahyar Koshkouei"
 	@echo "Haiyajan is free software; see the LICENSE file for copying conditions. There is "
