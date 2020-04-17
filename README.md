@@ -27,6 +27,13 @@ platforms that this project will be regularly tested on for major releases are:
 
 We welcome bug reports and contributions for all platforms.
 
+## License
+Copyright (C) 2020 Mahyar Koshkouei, et al.
+
+Haiyajan is free software release under the **GPLv3**; see the LICENSE file for
+copying conditions. There is NO warranty; not even for MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.
+
 # Development
 
 ## Versioning
