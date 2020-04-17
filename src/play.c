@@ -15,7 +15,7 @@
 #include <SDL2/SDL.h>
 
 #include <libretro.h>
-#include <parsley.h>
+#include <haiyajan.h>
 #include <play.h>
 
 #define NUM_ELEMS(x) (sizeof(x) / sizeof(*x))

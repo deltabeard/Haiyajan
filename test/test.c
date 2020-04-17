@@ -1,5 +1,5 @@
 /**
- * Test cases for the Parsley project.
+ * Test cases for the Haiyajan project.
  * Copyright (C) 2020  Mahyar Koshkouei
  *
  * This is free software, and you are welcome to redistribute it under the terms

@@ -30,9 +30,9 @@ static uint_fast8_t prerun_checks(void)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_SYSTEM,
 				"The major version of SDL2 loaded (%d) does "
-				"not match the version from which Parsley was "
+				"not match the version from which Haiyajan was "
 				"compiled with (%d). "
-				"Please recompile Parsley and try again.",
+				"Please recompile Haiyajan and try again.",
 				linked.major, compiled.major);
 		return 1;
 	}
@@ -43,7 +43,7 @@ static uint_fast8_t prerun_checks(void)
 		SDL_LogWarn(
 			SDL_LOG_CATEGORY_SYSTEM,
 			"The version of SDL2 loaded (%d.%d.%d) is different to "
-			"the version that Parsley was compiled with "
+			"the version that Haiyajan was compiled with "
 			"(%d.%d.%d).",
 			linked.major, linked.minor, linked.patch,
 			compiled.major, compiled.minor, compiled.patch);

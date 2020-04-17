@@ -21,8 +21,8 @@ CFLAGS += $(OPT)
 
 .PHONY: test
 
-all: parsley test
-parsley: ./src/parsley.o ./src/load.o ./src/play.o
+all: haiyajan test
+haiyajan: ./src/haiyajan.o ./src/load.o ./src/play.o
 	+$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 test:
@@ -30,7 +30,7 @@ test:
 
 clean:
 	$(RM) ./src/*.o
-	$(RM) ./parsley
+	$(RM) ./haiyajan
 	$(MAKE) -C ./test clean
 
 help:
@@ -41,6 +41,6 @@ help:
 	@echo "  Example: make DEBUG=1"
 	@echo
 	@echo "Copyright (C) 2020 Mahyar Koshkouei"
-	@echo "Parsley is free software; see the LICENSE file for copying conditions. There is "
+	@echo "Haiyajan is free software; see the LICENSE file for copying conditions. There is "
 	@echo "NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
 	@echo ""

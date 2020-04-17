@@ -28,7 +28,7 @@ uint_fast8_t load_libretro_file(const char *file, struct core_ctx_s *ctx)
 	 * - Read file.
 	 *
 	 * If need_fullpath in retro_system_info is true, then don't load the
-	 * ROM into memory. If false, then Parsley must load the ROM image into
+	 * ROM into memory. If false, then Haiyajan must load the ROM image into
 	 * memory.
 	 */
 	struct retro_game_info game = { .path = file, .meta = NULL };

@@ -1,5 +1,5 @@
 /**
- * User interface for use with Parsley.
+ * User interface for use with Haiyajan.
  * Copyright (C) 2020  Mahyar Koshkouei
  *
  * This is free software, and you are welcome to redistribute it under the terms
