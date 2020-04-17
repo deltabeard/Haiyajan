@@ -43,8 +43,8 @@ project for brevity.
 ## Building
 The following dependencies are recommended for building Haiyajan. Other tools
 may be used, but are unsupported by this project.
-- SDL2
-- GNU GCC
+- SDL2 (Required)
+- GNU Compiler Collection (GCC)
 - GNU Make
 
 Simply execute `make` in the project folder.
