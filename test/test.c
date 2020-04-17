@@ -18,7 +18,7 @@
 #include <string.h>
 
 #include <load.h>
-#include <parsley.h>
+#include <haiyajan.h>
 
 #include "minctest.h"
 
