@@ -68,13 +68,20 @@ struct core_ctx_s
 		/* SDL2 function object handle for libretro core. */
 		void *handle;
 
-		/* For cores which require the game to be loaded into memory. */
+		/* For cores which require the content to be loaded into memory.
+		 * This is an allocated buffer of content for libretro cores. */
 		Uint8 *game_data;
 
+		/* The renderer that is shown on screen. */
 		SDL_Renderer *disp_rend;
-		SDL_Texture *game_texture;
+
+		/* The texture that the libretro core renders to. */
+		SDL_Texture *core_tex;
+
+		/* The resolution of the libretro core video output. */
 		SDL_Rect game_logical_res;
 
+		/* The context of the audio device. */
 		SDL_AudioDeviceID audio_dev;
 	};
 

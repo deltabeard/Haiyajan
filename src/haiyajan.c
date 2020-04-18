@@ -152,10 +152,10 @@ int main(int argc, char *argv[])
 
 		play_frame(&ctx);
 
-		if(ctx.game_texture != NULL)
+		if(ctx.core_tex != NULL)
 		{
 			SDL_RenderClear(ctx.disp_rend);
-			SDL_RenderCopy(ctx.disp_rend, ctx.game_texture, NULL,
+			SDL_RenderCopy(ctx.disp_rend, ctx.core_tex, NULL,
 				       NULL);
 		}
 
