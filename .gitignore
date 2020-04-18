@@ -3,7 +3,8 @@
 *.dll
 
 *.exe
-parsley
+haiyajan
+haiyajan.debug
 test
 
 *.gcda
