@@ -135,8 +135,11 @@ int main(int argc, char *argv[])
 
 	SDL_SetWindowMinimumSize(win, ctx.game_logical_res.w,
 				 ctx.game_logical_res.h);
+	SDL_SetWindowSize(win, ctx.game_logical_res.w,
+				 ctx.game_logical_res.h);
 	SDL_RenderSetLogicalSize(ctx.disp_rend, ctx.game_logical_res.w,
 				 ctx.game_logical_res.h);
+	//SDL_RenderSetIntegerScale(ctx.disp_rend, SDL_ENABLE);
 
 	SDL_Event event;
 	while(1)
