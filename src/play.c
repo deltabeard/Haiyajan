@@ -196,7 +196,7 @@ void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 	int tex_w, tex_h;
 	Uint32 format;
 
-	SDL_QueryTexture(ctx_retro->game_texture, &format, NULL, &tex_w,
+	SDL_QueryTexture(ctx_retro->core_tex, &format, NULL, &tex_w,
 			 &tex_h);
 	tex_pitch = tex_w * SDL_BYTESPERPIXEL(format);
 
@@ -204,7 +204,7 @@ void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 	SDL_assert_paranoid(format == ctx_retro->env.pixel_fmt);
 #endif
 
-	if(SDL_UpdateTexture(ctx_retro->game_texture, NULL, data, pitch) != 0)
+	if(SDL_UpdateTexture(ctx_retro->core_tex, NULL, data, pitch) != 0)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
 				"Texture could not updated: %s",
@@ -254,7 +254,7 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 	unsigned height;
 
 	/* Only initialise video if the core hasn't requested it earlier. */
-	if(ctx->game_texture == NULL)
+	if(ctx->core_tex == NULL)
 		ctx->fn.retro_get_system_av_info(&ctx->av_info);
 
 	format = req_format != NULL ? *req_format : ctx->env.pixel_fmt;
@@ -278,10 +278,10 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 
 	/* If we have previously created a texture, destroy it and assign the
 	 * newly created texture to it. */
-	if(ctx->game_texture != NULL)
-		SDL_DestroyTexture(ctx->game_texture);
+	if(ctx->core_tex != NULL)
+		SDL_DestroyTexture(ctx->core_tex);
 
-	ctx->game_texture = test_texture;
+	ctx->core_tex = test_texture;
 	ctx->env.pixel_fmt = format;
 	ctx->av_info.geometry.base_width = width;
 	ctx->av_info.geometry.base_height = height;
@@ -322,7 +322,7 @@ uint_fast8_t play_init_av(struct core_ctx_s *ctx)
 	SDL_assert(ctx->env.status_bits.game_loaded == 1);
 
 	/* If texture is already initialised, don't recreate it. */
-	if(ctx->game_texture == NULL)
+	if(ctx->core_tex == NULL)
 	{
 		ctx->fn.retro_get_system_av_info(&ctx->av_info);
 		SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO,
@@ -406,7 +406,7 @@ void play_init_cb(struct core_ctx_s *ctx)
 
 	/* Set default pixel format. */
 	ctx->env.pixel_fmt = SDL_PIXELFORMAT_RGB555;
-	ctx->game_texture = NULL;
+	ctx->core_tex = NULL;
 
 	ctx->fn.retro_set_environment(cb_retro_environment);
 	ctx->fn.retro_set_video_refresh(cb_retro_video_refresh);
@@ -427,10 +427,10 @@ void play_deinit_cb(struct core_ctx_s *ctx)
 	if(ctx == NULL)
 		return;
 
-	if(ctx->game_texture != NULL)
+	if(ctx->core_tex != NULL)
 	{
-		SDL_DestroyTexture(ctx->game_texture);
-		ctx->game_texture = NULL;
+		SDL_DestroyTexture(ctx->core_tex);
+		ctx->core_tex = NULL;
 	}
 
 	SDL_CloseAudioDevice(ctx->audio_dev);

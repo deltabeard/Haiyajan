@@ -15,8 +15,18 @@
 #include <SDL2/SDL.h>
 #include <stdlib.h>
 
+#define OPTPARSE_IMPLEMENTATION
+#define OPTPARSE_API static
+#include <optparse.h>
+
 #include <load.h>
 #include <play.h>
+
+struct cmd_args_s {
+	char *file_core;
+	char *file_content;
+	unsigned char benchmark : 1;
+};
 
 static uint_fast8_t prerun_checks(void)
 {
@@ -52,12 +62,55 @@ static uint_fast8_t prerun_checks(void)
 	return 0;
 }
 
+uint_fast8_t process_args(int argc, char **argv, struct cmd_args_s *args)
+{
+	const struct optparse_long longopts[] = {
+		{ "core",	'L', OPTPARSE_REQUIRED },
+		{ "benchmark",	'b', OPTPARSE_NONE },
+		{ 0 }
+	};
+	int option;
+	struct optparse options;
+
+	SDL_memset(args, 0, sizeof(struct cmd_args_s));
+
+	optparse_init(&options, argv);
+	while((option = optparse_long(&options, longopts, NULL)) != -1)
+	{
+		switch(option)
+		{
+		case 'L':
+			args->file_core = SDL_strdup(options.optarg);
+			break;
+		case 'b':
+			args->benchmark = 1;
+			break;
+		case '?':
+			SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
+					"%s", options.errmsg);
+			return 1;
+		}
+	}
+
+	/* Print remaining arguments. */
+	char *arg = optparse_arg(&options);
+	if(arg != NULL)
+		args->file_content = SDL_strdup(arg);
+
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
 	struct core_ctx_s ctx = { 0 };
-	char *core_path;
-	char *file;
 	SDL_Window *win = NULL;
+	struct cmd_args_s args;
+
+	if(process_args(argc, argv, &args) != 0)
+		exit(EXIT_FAILURE);
+
+	if(prerun_checks() != 0)
+		exit(EXIT_FAILURE);
 
 	if(SDL_Init(SDL_INIT_EVERYTHING) != 0)
 	{
@@ -73,19 +126,13 @@ int main(int argc, char *argv[])
 	SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO);
 #endif
 
-	if(prerun_checks())
-		goto err;
-
-	if(argc != 3)
+	if(args.file_core == NULL || args.file_content == NULL)
 	{
-		SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "%s CORE FILE",
+		SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "%s -L CORE FILE",
 			    argv[0]);
 		SDL_Quit();
 		exit(EXIT_FAILURE);
 	}
-
-	core_path = argv[1];
-	file = argv[2];
 
 	win = SDL_CreateWindow(PROG_NAME, SDL_WINDOWPOS_UNDEFINED,
 			       SDL_WINDOWPOS_UNDEFINED, 320, 240,
@@ -98,14 +145,12 @@ int main(int argc, char *argv[])
 		win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
 	if(ctx.disp_rend == NULL)
-	{
 		goto err;
-	}
 
 	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 		       "Created window and renderer");
 
-	if(load_libretro_core(core_path, &ctx))
+	if(load_libretro_core(args.file_core, &ctx))
 		goto err;
 
 	/* TODO:
@@ -124,7 +169,7 @@ int main(int argc, char *argv[])
 
 	play_init_cb(&ctx);
 
-	if(load_libretro_file(file, &ctx) != 0)
+	if(load_libretro_file(args.file_content, &ctx) != 0)
 	{
 		unload_libretro_core(&ctx);
 		goto err;
@@ -135,11 +180,10 @@ int main(int argc, char *argv[])
 
 	SDL_SetWindowMinimumSize(win, ctx.game_logical_res.w,
 				 ctx.game_logical_res.h);
-	SDL_SetWindowSize(win, ctx.game_logical_res.w,
-				 ctx.game_logical_res.h);
+	SDL_SetWindowSize(win, ctx.game_logical_res.w, ctx.game_logical_res.h);
 	SDL_RenderSetLogicalSize(ctx.disp_rend, ctx.game_logical_res.w,
 				 ctx.game_logical_res.h);
-	//SDL_RenderSetIntegerScale(ctx.disp_rend, SDL_ENABLE);
+	// SDL_RenderSetIntegerScale(ctx.disp_rend, SDL_ENABLE);
 
 	SDL_Event event;
 	while(1)
@@ -155,8 +199,7 @@ int main(int argc, char *argv[])
 		if(ctx.core_tex != NULL)
 		{
 			SDL_RenderClear(ctx.disp_rend);
-			SDL_RenderCopy(ctx.disp_rend, ctx.core_tex, NULL,
-				       NULL);
+			SDL_RenderCopy(ctx.disp_rend, ctx.core_tex, NULL, NULL);
 		}
 
 		SDL_RenderPresent(ctx.disp_rend);

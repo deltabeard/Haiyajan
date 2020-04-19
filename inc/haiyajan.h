@@ -14,7 +14,8 @@
 
 #pragma once
 
-#include <libretro.h>
+#include "libretro.h"
+#include <SDL2/SDL.h>
 
 #define PROG_NAME     "Haiyajan"
 #define PROG_NAME_LEN strlen(PROG_NAME)
@@ -76,9 +77,11 @@ struct core_ctx_s
 		SDL_Renderer *disp_rend;
 
 		/* The texture that the libretro core renders to. */
+		/* FIXME: Make texture max-width/height */
 		SDL_Texture *core_tex;
 
 		/* The resolution of the libretro core video output. */
+		/* FIXME: Use video_cb width/height for window size. */
 		SDL_Rect game_logical_res;
 
 		/* The context of the audio device. */
