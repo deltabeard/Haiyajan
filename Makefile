@@ -1,4 +1,5 @@
 CFLAGS := -std=c99 -g3 -fPIE -Wall -Wextra -pipe -I./inc $(shell sdl2-config --cflags)
+CFLAGS += $(OPT)
 
 ifeq ($(DEBUG),1)
 	CFLAGS += -D DEBUG=1 -D SDL_ASSERT_LEVEL=3
@@ -17,7 +18,15 @@ else
 	LDLIBS := $(shell sdl2-config --libs)
 endif
 
-CFLAGS += $(OPT)
+GIT_VERSION := $(shell git rev-parse --short HEAD 2>/dev/null)
+REL_VERSION := $(shell git describe --tags 2>/dev/null)
+ifeq ($(GIT_VERSION),)
+	GIT_VERSION := NO_GIT
+endif
+ifeq ($(REL_VERSION),)
+	REL_VERSION := UNRELEASED
+endif
+CFLAGS += -D GIT_VERSION=\"$(GIT_VERSION)\" -D REL_VERSION=\"$(REL_VERSION)\"
 
 .PHONY: test
 

@@ -22,7 +22,8 @@
 #include <load.h>
 #include <play.h>
 
-struct cmd_args_s {
+struct cmd_args_s
+{
 	char *file_core;
 	char *file_content;
 	unsigned char benchmark : 1;
@@ -62,11 +63,30 @@ static uint_fast8_t prerun_checks(void)
 	return 0;
 }
 
-uint_fast8_t process_args(int argc, char **argv, struct cmd_args_s *args)
+static void print_info(void)
+{
+	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+		    PROG_NAME " Libretro Interface -- " REL_VERSION
+		    " (" GIT_VERSION ")\n");
+}
+
+static void print_help(const char *app_name)
+{
+	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+		    "Usage: %s [OPTIONS] -L CORE FILE\n"
+		    "  -h, --help      Show this help message.\n"
+		    "  -b, --benchmark Measures how many frames are rendered "
+		    "within 5 seconds.\n"
+		    "  -L, --libretro  Path to libretro core.\n",
+	     app_name);
+}
+
+static uint_fast8_t process_args(int argc, char **argv, struct cmd_args_s *args)
 {
 	const struct optparse_long longopts[] = {
-		{ "core",	'L', OPTPARSE_REQUIRED },
-		{ "benchmark",	'b', OPTPARSE_NONE },
+		{ "libretro", 'L', OPTPARSE_REQUIRED },
+		{ "benchmark", 'b', OPTPARSE_NONE },
+		{ "help", 'h', OPTPARSE_NONE },
 		{ 0 }
 	};
 	int option;
@@ -82,12 +102,19 @@ uint_fast8_t process_args(int argc, char **argv, struct cmd_args_s *args)
 		case 'L':
 			args->file_core = SDL_strdup(options.optarg);
 			break;
+
 		case 'b':
 			args->benchmark = 1;
 			break;
+
+		case 'h':
+			print_info();
+			print_help(argv[0]);
+			exit(EXIT_SUCCESS);
+
 		case '?':
-			SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-					"%s", options.errmsg);
+			SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "%s",
+					options.errmsg);
 			return 1;
 		}
 	}
@@ -106,8 +133,27 @@ int main(int argc, char *argv[])
 	SDL_Window *win = NULL;
 	struct cmd_args_s args;
 
-	if(process_args(argc, argv, &args) != 0)
+	if(process_args(argc, argv, &args) != 0 ||
+		args.file_core == NULL || args.file_content == NULL)
+	{
+		if(args.file_core == NULL)
+		{
+			SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
+					"The path to a libretro core was not given");
+		}
+
+		if(args.file_content == NULL)
+		{
+			SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
+					"The path to the content file was not given");
+		}
+
+		print_info();
+		print_help(argv[0]);
 		exit(EXIT_FAILURE);
+	}
+
+	print_info();
 
 	if(prerun_checks() != 0)
 		exit(EXIT_FAILURE);
@@ -125,14 +171,6 @@ int main(int argc, char *argv[])
 #else
 	SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO);
 #endif
-
-	if(args.file_core == NULL || args.file_content == NULL)
-	{
-		SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "%s -L CORE FILE",
-			    argv[0]);
-		SDL_Quit();
-		exit(EXIT_FAILURE);
-	}
 
 	win = SDL_CreateWindow(PROG_NAME, SDL_WINDOWPOS_UNDEFINED,
 			       SDL_WINDOWPOS_UNDEFINED, 320, 240,

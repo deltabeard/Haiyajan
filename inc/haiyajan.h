@@ -17,8 +17,8 @@
 #include "libretro.h"
 #include <SDL2/SDL.h>
 
-#define PROG_NAME     "Haiyajan"
-#define PROG_NAME_LEN strlen(PROG_NAME)
+#define PROG_NAME	"Haiyajan"
+#define PROG_NAME_LEN	strlen(PROG_NAME)
 #define MAX_TITLE_LEN 56
 
 /**
