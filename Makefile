@@ -8,7 +8,6 @@ else
 	# I don't want any warnings in release builds
 	CFLAGS += -Werror -D SDL_ASSERT_LEVEL=1 -fPIE -flto=auto -fno-fat-lto-objects
 	OPT ?= -O2
-	COND_TARGETS := haiyajan.debug
 endif
 
 ifeq ($(STATIC),1)
@@ -30,7 +29,7 @@ CFLAGS += -D GIT_VERSION=\"$(GIT_VERSION)\" -D REL_VERSION=\"$(REL_VERSION)\"
 
 .PHONY: test
 
-all: haiyajan $(COND_TARGETS)
+all: haiyajan haiyajan.debug
 haiyajan: ./src/haiyajan.o ./src/load.o ./src/play.o
 	+$(CC) $(CFLAGS) -s -o $@ $^ $(LDLIBS)
 

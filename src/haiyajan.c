@@ -72,13 +72,27 @@ static void print_info(void)
 
 static void print_help(const char *app_name)
 {
+	char buf[256] = "\0";
+	const int num_drivers = SDL_GetNumVideoDrivers();
+
+	for(int index = 0; index < num_drivers; index++)
+	{
+		if(index != 0)
+			SDL_strlcat(buf, ", ", SDL_arraysize(buf));
+
+		SDL_strlcat(buf, SDL_GetVideoDriver(index), SDL_arraysize(buf));
+	}
+
 	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
 		    "Usage: %s [OPTIONS] -L CORE FILE\n"
 		    "  -h, --help      Show this help message.\n"
 		    "  -b, --benchmark Measures how many frames are rendered "
 		    "within 5 seconds.\n"
-		    "  -L, --libretro  Path to libretro core.\n",
-	     app_name);
+		    "  -L, --libretro  Path to libretro core.\n"
+	            "\n"
+		    "\n"
+	     "Available video drivers: %s\n",
+	     app_name, buf);
 }
 
 static uint_fast8_t process_args(int argc, char **argv, struct cmd_args_s *args)
