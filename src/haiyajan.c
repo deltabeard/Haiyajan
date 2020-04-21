@@ -200,19 +200,19 @@ int main(int argc, char *argv[])
 			       SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
 	if(win == NULL)
-		goto err;
+		goto prog_err;
 
 	ctx.disp_rend = SDL_CreateRenderer(
 		win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
 	if(ctx.disp_rend == NULL)
-		goto err;
+		goto prog_err;
 
 	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 		       "Created window and renderer");
 
 	if(load_libretro_core(args.file_core, &ctx))
-		goto err;
+		goto core_err;
 
 	/* TODO:
 	 * - Check that input file is supported by core
@@ -231,10 +231,7 @@ int main(int argc, char *argv[])
 	play_init_cb(&ctx);
 
 	if(load_libretro_file(args.file_content, &ctx) != 0)
-	{
-		unload_libretro_core(&ctx);
-		goto err;
-	}
+		goto file_err;
 
 	if(play_init_av(&ctx) != 0)
 		goto err;
@@ -280,8 +277,14 @@ err:
 	SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
 			"Exiting due to an error. %s", SDL_GetError());
 	unload_libretro_file(&ctx);
+
+file_err:
 	unload_libretro_core(&ctx);
+
+core_err:
 	play_deinit_cb(&ctx);
+
+prog_err:
 	SDL_DestroyRenderer(ctx.disp_rend);
 	SDL_DestroyWindow(win);
 	SDL_Quit();
