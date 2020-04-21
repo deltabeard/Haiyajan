@@ -15,6 +15,10 @@
 #include <SDL2/SDL.h>
 #include <stdlib.h>
 
+#ifdef _WIN32
+#include <stdio.h>
+#endif
+
 #define OPTPARSE_IMPLEMENTATION
 #define OPTPARSE_API static
 #include <optparse.h>
@@ -146,6 +150,11 @@ int main(int argc, char *argv[])
 	struct core_ctx_s ctx = { 0 };
 	SDL_Window *win = NULL;
 	struct cmd_args_s args;
+
+#ifdef _WIN32
+	/* Windows (MinGW) does not unbuffer stderr by default. */
+	setbuf(stderr, NULL);
+#endif
 
 	if(process_args(argc, argv, &args) != 0 ||
 		args.file_core == NULL || args.file_content == NULL)
