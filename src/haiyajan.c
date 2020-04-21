@@ -76,15 +76,32 @@ static void print_info(void)
 
 static void print_help(const char *app_name)
 {
-	char buf[256] = "\0";
+	char str_drivers[256] = "\0";
+	char str_rends[256] = "\0";
 	const int num_drivers = SDL_GetNumVideoDrivers();
+	const int num_rends = SDL_GetNumRenderDrivers();
 
 	for(int index = 0; index < num_drivers; index++)
 	{
 		if(index != 0)
-			SDL_strlcat(buf, ", ", SDL_arraysize(buf));
+		{
+			SDL_strlcat(str_drivers, ", ",
+				    SDL_arraysize(str_drivers));
+		}
 
-		SDL_strlcat(buf, SDL_GetVideoDriver(index), SDL_arraysize(buf));
+		SDL_strlcat(str_drivers, SDL_GetVideoDriver(index),
+			    SDL_arraysize(str_drivers));
+	}
+
+	for(int index = 0; index < num_rends; index++)
+	{
+		SDL_RendererInfo info;
+
+		if(index != 0)
+			SDL_strlcat(str_rends, ", ", SDL_arraysize(str_rends));
+
+		SDL_GetRenderDriverInfo(index, &info);
+		SDL_strlcat(str_rends, info.name, SDL_arraysize(str_rends));
 	}
 
 	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
@@ -95,8 +112,13 @@ static void print_help(const char *app_name)
 		    "  -L, --libretro  Path to libretro core.\n"
 	            "\n"
 		    "\n"
-	     "Available video drivers: %s\n",
-	     app_name, buf);
+	     "Available video drivers: %s\n"
+	     "Available render drivers: %s\n"
+	     "You may set the video and render drivers with the usual SDL2 "
+		"environment variables respectively:\n"
+	     "  SDL_VIDEODRIVER\n"
+	     "  SDL_RENDER_DRIVER\n",
+	     app_name, str_drivers, str_rends);
 }
 
 static uint_fast8_t process_args(int argc, char **argv, struct cmd_args_s *args)
@@ -109,6 +131,8 @@ static uint_fast8_t process_args(int argc, char **argv, struct cmd_args_s *args)
 	};
 	int option;
 	struct optparse options;
+
+	(void) argc;
 
 	SDL_memset(args, 0, sizeof(struct cmd_args_s));
 
