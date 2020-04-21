@@ -239,6 +239,12 @@ int16_t cb_retro_input_state(unsigned port, unsigned device, unsigned index,
 	(void)device;
 	(void)index;
 	(void)id;
+
+	switch(port)
+	{
+	case 0:
+
+	}
 	return 0;
 }
 
@@ -418,6 +424,9 @@ void play_init_cb(struct core_ctx_s *ctx)
 	/* Error in libretro core dev overview: retro_init() should be called
 	 * after retro_set_*() functions. */
 	ctx->fn.retro_init();
+
+	/* Connect player 1 controller. */
+	ctx->fn.retro_set_controller_port_device(0, RETRO_DEVICE_JOYPAD);
 
 	ctx->env.status_bits.core_init = 1;
 }

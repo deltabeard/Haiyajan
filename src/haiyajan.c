@@ -223,6 +223,13 @@ int main(int argc, char *argv[])
 			       SDL_WINDOWPOS_UNDEFINED, 320, 240,
 			       SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
+	/* Disable cursor when using KMSDRM. */
+	{
+		const char *video_drv = SDL_GetCurrentVideoDriver();
+		if(video_drv != NULL && SDL_strcmp(video_drv, "KMSDRM") == 0)
+			SDL_ShowCursor(SDL_DISABLE);
+	}
+
 	if(win == NULL)
 		goto prog_err;
 
