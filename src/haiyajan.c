@@ -78,8 +78,10 @@ static void print_help(const char *app_name)
 {
 	char str_drivers[256] = "\0";
 	char str_rends[256] = "\0";
+	char str_audio[256] = "\0";
 	const int num_drivers = SDL_GetNumVideoDrivers();
 	const int num_rends = SDL_GetNumRenderDrivers();
+	const int num_audio = SDL_GetNumAudioDrivers();
 
 	for(int index = 0; index < num_drivers; index++)
 	{
@@ -104,6 +106,18 @@ static void print_help(const char *app_name)
 		SDL_strlcat(str_rends, info.name, SDL_arraysize(str_rends));
 	}
 
+	for(int index = 0; index < num_audio; index++)
+	{
+		if(index != 0)
+		{
+			SDL_strlcat(str_audio, ", ",
+				    SDL_arraysize(str_audio));
+		}
+
+		SDL_strlcat(str_audio, SDL_GetAudioDriver(index),
+				SDL_arraysize(str_audio));
+	}
+
 	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
 		    "Usage: %s [OPTIONS] -L CORE FILE\n"
 		    "  -h, --help      Show this help message.\n"
@@ -111,14 +125,15 @@ static void print_help(const char *app_name)
 		    "within 5 seconds.\n"
 		    "  -L, --libretro  Path to libretro core.\n"
 	            "\n"
-		    "\n"
 	     "Available video drivers: %s\n"
 	     "Available render drivers: %s\n"
+	     "Available audio output devices: %s\n"
 	     "You may set the video and render drivers with the usual SDL2 "
 		"environment variables respectively:\n"
 	     "  SDL_VIDEODRIVER\n"
-	     "  SDL_RENDER_DRIVER\n",
-	     app_name, str_drivers, str_rends);
+	     "  SDL_RENDER_DRIVER\n"
+	     "  SDL_AUDIO_DRIVER\n",
+	     app_name, str_drivers, str_rends, str_audio);
 }
 
 static uint_fast8_t process_args(int argc, char **argv, struct cmd_args_s *args)
