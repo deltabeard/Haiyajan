@@ -1,5 +1,4 @@
 CFLAGS := -std=c99 -g3 -fPIE -Wall -Wextra -pipe -I./inc $(shell sdl2-config --cflags)
-CFLAGS += $(OPT)
 
 ifeq ($(DEBUG),1)
 	CFLAGS += -D DEBUG=1 -D SDL_ASSERT_LEVEL=3
@@ -9,6 +8,7 @@ else
 	CFLAGS += -Werror -D SDL_ASSERT_LEVEL=1 -fPIE -flto=auto -fno-fat-lto-objects
 	OPT ?= -O2
 endif
+CFLAGS += $(OPT)
 
 ifeq ($(STATIC),1)
 	LDLIBS := $(shell sdl2-config --static-libs)
