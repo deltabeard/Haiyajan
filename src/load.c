@@ -18,7 +18,11 @@
 #include <libretro.h>
 #include <load.h>
 
-#define NUM_ELEMS(x) (sizeof(x) / sizeof(*x))
+#ifdef __GNUC__
+#define FUNC_OPTIMIZE_SMALL __attribute__((optimize("Os")))
+#else
+#define FUNC_OPTIMIZE_SMALL
+#endif
 
 uint_fast8_t load_libretro_file(const char *file, struct core_ctx_s *ctx)
 {
@@ -77,7 +81,7 @@ uint_fast8_t load_libretro_file(const char *file, struct core_ctx_s *ctx)
 	return 0;
 }
 
-uint_fast8_t load_libretro_core(const char *so_file, struct core_ctx_s *ctx)
+uint_fast8_t FUNC_OPTIMIZE_SMALL load_libretro_core(const char *so_file, struct core_ctx_s *ctx)
 {
 	struct fn_links_s
 	{
@@ -159,7 +163,7 @@ uint_fast8_t load_libretro_core(const char *so_file, struct core_ctx_s *ctx)
 	if(ctx->handle == NULL)
 		return 1;
 
-	for(uint_fast8_t i = 0; i < NUM_ELEMS(fn_links); i++)
+	for(uint_fast8_t i = 0; i < SDL_arraysize(fn_links); i++)
 	{
 		*fn_links[i].fn_ptr.sdl_fn =
 			SDL_LoadFunction(ctx->handle, fn_links[i].fn_str);

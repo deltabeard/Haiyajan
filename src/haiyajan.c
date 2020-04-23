@@ -26,6 +26,12 @@
 #include <load.h>
 #include <play.h>
 
+#ifdef __GNUC__
+#define FUNC_OPTIMIZE_SMALL __attribute__((optimize("Os")))
+#else
+#define FUNC_OPTIMIZE_SMALL
+#endif
+
 struct cmd_args_s
 {
 	char *file_core;
@@ -33,7 +39,7 @@ struct cmd_args_s
 	unsigned char benchmark : 1;
 };
 
-static uint_fast8_t __attribute__((optimize("Os"))) prerun_checks(void)
+static uint_fast8_t FUNC_OPTIMIZE_SMALL prerun_checks(void)
 {
 	SDL_version compiled;
 	SDL_version linked;
@@ -104,7 +110,7 @@ static void __attribute__((optimize("Os"))) print_info(void)
 		    str_feat[0] == '\0' ? "no additional instructions" : str_feat);
 }
 
-static void __attribute__((optimize("Os"))) print_help(void)
+static void FUNC_OPTIMIZE_SMALL print_help(void)
 {
 	char str[256];
 	const int num_drivers = SDL_GetNumVideoDrivers();
@@ -164,8 +170,7 @@ static void __attribute__((optimize("Os"))) print_help(void)
 			"  SDL_AUDIODRIVER\n");
 }
 
-static uint_fast8_t __attribute__((optimize("Os")))
-process_args(int argc, char **argv, struct cmd_args_s *args)
+static uint_fast8_t FUNC_OPTIMIZE_SMALL process_args(int argc, char **argv, struct cmd_args_s *args)
 {
 	const struct optparse_long longopts[] = {
 		{ "libretro", 'L', OPTPARSE_REQUIRED },
