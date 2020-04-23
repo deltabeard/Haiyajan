@@ -33,7 +33,7 @@ struct cmd_args_s
 	unsigned char benchmark : 1;
 };
 
-static uint_fast8_t prerun_checks(void)
+static uint_fast8_t __attribute__((optimize("Os"))) prerun_checks(void)
 {
 	SDL_version compiled;
 	SDL_version linked;
@@ -67,11 +67,11 @@ static uint_fast8_t prerun_checks(void)
 	return 0;
 }
 
-static void print_info(void)
+static void __attribute__((optimize("Os"))) print_info(void)
 {
 	struct features_s {
 		SDL_bool (*get_cpu_feat)(void);
-		const char feat_name[6];
+		const char *const feat_name;
 	};
 	const struct features_s cpu_features[] = {
 		{ SDL_Has3DNow,	"3DNow"	},
@@ -104,72 +104,74 @@ static void print_info(void)
 		    str_feat == '\0' ? "no additional instructions" : str_feat);
 }
 
-static void print_help(void)
+static void __attribute__((optimize("Os"))) print_help(void)
 {
-	char str_drivers[256] = "\0";
-	char str_rends[256] = "\0";
-	char str_audio[256] = "\0";
+	char str[256];
 	const int num_drivers = SDL_GetNumVideoDrivers();
 	const int num_rends = SDL_GetNumRenderDrivers();
 	const int num_audio = SDL_GetNumAudioDrivers();
 
+	fprintf(stderr, "\n"
+			"Usage: haiyajan [OPTIONS] -L CORE FILE\n"
+			"  -h, --help      Show this help message.\n"
+			"  -v, --verbose   Print verbose log messages.\n"
+			"  -b, --benchmark Measures how many frames are "
+			"rendered within 5 seconds.\n"
+			"  -L, --libretro  Path to libretro core.\n"
+			"\n");
+
+	str[0] = '\0';
 	for(int index = 0; index < num_drivers; index++)
 	{
 		if(index != 0)
-		{
-			SDL_strlcat(str_drivers, ", ",
-				    SDL_arraysize(str_drivers));
-		}
+			SDL_strlcat(str, ", ", SDL_arraysize(str));
 
-		SDL_strlcat(str_drivers, SDL_GetVideoDriver(index),
-			    SDL_arraysize(str_drivers));
+		SDL_strlcat(str, SDL_GetVideoDriver(index),
+			    SDL_arraysize(str));
 	}
+	fprintf(stderr, "Available video drivers: %s\n",
+			num_drivers >= 0 ? str : "Error");
 
+	str[0] = '\0';
 	for(int index = 0; index < num_rends; index++)
 	{
 		SDL_RendererInfo info;
 
 		if(index != 0)
-			SDL_strlcat(str_rends, ", ", SDL_arraysize(str_rends));
+			SDL_strlcat(str, ", ", SDL_arraysize(str));
 
 		SDL_GetRenderDriverInfo(index, &info);
-		SDL_strlcat(str_rends, info.name, SDL_arraysize(str_rends));
+		SDL_strlcat(str, info.name, SDL_arraysize(str));
 	}
+	fprintf(stderr, "Available render drivers: %s\n",
+			num_rends >= 0 ? str : "Error");
 
+	str[0] = '\0';
 	for(int index = 0; index < num_audio; index++)
 	{
 		if(index != 0)
 		{
-			SDL_strlcat(str_audio, ", ",
-				    SDL_arraysize(str_audio));
+			SDL_strlcat(str, ", ", SDL_arraysize(str));
 		}
 
-		SDL_strlcat(str_audio, SDL_GetAudioDriver(index),
-				SDL_arraysize(str_audio));
+		SDL_strlcat(str, SDL_GetAudioDriver(index), SDL_arraysize(str));
 	}
+	fprintf(stderr, "Available audio output devices: %s\n",
+			num_audio >= 0 ? str : "Error");
 
-	fprintf(stderr, "\n"
-		    "Usage: haiyajan [OPTIONS] -L CORE FILE\n"
-		    "  -h, --help      Show this help message.\n"
-		    "  -b, --benchmark Measures how many frames are rendered "
-		    "within 5 seconds.\n"
-		    "  -L, --libretro  Path to libretro core.\n"
-	            "\n"
-	     "Available video drivers: %s\n"
-	     "Available render drivers: %s\n"
-	     "Available audio output devices: %s\n"
-	     "You may set the video and render drivers with the usual SDL2 "
-		"environment variables respectively:\n"
-	     "  SDL_VIDEODRIVER\n"
-	     "  SDL_RENDER_DRIVER\n"
-	     "  SDL_AUDIO_DRIVER\n",
-	     str_drivers, str_rends, str_audio);
+	fprintf(stderr, "The following environment variables may be used to "
+			"select a specific driver:\n"
+			"  SDL_VIDEODRIVER\n"
+			"  SDL_RENDER_DRIVER\n"
+			"  SDL_AUDIO_DRIVER\n");
 }
 
-static uint_fast8_t process_args(int argc, char **argv, struct cmd_args_s *args)
+static uint_fast8_t __attribute__((optimize("Os")))
+process_args(int argc, char **argv, struct cmd_args_s *args)
 {
 	const struct optparse_long longopts[] = {
 		{ "libretro", 'L', OPTPARSE_REQUIRED },
+		{ "verbose", 'v', OPTPARSE_NONE },
 		{ "benchmark", 'b', OPTPARSE_NONE },
 		{ "help", 'h', OPTPARSE_NONE },
 		{ 0 }
@@ -188,6 +190,10 @@ static uint_fast8_t process_args(int argc, char **argv, struct cmd_args_s *args)
 		{
 		case 'L':
 			args->file_core = SDL_strdup(options.optarg);
+			break;
+
+		case 'v':
+			SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE);
 			break;
 
 		case 'b':
