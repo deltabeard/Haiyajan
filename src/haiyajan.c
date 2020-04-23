@@ -150,9 +150,7 @@ static void __attribute__((optimize("Os"))) print_help(void)
 	for(int index = 0; index < num_audio; index++)
 	{
 		if(index != 0)
-		{
 			SDL_strlcat(str, ", ", SDL_arraysize(str));
-		}
 
 		SDL_strlcat(str, SDL_GetAudioDriver(index), SDL_arraysize(str));
 	}
@@ -163,7 +161,7 @@ static void __attribute__((optimize("Os"))) print_help(void)
 			"select a specific driver:\n"
 			"  SDL_VIDEODRIVER\n"
 			"  SDL_RENDER_DRIVER\n"
-			"  SDL_AUDIO_DRIVER\n");
+			"  SDL_AUDIODRIVER\n");
 }
 
 static uint_fast8_t __attribute__((optimize("Os")))
