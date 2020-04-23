@@ -27,10 +27,12 @@
 #include <play.h>
 
 #ifdef __GNUC__
-#define FUNC_OPTIMIZE_SMALL __attribute__((optimize("Os")))
+#define FUNC_OPTIMIZE_SMALL	__attribute__((optimize("Os")))
 #else
 #define FUNC_OPTIMIZE_SMALL
 #endif
+
+#define BENCHMARK_DUR_SEC	20
 
 struct cmd_args_s
 {
@@ -120,9 +122,9 @@ static void FUNC_OPTIMIZE_SMALL print_help(void)
 			"  -h, --help      Show this help message.\n"
 			"  -v, --verbose   Print verbose log messages.\n"
 			"  -b, --benchmark Measures how many frames are "
-			"rendered within 5 seconds.\n"
+			"rendered within %d seconds.\n"
 			"  -L, --libretro  Path to libretro core.\n"
-			"\n");
+			"\n", BENCHMARK_DUR_SEC);
 
 	str[0] = '\0';
 	for(int index = 0; index < num_drivers; index++)
@@ -327,7 +329,8 @@ int main(int argc, char *argv[])
 	if(args.benchmark)
 	{
 		SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-			    "Running benchmark for 20 seconds, please wait.");
+			    "Running benchmark for %d seconds, please wait.",
+			    BENCHMARK_DUR_SEC);
 	}
 
 	SDL_Event event;
