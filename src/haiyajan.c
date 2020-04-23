@@ -324,7 +324,17 @@ int main(int argc, char *argv[])
 				 ctx.game_logical_res.h);
 	// SDL_RenderSetIntegerScale(ctx.disp_rend, SDL_ENABLE);
 
+	if(args.benchmark)
+	{
+		SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+			    "Running benchmark for 20 seconds, please wait.");
+	}
+
 	SDL_Event event;
+	const Uint32 start_ticks = SDL_GetTicks();
+	Uint32 delta_ticks = 1;
+	uint_fast32_t frames = 0;
+
 	while(1)
 	{
 		SDL_PollEvent(&event);
@@ -342,6 +352,24 @@ int main(int argc, char *argv[])
 		}
 
 		SDL_RenderPresent(ctx.disp_rend);
+
+		if(args.benchmark == 0)
+			continue;
+
+		/* Whilst running benchmark, flush the audio queue when it
+		 * increases above 128 KiB to reduce memory usage. */
+		if(SDL_GetQueuedAudioSize(ctx.audio_dev) > (128 * 1024))
+			SDL_ClearQueuedAudio(ctx.audio_dev);
+
+		frames++;
+		if((delta_ticks = (SDL_GetTicks() - start_ticks)) >= (20 * 1000))
+			break;
+	}
+
+	if(args.benchmark)
+	{
+		double fps = (double)frames / ((double)delta_ticks / 1000.0);
+		SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "FPS: %.2f", fps);
 	}
 
 	ret = EXIT_SUCCESS;
