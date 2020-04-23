@@ -267,7 +267,7 @@ int main(int argc, char *argv[])
 	if(prerun_checks() != 0)
 		exit(EXIT_FAILURE);
 
-	if(SDL_Init(SDL_INIT_EVERYTHING) != 0)
+	if(SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
 				"SDL initialisation failed: %s",
