@@ -39,7 +39,7 @@ struct cmd_args_s
 	unsigned char benchmark : 1;
 };
 
-static uint_fast8_t FUNC_OPTIMIZE_SMALL prerun_checks(void)
+static void FUNC_OPTIMIZE_SMALL prerun_checks(void)
 {
 	SDL_version compiled;
 	SDL_version linked;
@@ -55,7 +55,7 @@ static uint_fast8_t FUNC_OPTIMIZE_SMALL prerun_checks(void)
 				"compiled with (%d). "
 				"Please recompile Haiyajan and try again.",
 				linked.major, compiled.major);
-		return 1;
+		exit(EXIT_FAILURE);
 	}
 
 	if(SDL_VERSIONNUM(compiled.major, compiled.minor, compiled.patch) !=
@@ -69,11 +69,9 @@ static uint_fast8_t FUNC_OPTIMIZE_SMALL prerun_checks(void)
 			linked.major, linked.minor, linked.patch,
 			compiled.major, compiled.minor, compiled.patch);
 	}
-
-	return 0;
 }
 
-static void __attribute__((optimize("Os"))) print_info(void)
+static void FUNC_OPTIMIZE_SMALL print_info(void)
 {
 	struct features_s {
 		SDL_bool (*get_cpu_feat)(void);
@@ -170,7 +168,7 @@ static void FUNC_OPTIMIZE_SMALL print_help(void)
 			"  SDL_AUDIODRIVER\n");
 }
 
-static uint_fast8_t FUNC_OPTIMIZE_SMALL process_args(int argc, char **argv, struct cmd_args_s *args)
+static void FUNC_OPTIMIZE_SMALL process_args(char **argv, struct cmd_args_s *args)
 {
 	const struct optparse_long longopts[] = {
 		{ "libretro", 'L', OPTPARSE_REQUIRED },
@@ -181,10 +179,6 @@ static uint_fast8_t FUNC_OPTIMIZE_SMALL process_args(int argc, char **argv, stru
 	};
 	int option;
 	struct optparse options;
-
-	(void) argc;
-
-	SDL_memset(args, 0, sizeof(struct cmd_args_s));
 
 	optparse_init(&options, argv);
 	while((option = optparse_long(&options, longopts, NULL)) != -1)
@@ -210,7 +204,7 @@ static uint_fast8_t FUNC_OPTIMIZE_SMALL process_args(int argc, char **argv, stru
 		case '?':
 			SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "%s",
 					options.errmsg);
-			return 1;
+			goto err;
 		}
 	}
 
@@ -218,15 +212,36 @@ static uint_fast8_t FUNC_OPTIMIZE_SMALL process_args(int argc, char **argv, stru
 	char *arg = optparse_arg(&options);
 	if(arg != NULL)
 		args->file_content = SDL_strdup(arg);
+	else
+	{
+		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
+				"The path to the content file was not given");
+		goto err;
+	}
 
-	return 0;
+	if(args->file_core == NULL)
+	{
+		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
+				"The path to a libretro core was not given");
+		goto err;
+	}
+
+	return;
+
+err:
+	print_help();
+	exit(EXIT_FAILURE);
 }
 
 int main(int argc, char *argv[])
 {
+	int ret = EXIT_FAILURE;
 	struct core_ctx_s ctx = { 0 };
+	struct cmd_args_s args = { 0 };
 	SDL_Window *win = NULL;
-	struct cmd_args_s args;
+
+	/* Ignore argc being unused warning. */
+	(void) argc;
 
 #ifdef _WIN32
 	/* Windows (MinGW) does not unbuffer stderr by default. */
@@ -243,31 +258,11 @@ int main(int argc, char *argv[])
 			PROG_NAME " Libretro Interface -- " REL_VERSION
 			" (" GIT_VERSION ")");
 
-	if(process_args(argc, argv, &args) != 0 ||
-		args.file_core == NULL || args.file_content == NULL)
-	{
-		if(args.file_core == NULL)
-		{
-			SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-					"The path to a libretro core was not given");
-		}
-
-		if(args.file_content == NULL)
-		{
-			SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-					"The path to the content file was not given");
-		}
-
-		print_help();
-		exit(EXIT_FAILURE);
-	}
-
+	process_args(argv, &args);
 	print_info();
+	prerun_checks();
 
-	if(prerun_checks() != 0)
-		exit(EXIT_FAILURE);
-
-	if(SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0)
+	if(SDL_Init(SDL_INIT_AUDIO | SDL_INIT_EVENTS) != 0)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
 				"SDL initialisation failed: %s",
@@ -275,24 +270,30 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	if(SDL_VideoInit(args.benchmark ? "offscreen" : NULL) != 0)
+	{
+		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
+				"Error initializing SDL video:  %s\n",
+				SDL_GetError());
+		exit(EXIT_FAILURE);
+	}
+
 	win = SDL_CreateWindow(PROG_NAME, SDL_WINDOWPOS_UNDEFINED,
 			       SDL_WINDOWPOS_UNDEFINED, 320, 240,
 			       SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-
 	if(win == NULL)
-		goto prog_err;
+		goto err;
 
 	ctx.disp_rend = SDL_CreateRenderer(
 		win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-
 	if(ctx.disp_rend == NULL)
-		goto prog_err;
+		goto err;
 
 	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 		       "Created window and renderer");
 
 	if(load_libretro_core(args.file_core, &ctx))
-		goto core_err;
+		goto err;
 
 	/* TODO:
 	 * - Check that input file is supported by core
@@ -311,7 +312,7 @@ int main(int argc, char *argv[])
 	play_init_cb(&ctx);
 
 	if(load_libretro_file(args.file_content, &ctx) != 0)
-		goto file_err;
+		goto err;
 
 	if(play_init_av(&ctx) != 0)
 		goto err;
@@ -343,30 +344,33 @@ int main(int argc, char *argv[])
 		SDL_RenderPresent(ctx.disp_rend);
 	}
 
-	unload_libretro_file(&ctx);
-	unload_libretro_core(&ctx);
-	play_deinit_cb(&ctx);
+	ret = EXIT_SUCCESS;
+
+out:
+	if(ctx.env.status_bits.game_loaded)
+		unload_libretro_file(&ctx);
+
+	if(ctx.env.status_bits.core_init)
+	{
+		unload_libretro_core(&ctx);
+		play_deinit_cb(&ctx);
+	}
+
 	SDL_DestroyRenderer(ctx.disp_rend);
 	SDL_DestroyWindow(win);
-	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Exiting gracefully.");
 	SDL_Quit();
 
-	exit(EXIT_SUCCESS);
+	if(ret == EXIT_SUCCESS)
+	{
+		SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+			    "Exiting gracefully.");
+	}
+
+	exit(ret);
 
 err:
 	SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
 			"Exiting due to an error. %s", SDL_GetError());
-	unload_libretro_file(&ctx);
 
-file_err:
-	unload_libretro_core(&ctx);
-
-core_err:
-	play_deinit_cb(&ctx);
-
-prog_err:
-	SDL_DestroyRenderer(ctx.disp_rend);
-	SDL_DestroyWindow(win);
-	SDL_Quit();
-	exit(EXIT_FAILURE);
+	goto out;
 }
