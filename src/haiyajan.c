@@ -101,7 +101,7 @@ static void __attribute__((optimize("Os"))) print_info(void)
 	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
 	"%s platform, %d core CPU, featuring %s\n",
 		    SDL_GetPlatform(), SDL_GetCPUCount(),
-		    str_feat == '\0' ? "no additional instructions" : str_feat);
+		    str_feat[0] == '\0' ? "no additional instructions" : str_feat);
 }
 
 static void __attribute__((optimize("Os"))) print_help(void)
