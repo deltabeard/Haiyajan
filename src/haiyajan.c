@@ -69,12 +69,42 @@ static uint_fast8_t prerun_checks(void)
 
 static void print_info(void)
 {
+	struct features_s {
+		SDL_bool (*get_cpu_feat)(void);
+		const char feat_name[6];
+	};
+	const struct features_s cpu_features[] = {
+		{ SDL_Has3DNow,	"3DNow"	},
+		{ SDL_HasAVX,	"AVX"	},
+		{ SDL_HasAVX2,	"AVX2"	},
+		{ SDL_HasAltiVec, "VMX"	},
+		{ SDL_HasMMX,	"MMX"	},
+		{ SDL_HasRDTSC,	"RDTSC"	},
+		{ SDL_HasSSE,	"SSE"	},
+		{ SDL_HasSSE2,	"SSE2"	},
+		{ SDL_HasSSE3,	"SSE3"	},
+		{ SDL_HasSSE41,	"SSE41"	},
+		{ SDL_HasSSE42,	"SSE42"	}
+	};
+	char str_feat[128] = "\0";
+
+	for(size_t i = 0; i < SDL_arraysize(cpu_features); i++)
+	{
+		if(cpu_features[i].get_cpu_feat() == SDL_FALSE)
+			continue;
+
+		SDL_strlcat(str_feat, cpu_features[i].feat_name,
+			    SDL_arraysize(str_feat));
+		SDL_strlcat(str_feat, " ", SDL_arraysize(str_feat));
+	}
+
 	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-		    PROG_NAME " Libretro Interface -- " REL_VERSION
-		    " (" GIT_VERSION ")\n");
+	"%s platform, %d core CPU, featuring %s\n",
+		    SDL_GetPlatform(), SDL_GetCPUCount(),
+		    str_feat == '\0' ? "no additional instructions" : str_feat);
 }
 
-static void print_help(const char *app_name)
+static void print_help(void)
 {
 	char str_drivers[256] = "\0";
 	char str_rends[256] = "\0";
@@ -118,8 +148,8 @@ static void print_help(const char *app_name)
 				SDL_arraysize(str_audio));
 	}
 
-	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-		    "Usage: %s [OPTIONS] -L CORE FILE\n"
+	fprintf(stderr, "\n"
+		    "Usage: haiyajan [OPTIONS] -L CORE FILE\n"
 		    "  -h, --help      Show this help message.\n"
 		    "  -b, --benchmark Measures how many frames are rendered "
 		    "within 5 seconds.\n"
@@ -133,7 +163,7 @@ static void print_help(const char *app_name)
 	     "  SDL_VIDEODRIVER\n"
 	     "  SDL_RENDER_DRIVER\n"
 	     "  SDL_AUDIO_DRIVER\n",
-	     app_name, str_drivers, str_rends, str_audio);
+	     str_drivers, str_rends, str_audio);
 }
 
 static uint_fast8_t process_args(int argc, char **argv, struct cmd_args_s *args)
@@ -165,8 +195,7 @@ static uint_fast8_t process_args(int argc, char **argv, struct cmd_args_s *args)
 			break;
 
 		case 'h':
-			print_info();
-			print_help(argv[0]);
+			print_help();
 			exit(EXIT_SUCCESS);
 
 		case '?':
@@ -195,6 +224,16 @@ int main(int argc, char *argv[])
 	setbuf(stderr, NULL);
 #endif
 
+#ifdef DEBUG
+	SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE);
+#else
+	SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO);
+#endif
+
+	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "%s\n",
+			PROG_NAME " Libretro Interface -- " REL_VERSION
+			" (" GIT_VERSION ")");
+
 	if(process_args(argc, argv, &args) != 0 ||
 		args.file_core == NULL || args.file_content == NULL)
 	{
@@ -210,8 +249,7 @@ int main(int argc, char *argv[])
 					"The path to the content file was not given");
 		}
 
-		print_info();
-		print_help(argv[0]);
+		print_help();
 		exit(EXIT_FAILURE);
 	}
 
@@ -227,12 +265,6 @@ int main(int argc, char *argv[])
 				SDL_GetError());
 		exit(EXIT_FAILURE);
 	}
-
-#ifdef DEBUG
-	SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE);
-#else
-	SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO);
-#endif
 
 	win = SDL_CreateWindow(PROG_NAME, SDL_WINDOWPOS_UNDEFINED,
 			       SDL_WINDOWPOS_UNDEFINED, 320, 240,
