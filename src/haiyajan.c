@@ -26,6 +26,10 @@
 #include <load.h>
 #include <play.h>
 
+#define PROG_NAME	"Haiyajan"
+#define PROG_NAME_LEN	strlen(PROG_NAME)
+#define MAX_TITLE_LEN	56
+
 #ifdef __GNUC__
 #define FUNC_OPTIMIZE_SMALL	__attribute__((optimize("Os")))
 #else
