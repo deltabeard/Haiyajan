@@ -254,11 +254,7 @@ int main(int argc, char *argv[])
 	setbuf(stderr, NULL);
 #endif
 
-#ifdef DEBUG
-	SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE);
-#else
 	SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO);
-#endif
 
 	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "%s\n",
 			PROG_NAME " Libretro Interface -- " REL_VERSION
