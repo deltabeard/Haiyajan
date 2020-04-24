@@ -18,13 +18,8 @@
 #include <libretro.h>
 #include <load.h>
 
-#ifdef __GNUC__
-#define FUNC_OPTIMIZE_SMALL __attribute__((optimize("Os")))
-#else
-#define FUNC_OPTIMIZE_SMALL
-#endif
-
-uint_fast8_t load_libretro_file(const char *file, struct core_ctx_s *ctx)
+uint_fast8_t load_libretro_file(const char *restrict file,
+				struct core_ctx_s *restrict ctx)
 {
 	/* TODO:
 	 * - Check whether file must be loaded into RAM, or is read straight
@@ -81,7 +76,8 @@ uint_fast8_t load_libretro_file(const char *file, struct core_ctx_s *ctx)
 	return 0;
 }
 
-uint_fast8_t FUNC_OPTIMIZE_SMALL load_libretro_core(const char *so_file, struct core_ctx_s *ctx)
+uint_fast8_t load_libretro_core(const char *restrict so_file,
+				struct core_ctx_s *restrict ctx)
 {
 	struct fn_links_s
 	{
@@ -192,7 +188,7 @@ uint_fast8_t FUNC_OPTIMIZE_SMALL load_libretro_core(const char *so_file, struct 
 	return 0;
 }
 
-void unload_libretro_file(struct core_ctx_s *ctx)
+void unload_libretro_file(struct core_ctx_s *restrict ctx)
 {
 	if(ctx->game_data != NULL)
 	{
@@ -203,7 +199,7 @@ void unload_libretro_file(struct core_ctx_s *ctx)
 	ctx->env.status_bits.game_loaded = 0;
 }
 
-void unload_libretro_core(struct core_ctx_s *ctx)
+void unload_libretro_core(struct core_ctx_s *restrict ctx)
 {
 	if(ctx->env.status_bits.game_loaded)
 		unload_libretro_file(ctx);

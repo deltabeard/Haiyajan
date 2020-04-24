@@ -30,12 +30,6 @@
 #define PROG_NAME_LEN	strlen(PROG_NAME)
 #define MAX_TITLE_LEN	56
 
-#ifdef __GNUC__
-#define FUNC_OPTIMIZE_SMALL	__attribute__((optimize("Os")))
-#else
-#define FUNC_OPTIMIZE_SMALL
-#endif
-
 #define BENCHMARK_DUR_SEC	20
 
 struct cmd_args_s
@@ -45,7 +39,7 @@ struct cmd_args_s
 	unsigned char benchmark : 1;
 };
 
-static void FUNC_OPTIMIZE_SMALL prerun_checks(void)
+static void prerun_checks(void)
 {
 	SDL_version compiled;
 	SDL_version linked;
@@ -77,7 +71,7 @@ static void FUNC_OPTIMIZE_SMALL prerun_checks(void)
 	}
 }
 
-static void FUNC_OPTIMIZE_SMALL print_info(void)
+static void print_info(void)
 {
 	struct features_s {
 		SDL_bool (*get_cpu_feat)(void);
@@ -114,7 +108,7 @@ static void FUNC_OPTIMIZE_SMALL print_info(void)
 		    str_feat[0] == '\0' ? "no additional instructions" : str_feat);
 }
 
-static void FUNC_OPTIMIZE_SMALL print_help(void)
+static void print_help(void)
 {
 	char str[256];
 	const int num_drivers = SDL_GetNumVideoDrivers();
@@ -174,7 +168,7 @@ static void FUNC_OPTIMIZE_SMALL print_help(void)
 			"  SDL_AUDIODRIVER\n");
 }
 
-static void FUNC_OPTIMIZE_SMALL process_args(char **argv, struct cmd_args_s *args)
+static void process_args(char **argv, struct cmd_args_s *args)
 {
 	const struct optparse_long longopts[] = {
 		{ "libretro", 'L', OPTPARSE_REQUIRED },
