@@ -190,6 +190,7 @@ static void apply_settings(char **argv, struct cmd_args_s *args)
 	};
 	int option;
 	struct optparse options;
+	char *rem_arg;
 	uint_fast8_t video_init = 0;
 
 	optparse_init(&options, argv);
@@ -240,10 +241,10 @@ static void apply_settings(char **argv, struct cmd_args_s *args)
 	}
 
 	/* Print remaining arguments. */
-	char *arg = optparse_arg(&options);
+	rem_arg = optparse_arg(&options);
 
-	if(arg != NULL)
-		args->file_content = SDL_strdup(arg);
+	if(rem_arg != NULL)
+		args->file_content = SDL_strdup(rem_arg);
 	else
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
