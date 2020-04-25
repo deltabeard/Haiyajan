@@ -50,7 +50,8 @@ struct core_ctx_s
 		void (*retro_cheat_reset)(void);
 		void (*retro_cheat_set)(unsigned index, bool enabled, const char *code);
 		bool (*retro_load_game)(const struct retro_game_info *game);
-		bool (*retro_load_game_special)(unsigned game_type, const struct retro_game_info *info, size_t num_info);
+		bool (*retro_load_game_special)(unsigned game_type,
+			const struct retro_game_info *info, size_t num_info);
 		void (*retro_unload_game)(void);
 		unsigned (*retro_get_region)(void);
 
@@ -88,14 +89,16 @@ struct core_ctx_s
 	struct retro_system_info sys_info;
 	struct retro_system_av_info av_info;
 
-	struct {
+	struct
+	{
 		char core_log_name[8];
 	};
 
 	/* Libretro core environment status. */
 	struct
 	{
-		union {
+		union
+		{
 			struct
 			{
 				unsigned char core_init : 1;

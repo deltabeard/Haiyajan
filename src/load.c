@@ -19,7 +19,7 @@
 #include <load.h>
 
 uint_fast8_t load_libretro_file(const char *restrict file,
-				struct core_ctx_s *restrict ctx)
+	struct core_ctx_s *restrict ctx)
 {
 	/* TODO:
 	 * - Check whether file must be loaded into RAM, or is read straight
@@ -46,11 +46,13 @@ uint_fast8_t load_libretro_file(const char *restrict file,
 		SDL_RWops *game_file;
 
 		game_file = SDL_RWFromFile(file, "rb");
+
 		if(game_file == NULL)
 			return 1;
 
-	        game.size = SDL_RWsize(game_file);
+		game.size = SDL_RWsize(game_file);
 		ctx->game_data = malloc(game.size);
+
 		if(ctx->game_data == NULL)
 		{
 			SDL_SetError("Unable to allocate memory for game.");
@@ -77,7 +79,7 @@ uint_fast8_t load_libretro_file(const char *restrict file,
 }
 
 uint_fast8_t load_libretro_core(const char *restrict so_file,
-				struct core_ctx_s *restrict ctx)
+	struct core_ctx_s *restrict ctx)
 {
 	struct fn_links_s
 	{
@@ -87,7 +89,8 @@ uint_fast8_t load_libretro_core(const char *restrict so_file,
 
 		/* The following is a lot of bloat to appease a compiler warning
 		 * about assigning void pointers to function pointers. */
-		union {
+		union
+		{
 			void **sdl_fn;
 
 			void (**retro_init)(void);
@@ -114,14 +117,16 @@ uint_fast8_t load_libretro_core(const char *restrict so_file,
 			void (**retro_cheat_reset)(void);
 			void (**retro_cheat_set)(unsigned index, bool enabled, const char *code);
 			bool (**retro_load_game)(const struct retro_game_info *game);
-			bool (**retro_load_game_special)(unsigned game_type, const struct retro_game_info *info, size_t num_info);
+			bool (**retro_load_game_special)(unsigned game_type,
+				const struct retro_game_info *info, size_t num_info);
 			void (**retro_unload_game)(void);
 			unsigned (**retro_get_region)(void);
 
 			void *(**retro_get_memory_data)(unsigned id);
 			size_t (**retro_get_memory_size)(unsigned id);
 		} fn_ptr;
-	} const fn_links[] = {
+	} const fn_links[] =
+	{
 		{ "retro_init",			{ .retro_init = &ctx->fn.retro_init } },
 		{ "retro_deinit",		{ .retro_init = &ctx->fn.retro_deinit } },
 		{ "retro_api_version",		{ .retro_api_version = &ctx->fn.retro_api_version } },
@@ -156,6 +161,7 @@ uint_fast8_t load_libretro_core(const char *restrict so_file,
 	};
 
 	ctx->handle = SDL_LoadObject(so_file);
+
 	if(ctx->handle == NULL)
 		return 1;
 

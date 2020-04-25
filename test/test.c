@@ -38,7 +38,7 @@ void test_retro_init(void)
 	if(load_libretro_core(init_so_path, &ctx))
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "%s",
-				SDL_GetError());
+			SDL_GetError());
 		abort();
 	}
 
@@ -66,7 +66,7 @@ void test_retro_av(void)
 	if(load_libretro_core(av_so_path, &ctx))
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "%s",
-				SDL_GetError());
+			SDL_GetError());
 		abort();
 	}
 
@@ -87,7 +87,7 @@ int main(void)
 	if(SDL_Init(SDL_INIT_EVERYTHING) != 0)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-				"Unable to initialize SDL: %s", SDL_GetError());
+			"Unable to initialize SDL: %s", SDL_GetError());
 		return EXIT_FAILURE;
 	}
 

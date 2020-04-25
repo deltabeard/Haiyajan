@@ -35,12 +35,14 @@ static retro_input_state_t input_state_cb;
 
 void retro_get_system_av_info(struct retro_system_av_info *info)
 {
-	info->timing = (struct retro_system_timing){
+	info->timing = (struct retro_system_timing)
+	{
 		.fps = 60.0,
 		.sample_rate = 44100.0,
 	};
 
-	info->geometry = (struct retro_game_geometry){
+	info->geometry = (struct retro_game_geometry)
+	{
 		.base_width = 320,
 		.base_height = 240,
 		.max_width = 320,
@@ -135,8 +137,8 @@ void retro_cheat_reset(void)
 }
 
 bool retro_load_game_special(unsigned game_type,
-			     const struct retro_game_info *info,
-			     size_t num_info)
+	const struct retro_game_info *info,
+	size_t num_info)
 {
 	return false;
 }

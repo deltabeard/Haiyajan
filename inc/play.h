@@ -20,7 +20,8 @@
 
 /* Functions in this file are not thread safe. */
 
-enum {
+enum
+{
 	PLAY_LOG_CATEGORY_CORE = SDL_LOG_CATEGORY_CUSTOM,
 };
 

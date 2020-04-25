@@ -14,7 +14,8 @@ const unsigned height = 240;
 
 static Uint16 *fb;
 
-static struct av_ctx_s {
+static struct av_ctx_s
+{
 	unsigned remaining_frames;
 } av_ctx;
 
@@ -58,12 +59,14 @@ void retro_get_system_info(struct retro_system_info *info)
 
 void retro_get_system_av_info(struct retro_system_av_info *info)
 {
-	info->timing = (struct retro_system_timing){
+	info->timing = (struct retro_system_timing)
+	{
 		.fps = 100.0,
 		.sample_rate = 48000.0,
 	};
 
-	info->geometry = (struct retro_game_geometry){
+	info->geometry = (struct retro_game_geometry)
+	{
 		.base_width = width,
 		.base_height = height,
 		.max_width = width,
@@ -142,9 +145,7 @@ void retro_run(void)
 	}
 
 	for(unsigned i = width * height; i > 0; i--)
-	{
 		*(p++) = colour;
-	}
 
 	video_cb(fb, width, height, width * sizeof(Uint16));
 }
@@ -193,8 +194,8 @@ void retro_cheat_reset(void)
 }
 
 bool retro_load_game_special(unsigned game_type,
-			     const struct retro_game_info *info,
-			     size_t num_info)
+	const struct retro_game_info *info,
+	size_t num_info)
 {
 	return false;
 }

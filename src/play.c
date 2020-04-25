@@ -24,9 +24,9 @@ static struct core_ctx_s *ctx_retro = NULL;
 
 /* Forward declarations. */
 static uint_fast8_t play_reinit_texture(struct core_ctx_s *c,
-					const Uint32 *req_format,
-					const unsigned int *req_width,
-					const unsigned int *req_height);
+	const Uint32 *req_format,
+	const unsigned int *req_width,
+	const unsigned int *req_height);
 
 void play_frame(struct core_ctx_s *ctx)
 {
@@ -51,15 +51,16 @@ void play_libretro_log(enum retro_log_level level, const char *fmt, ...)
 	priority = level + 2;
 
 	va_start(ap, fmt);
+
 	if(SDL_vsnprintf(buf, sizeof(buf), fmt, ap) < 0)
 		SDL_strlcpy(buf, "Unknown log message\n", sizeof(buf));
 
 	va_end(ap);
 
 	SDL_LogMessage(PLAY_LOG_CATEGORY_CORE, priority,
-		       "%.*s: %s",
-			(int)sizeof(ctx_retro->core_log_name),
-			ctx_retro->core_log_name, buf);
+		"%.*s: %s",
+		(int)sizeof(ctx_retro->core_log_name),
+		ctx_retro->core_log_name, buf);
 }
 
 bool cb_retro_environment(unsigned cmd, void *data)
@@ -80,10 +81,10 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		/* Abort if this a paranoid debug build. */
 		SDL_assert_paranoid(ctx_retro->env.status_bits.core_init == 1);
 		SDL_assert_paranoid(ctx_retro->env.status_bits.game_loaded ==
-				    0);
+			0);
 
 		SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
-			       "Set performance level to %u", *perf);
+			"Set performance level to %u", *perf);
 
 		ctx_retro->env.perf_lvl = *perf;
 		break;
@@ -95,6 +96,7 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		/* FIXME: Fix memory leak. */
 		const char **sys_dir = data;
 		*sys_dir = SDL_GetBasePath();
+
 		if(*sys_dir == NULL)
 			return false;
 
@@ -105,8 +107,9 @@ bool cb_retro_environment(unsigned cmd, void *data)
 	{
 		enum retro_pixel_format *fmt = data;
 		const Uint32 fmt_tran[] = { SDL_PIXELFORMAT_RGB555,
-					    SDL_PIXELFORMAT_RGB888,
-					    SDL_PIXELFORMAT_RGB565 };
+				SDL_PIXELFORMAT_RGB888,
+				SDL_PIXELFORMAT_RGB565
+			};
 
 		/* Check that the game hasn't called retro_run() yet. */
 		SDL_assert_paranoid(ctx_retro->env.status_bits.running == 0);
@@ -114,20 +117,20 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		if(*fmt >= NUM_ELEMS(fmt_tran))
 		{
 			SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO,
-				    "Invalid format requested from core.");
+				"Invalid format requested from core.");
 			return false;
 		}
 
 		if(ctx_retro->env.status_bits.running != 0)
 		{
 			SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-				    "Pixel format change was requested, but "
-				    "not from within retro_run().");
+				"Pixel format change was requested, but "
+				"not from within retro_run().");
 			return false;
 		}
 
 		if(play_reinit_texture(ctx_retro, &fmt_tran[*fmt], NULL,
-				       NULL) != 0)
+				NULL) != 0)
 			return false;
 
 		SDL_LogVerbose(
@@ -138,12 +141,14 @@ bool cb_retro_environment(unsigned cmd, void *data)
 	}
 
 #if 0
+
 	case RETRO_ENVIRONMENT_SET_AUDIO_CALLBACK:
 	{
 		struct retro_audio_callback *audio_cb = data;
 		ctx_retro->env.audio_cb = *audio_cb;
 		break;
 	}
+
 #endif
 
 	case RETRO_ENVIRONMENT_GET_LOG_INTERFACE:
@@ -158,20 +163,20 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		const struct retro_game_geometry *geo = data;
 
 		SDL_assert_paranoid(geo->base_height <=
-				    ctx_retro->av_info.geometry.max_height);
+			ctx_retro->av_info.geometry.max_height);
 		SDL_assert_paranoid(geo->base_width <=
-				    ctx_retro->av_info.geometry.max_width);
+			ctx_retro->av_info.geometry.max_width);
 
 		ctx_retro->av_info.geometry.aspect_ratio = geo->aspect_ratio;
 
 		if(play_reinit_texture(ctx_retro, NULL, &geo->base_width,
-				       &geo->base_width) != 0)
+				&geo->base_width) != 0)
 			return false;
 
 		SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
-			       "Modified geometry to %u*%u (%.1f)",
-			       geo->base_width, geo->base_height,
-			       geo->aspect_ratio);
+			"Modified geometry to %u*%u (%.1f)",
+			geo->base_width, geo->base_height,
+			geo->aspect_ratio);
 		break;
 	}
 
@@ -183,7 +188,7 @@ bool cb_retro_environment(unsigned cmd, void *data)
 }
 
 void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
-			    size_t pitch)
+	size_t pitch)
 {
 	SDL_assert(width <= ctx_retro->av_info.geometry.max_width);
 	SDL_assert(height <= ctx_retro->av_info.geometry.max_height);
@@ -197,7 +202,7 @@ void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 	Uint32 format;
 
 	SDL_QueryTexture(ctx_retro->core_tex, &format, NULL, &tex_w,
-			 &tex_h);
+		&tex_h);
 	tex_pitch = tex_w * SDL_BYTESPERPIXEL(format);
 
 	SDL_assert_paranoid(pitch <= tex_pitch);
@@ -207,8 +212,8 @@ void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 	if(SDL_UpdateTexture(ctx_retro->core_tex, NULL, data, pitch) != 0)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-				"Texture could not updated: %s",
-				SDL_GetError());
+			"Texture could not updated: %s",
+			SDL_GetError());
 	}
 
 	return;
@@ -233,7 +238,7 @@ void cb_retro_input_poll(void)
 }
 
 int16_t cb_retro_input_state(unsigned port, unsigned device, unsigned index,
-			     unsigned id)
+	unsigned id)
 {
 	(void)port;
 	(void)device;
@@ -243,9 +248,9 @@ int16_t cb_retro_input_state(unsigned port, unsigned device, unsigned index,
 }
 
 static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
-					const Uint32 *req_format,
-					const unsigned int *req_width,
-					const unsigned int *req_height)
+	const Uint32 *req_format,
+	const unsigned int *req_width,
+	const unsigned int *req_height)
 {
 	float aspect;
 	SDL_Texture *test_texture;
@@ -259,20 +264,20 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 
 	format = req_format != NULL ? *req_format : ctx->env.pixel_fmt;
 	width = req_width != NULL ? *req_width
-				  : ctx->av_info.geometry.base_width;
+		: ctx->av_info.geometry.base_width;
 	height = req_height != NULL ? *req_height
-				    : ctx->av_info.geometry.base_height;
+		: ctx->av_info.geometry.base_height;
 
 	test_texture =
 		SDL_CreateTexture(ctx->disp_rend, format,
-				  SDL_TEXTUREACCESS_STREAMING, width, height);
+			SDL_TEXTUREACCESS_STREAMING, width, height);
 
 	if(test_texture == NULL)
 	{
 		SDL_LogInfo(SDL_LOG_CATEGORY_VIDEO,
-			    "Unable to create texture for the requested "
-			    "format %s: %s",
-			    SDL_GetPixelFormatName(format), SDL_GetError());
+			"Unable to create texture for the requested "
+			"format %s: %s",
+			SDL_GetPixelFormatName(format), SDL_GetError());
 		return 1;
 	}
 
@@ -298,7 +303,7 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 	{
 		ctx->game_logical_res.w = ctx->av_info.geometry.base_width;
 		ctx->game_logical_res.h = SDL_ceilf(
-			(float)ctx->av_info.geometry.base_width / aspect);
+				(float)ctx->av_info.geometry.base_width / aspect);
 	}
 	else
 	{
@@ -308,7 +313,7 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 	}
 
 	SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO, "Created texture: %s %d*%d",
-		       SDL_GetPixelFormatName(format), width, height);
+		SDL_GetPixelFormatName(format), width, height);
 
 	return 0;
 }
@@ -326,21 +331,21 @@ uint_fast8_t play_init_av(struct core_ctx_s *ctx)
 	{
 		ctx->fn.retro_get_system_av_info(&ctx->av_info);
 		SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO,
-			       "Core is requesting %.2f FPS, %.0f Hz, "
-			       "%u*%u, %u*%u, %.1f ratio",
-			       ctx->av_info.timing.fps,
-			       ctx->av_info.timing.sample_rate,
-			       ctx->av_info.geometry.base_width,
-			       ctx->av_info.geometry.base_height,
-			       ctx->av_info.geometry.max_width,
-			       ctx->av_info.geometry.max_height,
-			       ctx->av_info.geometry.aspect_ratio);
+			"Core is requesting %.2f FPS, %.0f Hz, "
+			"%u*%u, %u*%u, %.1f ratio",
+			ctx->av_info.timing.fps,
+			ctx->av_info.timing.sample_rate,
+			ctx->av_info.geometry.base_width,
+			ctx->av_info.geometry.base_height,
+			ctx->av_info.geometry.max_width,
+			ctx->av_info.geometry.max_height,
+			ctx->av_info.geometry.aspect_ratio);
 
 		if(play_reinit_texture(ctx, &ctx->env.pixel_fmt, NULL, NULL) !=
-		   0)
+			0)
 		{
 			SDL_SetError("Unable to create texture: %s",
-				     SDL_GetError());
+				SDL_GetError());
 			return 1;
 		}
 	}
@@ -352,17 +357,18 @@ uint_fast8_t play_init_av(struct core_ctx_s *ctx)
 	want.callback = NULL;
 
 	ctx->audio_dev = SDL_OpenAudioDevice(NULL, 0, &want, NULL,
-					     SDL_AUDIO_ALLOW_FORMAT_CHANGE);
+			SDL_AUDIO_ALLOW_FORMAT_CHANGE);
+
 	if(ctx->audio_dev == 0)
 	{
 		SDL_LogWarn(SDL_LOG_CATEGORY_AUDIO, "Failed to open audio: %s",
-			    SDL_GetError());
+			SDL_GetError());
 	}
 	else
 	{
 		SDL_LogInfo(SDL_LOG_CATEGORY_AUDIO,
-			    "Audio driver %s initialised",
-			    SDL_GetCurrentAudioDriver());
+			"Audio driver %s initialised",
+			SDL_GetCurrentAudioDriver());
 		SDL_PauseAudioDevice(ctx->audio_dev, 0);
 	}
 
@@ -387,13 +393,13 @@ void play_init_cb(struct core_ctx_s *ctx)
 			len = c - ctx->sys_info.library_name;
 
 		printed = SDL_snprintf(ctx->core_log_name,
-				       sizeof(ctx->core_log_name), "%.*s",
-				       (int)len, ctx->sys_info.library_name);
+				sizeof(ctx->core_log_name), "%.*s",
+				(int)len, ctx->sys_info.library_name);
 
 		if(printed < 0)
 		{
 			SDL_strlcpy(ctx->core_log_name, "CORE",
-				    sizeof(ctx->core_log_name));
+				sizeof(ctx->core_log_name));
 		}
 
 		while(printed > 0)
