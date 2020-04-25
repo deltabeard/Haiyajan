@@ -120,10 +120,11 @@ static void print_help(void)
 	fprintf(stderr, "\n"
 		"Usage: haiyajan [OPTIONS] -L CORE FILE\n"
 		"  -h, --help      Show this help message.\n"
+		"  -L, --libretro  Path to libretro core.\n"
 		"  -v, --verbose   Print verbose log messages.\n"
 		"  -b, --benchmark Measures how many frames are "
 		"rendered within %d seconds.\n"
-		"  -L, --libretro  Path to libretro core.\n"
+		"  -V, --video     Video driver to use\n"
 		"\n", BENCHMARK_DUR_SEC);
 
 	str[0] = '\0';
@@ -176,18 +177,20 @@ static void print_help(void)
 		"  SDL_AUDIODRIVER\n");
 }
 
-static void process_args(char **argv, struct cmd_args_s *args)
+static void apply_settings(char **argv, struct cmd_args_s *args)
 {
 	const struct optparse_long longopts[] =
 	{
-		{ "libretro", 'L', OPTPARSE_REQUIRED },
-		{ "verbose", 'v', OPTPARSE_NONE },
-		{ "benchmark", 'b', OPTPARSE_NONE },
-		{ "help", 'h', OPTPARSE_NONE },
+		{ "libretro",	'L', OPTPARSE_REQUIRED },
+		{ "verbose",	'v', OPTPARSE_NONE },
+		{ "benchmark",	'b', OPTPARSE_NONE },
+		{ "video",	'V', OPTPARSE_REQUIRED },
+		{ "help",	'h', OPTPARSE_NONE },
 		{ 0 }
 	};
 	int option;
 	struct optparse options;
+	uint_fast8_t video_init = 0;
 
 	optparse_init(&options, argv);
 
@@ -205,6 +208,24 @@ static void process_args(char **argv, struct cmd_args_s *args)
 
 		case 'b':
 			args->benchmark = 1;
+			break;
+
+		case 'V':
+			if(video_init)
+			{
+				SDL_VideoQuit();
+				video_init = 0;
+			}
+
+			if(SDL_VideoInit(options.optarg) != 0)
+			{
+				SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+					"Unable to initialise specified "
+					"video driver: %s", SDL_GetError());
+			}
+			else
+				video_init = 1;
+
 			break;
 
 		case 'h':
@@ -237,6 +258,15 @@ static void process_args(char **argv, struct cmd_args_s *args)
 		goto err;
 	}
 
+	/* Initialise default video driver if not done so already. */
+	if(video_init == 0 && SDL_VideoInit(NULL) != 0)
+	{
+		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
+			"Unable to initialise a video driver: %s",
+			SDL_GetError());
+		goto err;
+	}
+
 	return;
 
 err:
@@ -265,25 +295,17 @@ int main(int argc, char *argv[])
 		PROG_NAME " Libretro Interface -- " REL_VERSION
 		" (" GIT_VERSION ")");
 
-	process_args(argv, &args);
 	print_info();
 	prerun_checks();
 
 	if(SDL_Init(SDL_INIT_AUDIO | SDL_INIT_EVENTS) != 0)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-			"SDL initialisation failed: %s",
-			SDL_GetError());
+			"SDL initialisation failed: %s", SDL_GetError());
 		exit(EXIT_FAILURE);
 	}
 
-	if(SDL_VideoInit(args.benchmark ? "offscreen" : NULL) != 0)
-	{
-		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-			"Error initializing SDL video:  %s\n",
-			SDL_GetError());
-		exit(EXIT_FAILURE);
-	}
+	apply_settings(argv, &args);
 
 	win = SDL_CreateWindow(PROG_NAME, SDL_WINDOWPOS_UNDEFINED,
 			SDL_WINDOWPOS_UNDEFINED, 320, 240,
@@ -292,8 +314,19 @@ int main(int argc, char *argv[])
 	if(win == NULL)
 		goto err;
 
-	ctx.disp_rend = SDL_CreateRenderer(
-			win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+	/* Disable VSYNC for benchmarks to allow for the content to run faster
+	 * than the screen refresh rate. */
+	if(args.benchmark)
+	{
+		ctx.disp_rend = SDL_CreateRenderer(win, -1,
+				SDL_RENDERER_ACCELERATED);
+	}
+	else
+	{
+		ctx.disp_rend = SDL_CreateRenderer(
+				win, -1,
+				SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+	}
 
 	if(ctx.disp_rend == NULL)
 		goto err;
@@ -397,6 +430,7 @@ out:
 
 	SDL_DestroyRenderer(ctx.disp_rend);
 	SDL_DestroyWindow(win);
+	SDL_VideoQuit();
 	SDL_Quit();
 
 	if(ret == EXIT_SUCCESS)
