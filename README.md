@@ -30,9 +30,10 @@ We welcome bug reports and contributions for all platforms.
 ## License
 Copyright (C) 2020 Mahyar Koshkouei, et al.
 
-Haiyajan is free software release under the **GPLv3**; see the LICENSE file for
-copying conditions. There is NO warranty; not even for MERCHANTABILITY or
-FITNESS FOR A PARTICULAR PURPOSE.
+Haiyajan is free software released under the **GNU Affero General Public
+License Version 3 (AGPL v3)**; see the LICENSE file for copying conditions.
+There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.
 
 # Development
 
