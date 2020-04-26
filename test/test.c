@@ -57,32 +57,26 @@ void test_retro_init(void)
 	ctx.fn.retro_deinit();
 }
 
-static Uint16 fb = 0x0000;
+static Uint16 fb;
 void test_retro_av_video_cb(const void *data, unsigned width, unsigned height,
 			    size_t pitch)
 {
-	static unsigned frame = 1;
 	const Uint16 *buf = data;
 
 	(void) width;
 	(void) height;
 	(void) pitch;
 
-	if(frame % 2 == 0)
-		fb = *buf;
-	else
-		fb = *buf;
-
-	frame++;
-
+	fb = *buf;
 }
 
 void test_retro_av(void)
 {
 	struct core_ctx_s ctx;
 	const char av_so_path[] = "./libretro_av/libretro-av.so";
-	unsigned frames = 0;
-	unsigned display = 0;
+	double core_fps;
+	unsigned frames;
+	unsigned display;
 	struct timer_ctx_s tim;
 
 	/* Continuing tests will result in seg fault.
@@ -96,21 +90,30 @@ void test_retro_av(void)
 
 	{
 		struct retro_system_info info;
+		struct retro_system_av_info av_info;
 		ctx.fn.retro_get_system_info(&info);
+		ctx.fn.retro_get_system_av_info(&av_info);
+		core_fps = av_info.timing.fps;
+
 		lok(strcmp(info.library_name, "Test AV") == 0);
 		lok(strcmp(info.library_version, "1") == 0);
 		lok(info.need_fullpath == false);
 		lok(info.valid_extensions == NULL);
 	}
 
+	timer_init(&tim, core_fps);
 
-	timer_init(&tim, 10.0);
+	/* Reset frame buffer. */
+	fb = 0x0000;
+	frames = 0;
+	display = 0;
 	ctx.fn.retro_init();
 	ctx.fn.retro_set_video_refresh(test_retro_av_video_cb);
 
-	/* Simulating a 10 Hz display. */
-	while(1)
+	do
 	{
+		int delay;
+
 		if(frames % 2 == 0)
 			lok(fb == 0x0000);
 		else
@@ -119,30 +122,106 @@ void test_retro_av(void)
 		ctx.fn.retro_run();
 		frames++;
 
-		if(timer_show_frame(&tim))
-		{
-			/* show frame */
-			display++;
-		}
+		/* Simulate 10 Hz VSYNC. */
+		delay = timer_show_frame(&tim, (1.0/10.0) * 1000.0);
 
-		if(frames == 11)
-		{
-			lok(display == 10);
-			lok(fb == 0xFFFF);
-		}
-		else if(frames == 22)
-		{
-			lok(display == 20);
+		/* There should be no delay or skips, as the display has the
+		 * same refresh rate as the core. */
+		lequal(delay, 0);
+
+		/* Draw frame here. */
+		display++;
+
+		/* For clarity. */
+		lok(display == frames);
+
+		/* End test after 40 frames. */
+	} while(frames < 40);
+
+	timer_init(&tim, core_fps);
+	/* Reset frame buffer. */
+	fb = 0x0000;
+	frames = 0;
+	display = 0;
+	ctx.fn.retro_init();
+	ctx.fn.retro_set_video_refresh(test_retro_av_video_cb);
+	do
+	{
+		int delay = 0;
+
+		if(frames % 2 == 0)
 			lok(fb == 0x0000);
-		}
-		else if(frames == 33)
-		{
-			lok(display == 30);
+		else
 			lok(fb == 0xFFFF);
-		}
 
-		if(frames > 40)
-			break;
+		ctx.fn.retro_run();
+		frames++;
+
+		/* Simulate 8 Hz VSYNC. */
+		delay = timer_show_frame(&tim, (1.0/8.0) * 1000.0);
+		display++;
+
+		/* The timer will report that the frame must be skipped. */
+		lequal(delay, (int)(frames * -25));
+		lok(display == frames);
+	} while(frames < 10);
+
+	timer_init(&tim, core_fps);
+
+	/* Reset frame buffer. */
+	fb = 0x0000;
+	frames = 0;
+	display = 0;
+	ctx.fn.retro_init();
+	ctx.fn.retro_set_video_refresh(test_retro_av_video_cb);
+
+	do
+	{
+		int delay = 0;
+
+		if(frames % 2 == 0)
+			lok(fb == 0x0000);
+		else
+			lok(fb == 0xFFFF);
+
+		ctx.fn.retro_run();
+		frames++;
+
+		/* Simulate 12 Hz VSYNC. */
+		delay = timer_show_frame(&tim, (1.0/12.0) * 1000.0);
+
+		/* There should be no delay or skips, as the display has the
+		 * same refresh rate as the core. */
+
+		/* Draw frame here. */
+		display++;
+
+		lequal(delay, (int)(frames * 17));
+
+		/* As the display is faster than the core, we should always be
+		 * able to draw the frame. */
+		lok(frames == display);
+	} while(frames < 10);
+
+	timer_init(&tim, core_fps);
+	fb = 0x0000;
+	frames = 0;
+	display = 0;
+	ctx.fn.retro_init();
+	ctx.fn.retro_set_video_refresh(test_retro_av_video_cb);
+
+	/* Testing variable frame rate. */
+	{
+		int delay;
+		/* (1/10) * 1000 = 100ms */
+		delay = timer_show_frame(&tim, 125);
+		lequal(delay, -25);
+
+		delay = timer_show_frame(&tim, 50);
+		lequal(delay, 25);
+
+		delay = timer_show_frame(&tim, 125);
+		lequal(delay, 0);
 	}
 
 	ctx.fn.retro_deinit();

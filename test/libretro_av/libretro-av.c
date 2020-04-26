@@ -9,10 +9,10 @@ static retro_environment_t environ_cb;
 static retro_input_poll_t input_poll_cb;
 static retro_input_state_t input_state_cb;
 
-const unsigned width = 1;
-const unsigned height = 1;
+#define LIBRETRO_WIDTH	1
+#define LIBRETRO_HEIGHT	1
 
-static Uint16 *fb;
+static Uint16 fb[LIBRETRO_WIDTH * LIBRETRO_HEIGHT];
 
 /**
  * Tests frameskip, framerate timing and audio timing.
@@ -20,7 +20,7 @@ static Uint16 *fb;
 
 void retro_init(void)
 {
-	fb = SDL_calloc(width * height, sizeof(Uint16));
+	fb[0] = 0x0000;
 }
 
 void retro_deinit(void)
@@ -51,16 +51,16 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 	{
 		/* Every 10 frames, a frame must be skipped when the screen is
 		 * 10 Hz. */
-		.fps = 11,
+		.fps = 10,
 		.sample_rate = 48000.0,
 	};
 
 	info->geometry = (struct retro_game_geometry)
 	{
-		.base_width = width,
-		.base_height = height,
-		.max_width = width,
-		.max_height = height,
+		.base_width = LIBRETRO_WIDTH,
+		.base_height = LIBRETRO_HEIGHT,
+		.max_width = LIBRETRO_WIDTH,
+		.max_height = LIBRETRO_HEIGHT,
 		.aspect_ratio = -1.0,
 	};
 }
@@ -108,11 +108,10 @@ void retro_reset(void)
 
 void retro_run(void)
 {
-	Uint16 *p = fb;
+	fb[0] = ~fb[0];
 
-	*p = ~(*p);
-
-	video_cb(fb, width, height, width * sizeof(Uint16));
+	video_cb(fb, LIBRETRO_WIDTH, LIBRETRO_HEIGHT,
+		 LIBRETRO_WIDTH * sizeof(Uint16));
 }
 
 bool retro_load_game(const struct retro_game_info *info)

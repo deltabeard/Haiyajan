@@ -2,36 +2,33 @@
 
 #include <timer.h>
 
-void timer_init(struct timer_ctx_s *const tim, double display_rate)
+void timer_init(struct timer_ctx_s *const tim, double targ_rate)
 {
-	tim->display_rate = display_rate;
-	tim->timer_accumulator = 0.0;
-	tim->count_prev = SDL_GetTicks();
+	tim->display_ms = (1 / targ_rate) * 1000.0;
+	tim->timer_fract = 0.0;
+	tim->timer_accumulator = 0;
 
 	return;
 }
 
-void timer_pause(struct timer_ctx_s *const tim)
+int timer_show_frame(struct timer_ctx_s *const tim, Uint32 elapsed_ms)
 {
-	(void) tim;
-	return;
-}
+	double delay = tim->display_ms - (double) elapsed_ms;
+	double delay_ms = SDL_floor(delay);
 
-void timer_continue(struct timer_ctx_s *const tim)
-{
-	(void) tim;
-	return;
-}
+	/* FIXME: What happens if the delay is negative? */
+	tim->timer_fract += delay - delay_ms;
 
-unsigned char timer_show_frame(struct timer_ctx_s *const tim)
-{
-	static unsigned frame = 0;
-	(void) tim;
+	if(tim->timer_fract <= -(tim->display_ms))
+		tim->timer_fract += tim->display_ms;
+	else if(tim->timer_fract > 1.0)
+	{
+		double acc_int = SDL_floor(tim->timer_fract);
+		delay_ms += acc_int;
+		tim->timer_fract -= acc_int;
+	}
 
-	frame++;
+	tim->timer_accumulator += (int)delay_ms;
 
-	if(frame % 11 == 0)
-		return 0;
-
-	return 1;
+	return (int)tim->timer_accumulator;
 }
