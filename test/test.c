@@ -19,6 +19,7 @@
 
 #include <load.h>
 #include <haiyajan.h>
+#include <timer.h>
 
 #include "minctest.h"
 
@@ -56,10 +57,33 @@ void test_retro_init(void)
 	ctx.fn.retro_deinit();
 }
 
+static Uint16 fb = 0x0000;
+void test_retro_av_video_cb(const void *data, unsigned width, unsigned height,
+			    size_t pitch)
+{
+	static unsigned frame = 1;
+	const Uint16 *buf = data;
+
+	(void) width;
+	(void) height;
+	(void) pitch;
+
+	if(frame % 2 == 0)
+		fb = *buf;
+	else
+		fb = *buf;
+
+	frame++;
+
+}
+
 void test_retro_av(void)
 {
 	struct core_ctx_s ctx;
 	const char av_so_path[] = "./libretro_av/libretro-av.so";
+	unsigned frames = 0;
+	unsigned display = 0;
+	struct timer_ctx_s tim;
 
 	/* Continuing tests will result in seg fault.
 	 * Abort() for severe failure. */
@@ -79,6 +103,48 @@ void test_retro_av(void)
 		lok(info.valid_extensions == NULL);
 	}
 
+
+	timer_init(&tim, 10.0);
+	ctx.fn.retro_init();
+	ctx.fn.retro_set_video_refresh(test_retro_av_video_cb);
+
+	/* Simulating a 10 Hz display. */
+	while(1)
+	{
+		if(frames % 2 == 0)
+			lok(fb == 0x0000);
+		else
+			lok(fb == 0xFFFF);
+
+		ctx.fn.retro_run();
+		frames++;
+
+		if(timer_show_frame(&tim))
+		{
+			/* show frame */
+			display++;
+		}
+
+		if(frames == 11)
+		{
+			lok(display == 10);
+			lok(fb == 0xFFFF);
+		}
+		else if(frames == 22)
+		{
+			lok(display == 20);
+			lok(fb == 0x0000);
+		}
+		else if(frames == 33)
+		{
+			lok(display == 30);
+			lok(fb == 0xFFFF);
+		}
+
+		if(frames > 40)
+			break;
+	}
+
 	ctx.fn.retro_deinit();
 }
 
@@ -93,6 +159,7 @@ int main(void)
 
 	puts("Executing tests:");
 	lrun("Init", test_retro_init);
+	lrun("Frame Timing", test_retro_av);
 	lresults();
 	return lfails != 0;
 }

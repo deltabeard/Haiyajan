@@ -405,7 +405,6 @@ int main(int argc, char *argv[])
 			SDL_ClearQueuedAudio(ctx.audio_dev);
 
 		frames++;
-
 		if((delta_ticks = (SDL_GetTicks() - start_ticks)) >= (20 * 1000))
 			break;
 	}
