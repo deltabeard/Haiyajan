@@ -25,6 +25,7 @@
 
 #include <load.h>
 #include <play.h>
+#include <timer.h>
 
 #define PROG_NAME	"Haiyajan"
 #define PROG_NAME_LEN	strlen(PROG_NAME)
@@ -378,26 +379,51 @@ int main(int argc, char *argv[])
 	const Uint32 start_ticks = SDL_GetTicks();
 	Uint32 delta_ticks = 1;
 	uint_fast32_t frames = 0;
+	struct timer_ctx_s tim;
+	uint_fast8_t frame_skip = 0;
+	timer_init(&tim, ctx.av_info.timing.fps);
 
 	while(1)
 	{
+		Uint32 ticks_before = SDL_GetTicks();
 		SDL_PollEvent(&event);
 
 		if(event.type == SDL_QUIT)
 			break;
 
 		play_frame(&ctx);
-
-		if(ctx.core_tex != NULL)
-		{
-			SDL_RenderClear(ctx.disp_rend);
-			SDL_RenderCopy(ctx.disp_rend, ctx.core_tex, NULL, NULL);
-		}
-
-		SDL_RenderPresent(ctx.disp_rend);
+		SDL_assert_paranoid(ctx.core_tex != NULL);
 
 		if(args.benchmark == 0)
+		{
+			Uint32 ticks_diff;
+			int delay;
+
+			/* Only draw to screen if we're not falling behind. */
+			if(frame_skip == 0)
+			{
+				SDL_RenderClear(ctx.disp_rend);
+				SDL_RenderCopy(ctx.disp_rend, ctx.core_tex,
+					       NULL, NULL);
+				SDL_RenderPresent(ctx.disp_rend);
+			}
+			else
+				frame_skip--;
+
+			ticks_diff = SDL_TICKS_PASSED(ticks_before, SDL_GetTicks());
+			delay = timer_get_delay(&tim, ticks_diff);
+
+			/* Delay if we're running too fast. */
+			if(delay >= 1)
+				SDL_Delay(delay);
+			else if(delay < 0)
+				frame_skip++;
+
 			continue;
+		}
+
+		/* Benchmark logic only. */
+		SDL_RenderPresent(ctx.disp_rend);
 
 		/* Whilst running benchmark, flush the audio queue when it
 		 * increases above 128 KiB to reduce memory usage. */

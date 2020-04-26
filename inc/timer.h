@@ -5,8 +5,7 @@
 struct timer_ctx_s
 {
 	double display_ms;
-	double timer_fract;
-	int timer_accumulator;
+	double timer_accumulator;
 };
 
 /**
@@ -22,4 +21,4 @@ void timer_init(struct timer_ctx_s *const tim, double targ_rate);
  *
  * \returns	Negative for skip frame, 0 for no delay, else time to delay for..
  */
-int timer_show_frame(struct timer_ctx_s *const tim, Uint32 elapsed_ms);
+int timer_get_delay(struct timer_ctx_s *const tim, Uint32 elapsed_ms);

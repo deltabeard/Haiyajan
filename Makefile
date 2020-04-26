@@ -30,14 +30,14 @@ CFLAGS += -D GIT_VERSION=\"$(GIT_VERSION)\" -D REL_VERSION=\"$(REL_VERSION)\"
 .PHONY: test
 
 all: haiyajan haiyajan.debug
-haiyajan: ./src/haiyajan.o ./src/load.o ./src/play.o
+haiyajan: ./src/haiyajan.o ./src/load.o ./src/play.o ./src/load.o ./src/timer.o
 	+$(CC) $(CFLAGS) -s -o $@ $^ $(LDLIBS)
 
 # Produces a separate executable with debug symbols intact, and strips the
 # main executable.
 # To get information from stack trace: `addr2line -e haiyajan.debug addr`
-haiyajan.debug: ./src/haiyajan.o ./src/load.o ./src/play.o
-	+$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
+haiyajan.debug: haiyajan
+	+$(CC) $(CFLAGS) -o $@ ./src/*.o $(LDLIBS)
 
 test: haiyajan
 	$(MAKE) -C ./test run

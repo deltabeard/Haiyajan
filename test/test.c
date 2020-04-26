@@ -72,6 +72,56 @@ void test_retro_av_video_cb(const void *data, unsigned width, unsigned height,
 
 void test_retro_av(void)
 {
+	struct timer_ctx_s tim;
+
+	{
+		/* Testing 10 FPS core with 10 Hz display. */
+		timer_init(&tim, 10.0);
+
+		lequal(timer_get_delay(&tim, 100),   0);
+		lequal(timer_get_delay(&tim, 90),   10);
+		lequal(timer_get_delay(&tim, 90),   10);
+		lequal(timer_get_delay(&tim, 50),   50);
+
+		lequal(timer_get_delay(&tim, 150),  -50);
+		lequal(timer_get_delay(&tim, 150), -100);
+		lequal(timer_get_delay(&tim, 5),     -5);
+		lequal(timer_get_delay(&tim, 95),     0);
+	}
+
+	{
+		/* Testing 11 FPS core with 10 Hz display. */
+		timer_init(&tim, 11.0);
+
+		lequal(timer_get_delay(&tim, 90),  0);
+		lequal(timer_get_delay(&tim, 90),  1);
+		lequal(timer_get_delay(&tim, 90),  0);
+		lequal(timer_get_delay(&tim, 90),  1);
+
+		lequal(timer_get_delay(&tim, 80), 10);
+		lequal(timer_get_delay(&tim, 80), 11);
+		lequal(timer_get_delay(&tim, 80), 10);
+		lequal(timer_get_delay(&tim, 80), 11);
+		lequal(timer_get_delay(&tim, 101), 0);
+
+		timer_init(&tim, 11.0);
+		for(int i = 1; i < 11; i++)
+			lequal(timer_get_delay(&tim, 100), -9 * i);
+
+		lequal(timer_get_delay(&tim, 100), -100);
+	}
+
+	{
+		/* Testing 10 FPS core with 11 Hz display. */
+		timer_init(&tim, 10.0);
+
+		lequal(timer_get_delay(&tim, 100), 0);
+		lequal(timer_get_delay(&tim, 99), 1);
+		lequal(timer_get_delay(&tim, 101), -1);
+		lequal(timer_get_delay(&tim, 5), 94);
+	}
+
+#if 0
 	struct core_ctx_s ctx;
 	const char av_so_path[] = "./libretro_av/libretro-av.so";
 	double core_fps;
@@ -225,6 +275,7 @@ void test_retro_av(void)
 	}
 
 	ctx.fn.retro_deinit();
+#endif
 }
 
 int main(void)
