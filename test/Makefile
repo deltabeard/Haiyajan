@@ -6,6 +6,9 @@ all: test run
 test: test.o ../src/load.o ../src/timer.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
+../src/load.o: ../src/load.c ../inc/load.h ../inc/haiyajan.h ../inc/libretro.h
+../src/timer.o: ../src/timer.c ../inc/timer.h
+
 libretro-init:
 	$(MAKE) -C ./libretro_init
 

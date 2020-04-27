@@ -31,13 +31,19 @@ CFLAGS += -D GIT_VERSION=\"$(GIT_VERSION)\" -D REL_VERSION=\"$(REL_VERSION)\"
 
 all: haiyajan haiyajan.debug
 haiyajan: ./src/haiyajan.o ./src/load.o ./src/play.o ./src/load.o ./src/timer.o
-	+$(CC) $(CFLAGS) -s -o $@ $^ $(LDLIBS)
+	+$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
-# Produces a separate executable with debug symbols intact, and strips the
-# main executable.
+./src/haiyajan.o: ./src/haiyajan.c ./inc/*.h
+./src/load.o: ./src/load.c ./inc/load.h ./inc/haiyajan.h ./inc/libretro.h
+./src/play.o: ./src/play.c ./inc/play.h ./inc/haiyajan.h ./inc/libretro.h
+./src/timer.o: ./src/timer.c ./inc/timer.h
+
+# Saves debug symbols in a separate file, and strips the main executable.
 # To get information from stack trace: `addr2line -e haiyajan.debug addr`
 haiyajan.debug: haiyajan
-	+$(CC) $(CFLAGS) -o $@ ./src/*.o $(LDLIBS)
+	strip --only-keep-debug -o $@ $<
+	strip -s $<
+	@chmod -x $@
 
 test: haiyajan
 	$(MAKE) -C ./test run
