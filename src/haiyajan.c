@@ -189,7 +189,6 @@ static void apply_settings(char **argv, struct cmd_args_s *args)
 		{ "libretro",	'L', OPTPARSE_REQUIRED },
 		{ "info",	'I', OPTPARSE_NONE },
 		{ "verbose",	'v', OPTPARSE_NONE },
-		{ "benchmark",	'b', OPTPARSE_NONE },
 		{ "video",	'V', OPTPARSE_REQUIRED },
 		{ "version",	 1 , OPTPARSE_NONE },
 		{ "help",	'h', OPTPARSE_NONE },
@@ -216,10 +215,6 @@ static void apply_settings(char **argv, struct cmd_args_s *args)
 
 		case 'v':
 			SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE);
-			break;
-
-		case 'b':
-			args->benchmark = 1;
 			break;
 
 		case 'V':
@@ -341,23 +336,8 @@ int main(int argc, char *argv[])
 	if(win == NULL)
 		goto err;
 
-	/* Disable VSYNC for benchmarks to allow for the content to run faster
-	 * than the screen refresh rate. */
-	if(args.benchmark)
-	{
-		ctx.disp_rend = SDL_CreateRenderer(win, -1,
-				SDL_RENDERER_ACCELERATED);
-		SDL_LogVerbose(SDL_LOG_CATEGORY_RENDER, "Not using VSYNC");
-	}
-	else
-	{
-		ctx.disp_rend = SDL_CreateRenderer(
-				win, -1,
-				SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-		SDL_LogVerbose(SDL_LOG_CATEGORY_RENDER,
-			       "Attempting to enable VSYNC");
-	}
-
+	ctx.disp_rend = SDL_CreateRenderer(
+		win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 	if(ctx.disp_rend == NULL)
 		goto err;
 
@@ -409,27 +389,17 @@ int main(int argc, char *argv[])
 		ctx.game_logical_res.h);
 	// SDL_RenderSetIntegerScale(ctx.disp_rend, SDL_ENABLE);
 
-	if(args.benchmark)
-	{
-		SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-			"Running benchmark for %d seconds, please wait.",
-			BENCHMARK_DUR_SEC);
-	}
-
 	SDL_Event event;
-	const Uint32 start_ticks = SDL_GetTicks();
 	Uint32 ticks_before = SDL_GetTicks();
 	Uint32 delta_ticks = 0;
-	uint_fast32_t frames = 0;
 
 	struct timer_ctx_s tim;
 	int tim_cmd = timer_init(&tim, ctx.av_info.timing.fps);
 
-	/* TODO: Use moving average of 64 frames. */
 	float fps = 0;
 	Uint32 fps_beg = SDL_GetTicks();;
 	Uint32 fps_end = 0;
-	const uint_fast8_t fps_calc_frame_dur = 128;
+	const uint_fast8_t fps_calc_frame_dur = 64;
 	uint_fast8_t fps_curr_frame_dur = fps_calc_frame_dur;
 
 	while(1)
@@ -445,8 +415,10 @@ int main(int argc, char *argv[])
 		}
 		else if(tim_cmd > 0)
 		{
-			SDL_RenderPresent(ctx.disp_rend);
-			SDL_Delay(tim_cmd);
+			do {
+				SDL_RenderPresent(ctx.disp_rend);
+				SDL_Delay(tim_cmd);
+			}while((--tim_cmd) > 0);
 		}
 		else
 		{
@@ -490,26 +462,6 @@ int main(int argc, char *argv[])
 		}
 
 		fps_curr_frame_dur--;
-		frames++;
-
-		/* Benchmark logic only. */
-#if 0
-		if(args.benchmark)
-		{
-			/* Whilst running benchmark, flush the audio queue when
-			 * it increases above 128 KiB to reduce memory usage. */
-			if(SDL_GetQueuedAudioSize(ctx.audio_dev) > (128 * 1024))
-				SDL_ClearQueuedAudio(ctx.audio_dev);
-
-			if((delta_ticks = (SDL_GetTicks() - start_ticks)) >=
-			   (20 * 1000))
-			{
-				break;
-			}
-
-			continue;
-		}
-#endif
 
 		{
 			Uint32 ticks_next = SDL_GetTicks();
@@ -528,17 +480,9 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if(args.benchmark)
-	{
-		delta_ticks = SDL_GetTicks() - start_ticks;
-		double fps = (double)frames / ((double)delta_ticks / 1000.0);
-		SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "FPS: %.2f", fps);
-	}
-
 	ret = EXIT_SUCCESS;
 
 out:
-
 	if(ctx.env.status_bits.game_loaded)
 		unload_libretro_file(&ctx);
 

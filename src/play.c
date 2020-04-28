@@ -364,11 +364,10 @@ uint_fast8_t play_init_av(struct core_ctx_s *ctx)
 	want.freq = ctx->av_info.timing.sample_rate;
 	want.format = AUDIO_S16SYS;
 	want.channels = 2;
-	want.samples = 2048;
+	want.samples = 512;
 	want.callback = NULL;
 
-	ctx->audio_dev = SDL_OpenAudioDevice(NULL, 0, &want, NULL,
-			SDL_AUDIO_ALLOW_FORMAT_CHANGE);
+	ctx->audio_dev = SDL_OpenAudioDevice(NULL, 0, &want, NULL, 0);
 
 	if(ctx->audio_dev == 0)
 	{
