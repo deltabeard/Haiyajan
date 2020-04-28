@@ -20,7 +20,7 @@ int timer_get_delay(struct timer_ctx_s *const tim, Uint32 elapsed_ms)
 		return -1;
 	/* Do not render a new frame for the next VSYNC call. */
 	else if(tim->timer_accumulator < -(tim->core_ms))
-		return SDL_floor(tim->core_ms);
+		return SDL_floor(-(tim->timer_accumulator));
 
 	/* Play the next frame on the next VSYNC call as normal. */
 	return 0;

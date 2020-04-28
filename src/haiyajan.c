@@ -410,10 +410,12 @@ int main(int argc, char *argv[])
 		}
 		else if(tim_cmd > 0)
 		{
-			do {
-				SDL_RenderPresent(ctx.disp_rend);
-				SDL_Delay(tim_cmd);
-			}while((--tim_cmd) > 0);
+#if 0
+			printf("Delay: %d (%u) (%5.2f)\n", tim_cmd, delta_ticks,
+				tim.timer_accumulator);
+#endif
+			SDL_Delay(tim_cmd);
+			SDL_RenderPresent(ctx.disp_rend);
 		}
 		else
 		{

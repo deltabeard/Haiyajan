@@ -43,6 +43,7 @@ haiyajan: ./src/haiyajan.o ./src/load.o ./src/play.o ./src/load.o \
 # To get information from stack trace: `addr2line -e haiyajan.debug addr`
 haiyajan.debug: haiyajan
 	strip --only-keep-debug -o $@ $<
+	strip -s $<
 	@chmod -x $@
 
 test: haiyajan

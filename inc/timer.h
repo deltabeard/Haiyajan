@@ -8,6 +8,9 @@ struct timer_ctx_s
 	double timer_accumulator;
 };
 
+/* TODO: update docs. */
+/* TODO: use Uint64 instead of double. */
+
 /**
  * Initialises the timer context and sets the display refresh rate.
  */
@@ -19,6 +22,6 @@ int timer_init(struct timer_ctx_s *const tim, double emulated_rate);
  * If the content is running too fast, this function will execute an internal
  * delay in order to compensate.
  *
- * \returns	Negative for skip frame, 0 for no delay, else time to delay for..
+ * \returns	Negative for skip frame, 0 for no delay, else time to delay for.
  */
 int timer_get_delay(struct timer_ctx_s *const tim, Uint32 elapsed_ms);
