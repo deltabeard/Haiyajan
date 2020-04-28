@@ -32,13 +32,10 @@
 #define PROG_NAME_LEN	strlen(PROG_NAME)
 #define MAX_TITLE_LEN	56
 
-#define BENCHMARK_DUR_SEC	20
-
 struct cmd_args_s
 {
 	char *file_core;
 	char *file_content;
-	unsigned char benchmark : 1;
 	unsigned char vid_info : 1;
 };
 
@@ -127,10 +124,8 @@ static void print_help(void)
 		"  -L, --libretro  Path to libretro core.\n"
 		"  -I, --info      Print statistics onscreen.\n"
 		"  -v, --verbose   Print verbose log messages.\n"
-		"  -b, --benchmark Measures how many frames are "
-		"rendered within %d seconds.\n"
 		"  -V, --video     Video driver to use\n"
-		"\n", BENCHMARK_DUR_SEC);
+		"\n");
 
 	str[0] = '\0';
 
