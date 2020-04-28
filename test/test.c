@@ -74,19 +74,27 @@ void test_retro_av(void)
 {
 	struct timer_ctx_s tim;
 
+#if 0
 	{
 		/* Testing 10 FPS core with 10 Hz display. */
 		timer_init(&tim, 10.0);
 
 		lequal(timer_get_delay(&tim, 100),   0);
 		lequal(timer_get_delay(&tim, 90),   10);
+		/* SDL_Delay(10); */
 		lequal(timer_get_delay(&tim, 90),   10);
+		/* SDL_Delay(10); */
 		lequal(timer_get_delay(&tim, 50),   50);
+		/* SDL_Delay(50); */
 
 		lequal(timer_get_delay(&tim, 150),  -50);
+		/* Skip next frame */
 		lequal(timer_get_delay(&tim, 150), -100);
+		/* Skip next frame */
 		lequal(timer_get_delay(&tim, 5),     -5);
+		/* Compensate for late frame skip */
 		lequal(timer_get_delay(&tim, 95),     0);
+		/* No delay. Immediately play next frame. */
 	}
 
 	{
@@ -119,6 +127,65 @@ void test_retro_av(void)
 		lequal(timer_get_delay(&tim, 99), 1);
 		lequal(timer_get_delay(&tim, 101), -1);
 		lequal(timer_get_delay(&tim, 5), 94);
+	}
+#endif
+
+	{
+		/* Testing 60.10 FPS core with 60.00 Hz display. */
+		timer_init(&tim, 60.10);
+
+		/* Our computer is really fast, so imagine that the time it
+		 * takes to render a single frame is less than a milisecond.
+		 */
+
+		/* Delta time is -0.10, therefore we need to skip a frame every
+		 * 10 seconds. */
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), -1);
+	}
+
+	{
+		/* Testing 60.00 FPS core with 60.10 Hz display. */
+		timer_init(&tim, 60.00);
+
+		/* Delta time is 0.10, therefore we need to play an extra frame
+		 * every 10 seconds. */
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), 1);
+	}
+
+		{
+		/* Testing 60.10 FPS core with 120.00 Hz display. */
+		timer_init(&tim, 60.10);
+
+		/* Delta time is -0.10, therefore we need to skip a frame every
+		 * 10 seconds. */
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), 0);
+		lequal(timer_get_delay(&tim, 60), -1);
 	}
 
 #if 0

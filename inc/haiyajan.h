@@ -14,8 +14,9 @@
 
 #pragma once
 
-#include "libretro.h"
 #include <SDL2/SDL.h>
+
+#include <libretro.h>
 
 /**
  * Context of libretro core.

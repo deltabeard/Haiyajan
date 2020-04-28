@@ -4,14 +4,14 @@
 
 struct timer_ctx_s
 {
-	double display_ms;
+	double core_ms;
 	double timer_accumulator;
 };
 
 /**
  * Initialises the timer context and sets the display refresh rate.
  */
-void timer_init(struct timer_ctx_s *const tim, double targ_rate);
+int timer_init(struct timer_ctx_s *const tim, double emulated_rate);
 
 /**
  * Returns weather the current frame should be shown or not. A frame may be

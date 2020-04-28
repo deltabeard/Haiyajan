@@ -23,6 +23,7 @@
 #define OPTPARSE_API static
 #include <optparse.h>
 
+#include <font.h>
 #include <load.h>
 #include <play.h>
 #include <timer.h>
@@ -38,6 +39,7 @@ struct cmd_args_s
 	char *file_core;
 	char *file_content;
 	unsigned char benchmark : 1;
+	unsigned char vid_info : 1;
 };
 
 static void prerun_checks(void)
@@ -121,7 +123,9 @@ static void print_help(void)
 	fprintf(stderr, "\n"
 		"Usage: haiyajan [OPTIONS] -L CORE FILE\n"
 		"  -h, --help      Show this help message.\n"
+		"      --version   Print version information.\n"
 		"  -L, --libretro  Path to libretro core.\n"
+		"  -I, --info      Print statistics onscreen.\n"
 		"  -v, --verbose   Print verbose log messages.\n"
 		"  -b, --benchmark Measures how many frames are "
 		"rendered within %d seconds.\n"
@@ -183,9 +187,11 @@ static void apply_settings(char **argv, struct cmd_args_s *args)
 	const struct optparse_long longopts[] =
 	{
 		{ "libretro",	'L', OPTPARSE_REQUIRED },
+		{ "info",	'I', OPTPARSE_NONE },
 		{ "verbose",	'v', OPTPARSE_NONE },
 		{ "benchmark",	'b', OPTPARSE_NONE },
 		{ "video",	'V', OPTPARSE_REQUIRED },
+		{ "version",	 1 , OPTPARSE_NONE },
 		{ "help",	'h', OPTPARSE_NONE },
 		{ 0 }
 	};
@@ -204,6 +210,10 @@ static void apply_settings(char **argv, struct cmd_args_s *args)
 			args->file_core = SDL_strdup(options.optarg);
 			break;
 
+		case 'I':
+			args->vid_info = 1;
+			break;
+
 		case 'v':
 			SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE);
 			break;
@@ -215,20 +225,34 @@ static void apply_settings(char **argv, struct cmd_args_s *args)
 		case 'V':
 			if(video_init)
 			{
+				SDL_LogInfo(SDL_LOG_CATEGORY_VIDEO,
+					"Previously initialised video driver "
+					"%s will be replaced with %s",
+					SDL_GetCurrentVideoDriver(),
+					    options.optarg);
 				SDL_VideoQuit();
 				video_init = 0;
 			}
 
 			if(SDL_VideoInit(options.optarg) != 0)
 			{
-				SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+				SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO,
 					"Unable to initialise specified "
 					"video driver: %s", SDL_GetError());
 			}
 			else
+			{
+				SDL_LogInfo(SDL_LOG_CATEGORY_VIDEO,
+					"%s was successfully initialised",
+					options.optarg);
 				video_init = 1;
+			}
 
 			break;
+
+		case 1:
+			/* Version information has already been printed. */
+			exit(EXIT_SUCCESS);
 
 		case 'h':
 			print_help();
@@ -282,6 +306,7 @@ int main(int argc, char *argv[])
 	struct core_ctx_s ctx = { 0 };
 	struct cmd_args_s args = { 0 };
 	SDL_Window *win = NULL;
+	font_ctx *font = NULL;
 
 	/* Ignore argc being unused warning. */
 	(void) argc;
@@ -322,12 +347,15 @@ int main(int argc, char *argv[])
 	{
 		ctx.disp_rend = SDL_CreateRenderer(win, -1,
 				SDL_RENDERER_ACCELERATED);
+		SDL_LogVerbose(SDL_LOG_CATEGORY_RENDER, "Not using VSYNC");
 	}
 	else
 	{
 		ctx.disp_rend = SDL_CreateRenderer(
 				win, -1,
 				SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+		SDL_LogVerbose(SDL_LOG_CATEGORY_RENDER,
+			       "Attempting to enable VSYNC");
 	}
 
 	if(ctx.disp_rend == NULL)
@@ -335,6 +363,19 @@ int main(int argc, char *argv[])
 
 	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 		"Created window and renderer");
+
+	if(args.vid_info == 1)
+	{
+		font = FontStartup(ctx.disp_rend);
+		if(font == NULL)
+		{
+			SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+				"Unable to start font drawer: %s",
+				SDL_GetError());
+			/* Disable font drawing on error. */
+			args.vid_info = 0;
+		}
+	}
 
 	if(load_libretro_core(args.file_core, &ctx))
 		goto err;
@@ -377,66 +418,119 @@ int main(int argc, char *argv[])
 
 	SDL_Event event;
 	const Uint32 start_ticks = SDL_GetTicks();
-	Uint32 delta_ticks = 1;
+	Uint32 ticks_before = SDL_GetTicks();
+	Uint32 delta_ticks = 0;
 	uint_fast32_t frames = 0;
+
 	struct timer_ctx_s tim;
-	uint_fast8_t frame_skip = 0;
-	timer_init(&tim, ctx.av_info.timing.fps);
+	int tim_cmd = timer_init(&tim, ctx.av_info.timing.fps);
+
+	/* TODO: Use moving average of 64 frames. */
+	float fps = 0;
+	Uint32 fps_beg = SDL_GetTicks();;
+	Uint32 fps_end = 0;
+	const uint_fast8_t fps_calc_frame_dur = 128;
+	uint_fast8_t fps_curr_frame_dur = fps_calc_frame_dur;
 
 	while(1)
 	{
-		Uint32 ticks_before = SDL_GetTicks();
 		SDL_PollEvent(&event);
 
 		if(event.type == SDL_QUIT)
 			break;
 
-		play_frame(&ctx);
-		SDL_assert_paranoid(ctx.core_tex != NULL);
-
-		if(args.benchmark == 0)
+		if(tim_cmd < 0)
 		{
-			Uint32 ticks_diff;
-			int delay;
+			play_frame(&ctx);
+		}
+		else if(tim_cmd > 0)
+		{
+			SDL_RenderPresent(ctx.disp_rend);
+			SDL_Delay(tim_cmd);
+		}
+		else
+		{
+			play_frame(&ctx);
+
+			SDL_RenderClear(ctx.disp_rend);
+			SDL_RenderCopy(ctx.disp_rend, ctx.core_tex, NULL, NULL);
+
+			if(args.vid_info)
+			{
+				char busy_str[10] = { '\0' };
+				char fps_str[10] = { '\0' };
+				char acc_str[10] = { '\0' };
+				SDL_Rect dim = {
+					.w = 1, .h = 1, .x = 0, .y = 0
+				};
+				Uint32 ticks_busy = SDL_GetTicks();
+				Uint32 busy_diff = ticks_busy - ticks_before;
+
+				SDL_snprintf(busy_str, 10, "%d ms", busy_diff);
+				SDL_snprintf(fps_str, 10, "%5.2f", fps);
+				SDL_snprintf(acc_str, 10, "%5.2f",
+					     tim.timer_accumulator);
+
+				SDL_SetRenderDrawColor(ctx.disp_rend, 0xFF,
+						       0xFF, 0xFF, 0xFF);
+				FontPrintToRenderer(font, busy_str, &dim);
+
+				dim.y += FONT_CHAR_HEIGHT + 1;
+				FontPrintToRenderer(font, fps_str, &dim);
+
+				dim.y += FONT_CHAR_HEIGHT + 1;
+				FontPrintToRenderer(font, acc_str, &dim);
+
+				SDL_SetRenderDrawColor(ctx.disp_rend, 0, 0, 0,
+						       0);
+			}
 
 			/* Only draw to screen if we're not falling behind. */
-			if(frame_skip == 0)
+			SDL_RenderPresent(ctx.disp_rend);
+		}
+
+		fps_curr_frame_dur--;
+		frames++;
+
+		/* Benchmark logic only. */
+#if 0
+		if(args.benchmark)
+		{
+			/* Whilst running benchmark, flush the audio queue when
+			 * it increases above 128 KiB to reduce memory usage. */
+			if(SDL_GetQueuedAudioSize(ctx.audio_dev) > (128 * 1024))
+				SDL_ClearQueuedAudio(ctx.audio_dev);
+
+			if((delta_ticks = (SDL_GetTicks() - start_ticks)) >=
+			   (20 * 1000))
 			{
-				SDL_RenderClear(ctx.disp_rend);
-				SDL_RenderCopy(ctx.disp_rend, ctx.core_tex,
-					       NULL, NULL);
-				SDL_RenderPresent(ctx.disp_rend);
+				break;
 			}
-			else
-				frame_skip--;
-
-			ticks_diff = SDL_TICKS_PASSED(ticks_before, SDL_GetTicks());
-			delay = timer_get_delay(&tim, ticks_diff);
-
-			/* Delay if we're running too fast. */
-			if(delay >= 1)
-				SDL_Delay(delay);
-			else if(delay < 0)
-				frame_skip++;
 
 			continue;
 		}
+#endif
 
-		/* Benchmark logic only. */
-		SDL_RenderPresent(ctx.disp_rend);
+		{
+			Uint32 ticks_next = SDL_GetTicks();
+			delta_ticks = ticks_next - ticks_before;
+			tim_cmd = timer_get_delay(&tim, delta_ticks);
+			ticks_before = ticks_next;
+		}
 
-		/* Whilst running benchmark, flush the audio queue when it
-		 * increases above 128 KiB to reduce memory usage. */
-		if(SDL_GetQueuedAudioSize(ctx.audio_dev) > (128 * 1024))
-			SDL_ClearQueuedAudio(ctx.audio_dev);
-
-		frames++;
-		if((delta_ticks = (SDL_GetTicks() - start_ticks)) >= (20 * 1000))
-			break;
+		if(fps_curr_frame_dur == 0)
+		{
+			fps_end = SDL_GetTicks();
+			Uint32 fps_delta = fps_end - fps_beg;
+			fps = 1000.0 / ((double)fps_delta / (double)fps_calc_frame_dur);
+			fps_curr_frame_dur = fps_calc_frame_dur;
+			fps_beg = fps_end;
+		}
 	}
 
 	if(args.benchmark)
 	{
+		delta_ticks = SDL_GetTicks() - start_ticks;
 		double fps = (double)frames / ((double)delta_ticks / 1000.0);
 		SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "FPS: %.2f", fps);
 	}

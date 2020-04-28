@@ -2,32 +2,26 @@
 
 #include <timer.h>
 
-void timer_init(struct timer_ctx_s *const tim, double targ_rate)
+int timer_init(struct timer_ctx_s *const tim, double emulated_rate)
 {
-	tim->display_ms = (1 / targ_rate) * 1000.0;
+	tim->core_ms = (1.0 / emulated_rate) * 1000.0;
 	tim->timer_accumulator = 0.0;
 
-	return;
+	return 0;
 }
 
 int timer_get_delay(struct timer_ctx_s *const tim, Uint32 elapsed_ms)
 {
-	double delay = tim->display_ms - (double) elapsed_ms;
-	double delay_ms = SDL_floor(delay);
+	tim->timer_accumulator += elapsed_ms;
+	tim->timer_accumulator -= tim->core_ms;
 
-	/* FIXME: What happens if the delay is negative? */
-	tim->timer_accumulator += delay - delay_ms;
+	/* Render the next frame immediately without waiting for VSYNC. */
+	if(tim->timer_accumulator > tim->core_ms)
+		return -1;
+	/* Do not render a new frame for the next VSYNC call. */
+	else if(tim->timer_accumulator < -(tim->core_ms))
+		return SDL_floor(tim->core_ms);
 
-	if(tim->timer_accumulator <= -(tim->display_ms))
-	{
-		tim->timer_accumulator += tim->display_ms;
-	}
-	else if(tim->timer_accumulator > 1.0)
-	{
-		double acc_int = SDL_floor(tim->timer_accumulator);
-		delay_ms += acc_int;
-		tim->timer_accumulator -= acc_int;
-	}
-
-	return (int)delay_ms;
+	/* Play the next frame on the next VSYNC call as normal. */
+	return 0;
 }

@@ -260,6 +260,15 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 	unsigned width;
 	unsigned height;
 
+	if(ctx->env.status_bits.game_loaded == 0)
+	{
+		SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO, "Not initialising video "
+			"until game is loaded.");
+		ctx_retro->env.pixel_fmt = req_format != NULL ?
+			*req_format : SDL_PIXELFORMAT_RGB555;
+		return 0;
+	}
+
 	/* Only initialise video if the core hasn't requested it earlier. */
 	if(ctx->core_tex == NULL)
 		ctx->fn.retro_get_system_av_info(&ctx->av_info);

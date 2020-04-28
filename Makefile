@@ -30,7 +30,8 @@ CFLAGS += -D GIT_VERSION=\"$(GIT_VERSION)\" -D REL_VERSION=\"$(REL_VERSION)\"
 .PHONY: test
 
 all: haiyajan haiyajan.debug
-haiyajan: ./src/haiyajan.o ./src/load.o ./src/play.o ./src/load.o ./src/timer.o
+haiyajan: ./src/haiyajan.o ./src/load.o ./src/play.o ./src/load.o \
+		./src/timer.o ./src/font.o
 	+$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 ./src/haiyajan.o: ./src/haiyajan.c ./inc/*.h
@@ -42,7 +43,6 @@ haiyajan: ./src/haiyajan.o ./src/load.o ./src/play.o ./src/load.o ./src/timer.o
 # To get information from stack trace: `addr2line -e haiyajan.debug addr`
 haiyajan.debug: haiyajan
 	strip --only-keep-debug -o $@ $<
-	strip -s $<
 	@chmod -x $@
 
 test: haiyajan
