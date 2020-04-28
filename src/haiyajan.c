@@ -408,17 +408,11 @@ int main(int argc, char *argv[])
 		{
 			play_frame(&ctx);
 		}
-		else if(tim_cmd > 0)
-		{
-#if 0
-			printf("Delay: %d (%u) (%5.2f)\n", tim_cmd, delta_ticks,
-				tim.timer_accumulator);
-#endif
-			SDL_Delay(tim_cmd);
-			SDL_RenderPresent(ctx.disp_rend);
-		}
 		else
 		{
+			if(tim_cmd > 0)
+				SDL_Delay(tim_cmd);
+
 			play_frame(&ctx);
 
 			SDL_RenderClear(ctx.disp_rend);

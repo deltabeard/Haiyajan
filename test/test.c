@@ -131,6 +131,18 @@ void test_retro_av(void)
 #endif
 
 	{
+		/* Testing 10 FPS core with 10 Hz display. */
+		timer_init(&tim, 10.0);
+
+		/* Should be perfectly in sync. */
+		for(unsigned i = 10; i > 0; i--)
+			lequal(timer_get_delay(&tim, 100), 0);
+
+		lfequal(tim.core_ms, 100.0);
+		lfequal(tim.timer_accumulator, 0.0);
+	}
+
+	{
 		/* Testing 60.10 FPS core with 60.00 Hz display. */
 		timer_init(&tim, 60.10);
 
@@ -140,6 +152,10 @@ void test_retro_av(void)
 
 		/* Delta time is -0.10, therefore we need to skip a frame every
 		 * 10 seconds. */
+
+		/* Delta time is 0.10, therefore we need to play an extra frame
+		 * every 10 seconds. */
+		lequal(timer_get_delay(&tim, 1), 0);
 		lequal(timer_get_delay(&tim, 60), 0);
 		lequal(timer_get_delay(&tim, 60), 0);
 		lequal(timer_get_delay(&tim, 60), 0);
@@ -148,13 +164,19 @@ void test_retro_av(void)
 		lequal(timer_get_delay(&tim, 60), 0);
 		lequal(timer_get_delay(&tim, 60), 0);
 		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), -1);
+		lequal(timer_get_delay(&tim, 60), 1);
 	}
 
 	{
 		/* Testing 60.00 FPS core with 60.10 Hz display. */
 		timer_init(&tim, 60.00);
+
+		/* Our computer is really fast, so imagine that the time it
+		 * takes to render a single frame is less than a milisecond.
+		 */
+
+		/* Delta time is -0.10, therefore we need to skip a frame every
+		 * 10 seconds. */
 
 		/* Delta time is 0.10, therefore we need to play an extra frame
 		 * every 10 seconds. */
