@@ -19,13 +19,12 @@ endif
 
 GIT_VERSION := $(shell git rev-parse --short HEAD 2>/dev/null)
 REL_VERSION := $(shell git describe --tags 2>/dev/null)
-ifeq ($(GIT_VERSION),)
-	GIT_VERSION := NO_GIT
+ifneq ($(GIT_VERSION),)
+	CFLAGS += -D GIT_VERSION=\"$(GIT_VERSION)\"
 endif
-ifeq ($(REL_VERSION),)
-	REL_VERSION := UNRELEASED
+ifneq ($(REL_VERSION),)
+	CFLAGS += -D REL_VERSION=\"$(REL_VERSION)\"
 endif
-CFLAGS += -D GIT_VERSION=\"$(GIT_VERSION)\" -D REL_VERSION=\"$(REL_VERSION)\"
 
 .PHONY: test
 

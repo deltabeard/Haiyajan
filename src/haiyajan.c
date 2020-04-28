@@ -32,6 +32,13 @@
 #define PROG_NAME_LEN	strlen(PROG_NAME)
 #define MAX_TITLE_LEN	56
 
+#ifndef REL_VERSION
+#define REL_VERSION "UNRELEASED"
+#endif
+#ifndef GIT_VERSION
+#define GIT_VERSION "NONE"
+#endif
+
 struct cmd_args_s
 {
 	char *file_core;
@@ -308,9 +315,9 @@ int main(int argc, char *argv[])
 
 	SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO);
 
-	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "%s\n",
-		PROG_NAME " Libretro Interface -- " REL_VERSION
-		" (" GIT_VERSION ")");
+	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+		    "%s Libretro Interface -- %s (GIT %s)\n",
+		    PROG_NAME, REL_VERSION, GIT_VERSION);
 
 	print_info();
 	prerun_checks();
@@ -429,9 +436,9 @@ int main(int argc, char *argv[])
 				Uint32 ticks_busy = SDL_GetTicks();
 				Uint32 busy_diff = ticks_busy - ticks_before;
 
-				SDL_snprintf(busy_str, 10, "%d ms", busy_diff);
-				SDL_snprintf(fps_str, 10, "%5.2f", fps);
-				SDL_snprintf(acc_str, 10, "%5.2f",
+				SDL_snprintf(busy_str, 10, "%02d ms", busy_diff);
+				SDL_snprintf(fps_str, 10, "%6.2f", fps);
+				SDL_snprintf(acc_str, 10, "%6.2f",
 					     tim.timer_accumulator);
 
 				SDL_SetRenderDrawColor(ctx.disp_rend, 0xFF,
