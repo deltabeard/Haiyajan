@@ -312,16 +312,140 @@ err:
 	exit(EXIT_FAILURE);
 }
 
+static void run(struct core_ctx_s *ctx, struct cmd_args_s *args)
+{
+	font_ctx *font;
+	SDL_Event event;
+	Uint32 ticks_before, ticks_next, delta_ticks;
+	struct timer_ctx_s tim;
+	int tim_cmd;
+	float fps = 0.0F;
+	Uint32 fps_beg;
+	const uint_fast8_t fps_calc_frame_dur = 64;
+	uint_fast8_t fps_curr_frame_dur = fps_calc_frame_dur;
+
+	font = FontStartup(ctx->disp_rend);
+
+	if(font == NULL)
+	{
+		SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+			"Unable to start font drawer: %s", SDL_GetError());
+		/* Disable font drawing on error. */
+		args->vid_info = 0;
+	}
+
+	tim_cmd = timer_init(&tim, ctx->av_info.timing.fps);
+	ticks_before = fps_beg = SDL_GetTicks();
+
+	while(1)
+	{
+		SDL_PollEvent(&event);
+
+		if(event.type == SDL_QUIT)
+			break;
+
+		if(tim_cmd < 0)
+		{
+			play_frame(ctx);
+			goto timing;
+		}
+
+		if(tim_cmd > 0)
+			SDL_Delay(tim_cmd);
+
+		play_frame(ctx);
+
+		SDL_RenderClear(ctx->disp_rend);
+		SDL_RenderCopy(ctx->disp_rend, ctx->core_tex, NULL, NULL);
+
+		if(args->vid_info)
+		{
+			static char busy_str[10] = { '\0' };
+			static char fps_str[10] = { '\0' };
+			static char acc_str[10] = { '\0' };
+			static char aud_str[10] = { '\0' };
+			const SDL_Rect font_bg =
+			{
+				.w = 10 * FONT_CHAR_WIDTH,
+				.h = 4 * (FONT_CHAR_HEIGHT + 1),
+				.x = 0,
+				.y = 0
+			};
+			SDL_Rect dim = { .w = 1, .h = 1, .x = 0, .y = 0 };
+			Uint32 ticks_busy = SDL_GetTicks();
+			Uint32 busy_diff = ticks_busy - ticks_before;
+
+			/* Only update every five frames to make values
+			 * readable. */
+			if(fps_curr_frame_dur % 5 == 0)
+			{
+				SDL_snprintf(busy_str, 10, "%6u ms", busy_diff);
+				SDL_snprintf(acc_str, 10, "%6.2f ms",
+					tim.timer_accumulator);
+				SDL_snprintf(aud_str, 10, "%6lu",
+					SDL_GetQueuedAudioSize(ctx->audio_dev) /
+					sizeof(Uint16) / 2);
+			}
+
+			/* Update only after FPS has been recalculated. */
+			if(fps_curr_frame_dur == fps_calc_frame_dur)
+				SDL_snprintf(fps_str, 10, "%6.2f Hz", fps);
+
+			SDL_SetRenderDrawColor(ctx->disp_rend,
+				0x00, 0x00, 0x00, 0x40);
+			SDL_RenderFillRect(ctx->disp_rend, &font_bg);
+
+			SDL_SetRenderDrawColor(ctx->disp_rend,
+				0xFF, 0xFF, 0xFF, 0xFF);
+			FontPrintToRenderer(font, busy_str, &dim);
+
+			dim.y += FONT_CHAR_HEIGHT + 1;
+			FontPrintToRenderer(font, fps_str, &dim);
+
+			dim.y += FONT_CHAR_HEIGHT + 1;
+			FontPrintToRenderer(font, acc_str, &dim);
+
+			dim.y += FONT_CHAR_HEIGHT + 1;
+			FontPrintToRenderer(font, aud_str, &dim);
+
+			SDL_SetRenderDrawColor(ctx->disp_rend,
+				0x00, 0x00, 0x00, 0x00);
+		}
+
+		/* Only draw to screen if we're not falling behind. */
+		SDL_RenderPresent(ctx->disp_rend);
+
+timing:
+		ticks_next = SDL_GetTicks();
+		delta_ticks = ticks_next - ticks_before;
+		tim_cmd = timer_get_delay(&tim, delta_ticks);
+		ticks_before = ticks_next;
+
+		fps_curr_frame_dur--;
+
+		if(fps_curr_frame_dur == 0)
+		{
+			Uint32 fps_delta;
+			Uint32 fps_end = SDL_GetTicks();
+			fps_delta = fps_end - fps_beg;
+			fps = 1000.0F / ((float)fps_delta / (float)fps_calc_frame_dur);
+			fps_curr_frame_dur = fps_calc_frame_dur;
+			fps_beg = fps_end;
+		}
+	}
+
+	FontExit(font);
+}
+
 int main(int argc, char *argv[])
 {
 	int ret = EXIT_FAILURE;
 	struct core_ctx_s ctx = { 0 };
 	struct cmd_args_s args = { 0 };
 	SDL_Window *win = NULL;
-	font_ctx *font = NULL;
 
 	/* Ignore argc being unused warning. */
-	(void) argc;
+	(void)argc;
 
 #ifdef _WIN32
 	/* Windows (MinGW) does not unbuffer stderr by default. */
@@ -331,8 +455,8 @@ int main(int argc, char *argv[])
 	SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO);
 
 	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-		    "%s Libretro Interface -- %s (GIT %s)\n",
-		    PROG_NAME, REL_VERSION, GIT_VERSION);
+		"%s Libretro Interface -- %s (GIT %s)\n", PROG_NAME,
+		REL_VERSION, GIT_VERSION);
 
 	print_info();
 	prerun_checks();
@@ -340,7 +464,8 @@ int main(int argc, char *argv[])
 	if(SDL_Init(SDL_INIT_AUDIO | SDL_INIT_EVENTS) != 0)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-			"SDL initialisation failed: %s", SDL_GetError());
+			"SDL initialisation failed: %s",
+			SDL_GetError());
 		exit(EXIT_FAILURE);
 	}
 
@@ -354,25 +479,13 @@ int main(int argc, char *argv[])
 		goto err;
 
 	ctx.disp_rend = SDL_CreateRenderer(
-		win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+			win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+
 	if(ctx.disp_rend == NULL)
 		goto err;
 
 	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 		"Created window and renderer");
-
-	if(args.vid_info == 1)
-	{
-		font = FontStartup(ctx.disp_rend);
-		if(font == NULL)
-		{
-			SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-				"Unable to start font drawer: %s",
-				SDL_GetError());
-			/* Disable font drawing on error. */
-			args.vid_info = 0;
-		}
-	}
 
 	if(load_libretro_core(args.file_core, &ctx))
 		goto err;
@@ -404,128 +517,17 @@ int main(int argc, char *argv[])
 	SDL_SetWindowSize(win, ctx.game_logical_res.w, ctx.game_logical_res.h);
 	SDL_RenderSetLogicalSize(ctx.disp_rend, ctx.game_logical_res.w,
 		ctx.game_logical_res.h);
+
 	if(args.vid_info)
 		SDL_SetRenderDrawBlendMode(ctx.disp_rend, SDL_BLENDMODE_BLEND);
+
 	// SDL_RenderSetIntegerScale(ctx.disp_rend, SDL_ENABLE);
 
-	SDL_Event event;
-	Uint32 ticks_before = SDL_GetTicks();
-	Uint32 delta_ticks = 0;
-
-	struct timer_ctx_s tim;
-	int tim_cmd = timer_init(&tim, ctx.av_info.timing.fps);
-
-	float fps = 0;
-	Uint32 fps_beg = SDL_GetTicks();;
-	Uint32 fps_end = 0;
-	const uint_fast8_t fps_calc_frame_dur = 64;
-	uint_fast8_t fps_curr_frame_dur = fps_calc_frame_dur;
-
-	while(1)
-	{
-		SDL_PollEvent(&event);
-
-		if(event.type == SDL_QUIT)
-			break;
-
-		if(tim_cmd < 0)
-		{
-			play_frame(&ctx);
-		}
-		else
-		{
-			if(tim_cmd > 0)
-				SDL_Delay(tim_cmd);
-
-			play_frame(&ctx);
-
-			SDL_RenderClear(ctx.disp_rend);
-			SDL_RenderCopy(ctx.disp_rend, ctx.core_tex, NULL, NULL);
-
-			if(args.vid_info)
-			{
-				static char busy_str[10] = { '\0' };
-				static char fps_str[10] = { '\0' };
-				static char acc_str[10] = { '\0' };
-				static char aud_str[10] = { '\0' };
-				SDL_Rect dim = {
-					.w = 1, .h = 1, .x = 0, .y = 0
-				};
-				const SDL_Rect font_bg = {
-					.w = 10 * FONT_CHAR_WIDTH,
-					.h = 4 * (FONT_CHAR_HEIGHT + 1),
-					.x = 0,
-					.y = 0
-				};
-				Uint32 ticks_busy = SDL_GetTicks();
-				Uint32 busy_diff = ticks_busy - ticks_before;
-
-				/* Only update every five frames to make values
-				 * readable. */
-				if(fps_curr_frame_dur % 5 == 0)
-				{
-				SDL_snprintf(busy_str, 10, "%6u ms",
-					     busy_diff);
-				SDL_snprintf(acc_str, 10, "%6.2f ms",
-					     tim.timer_accumulator);
-				SDL_snprintf(aud_str, 10, "%6lu",
-					     SDL_GetQueuedAudioSize(ctx.audio_dev) / sizeof(Uint16) / 2);
-				}
-
-				/* Update only after FPS has been recalculated.
-				 */
-				if(fps_curr_frame_dur == fps_calc_frame_dur)
-				{
-					SDL_snprintf(fps_str, 10, "%6.2f Hz",
-						     fps);
-				}
-
-				SDL_SetRenderDrawColor(ctx.disp_rend, 0x00,
-						       0x00, 0x00, 0x40);
-				SDL_RenderFillRect(ctx.disp_rend, &font_bg);
-
-				SDL_SetRenderDrawColor(ctx.disp_rend, 0xFF,
-						       0xFF, 0xFF, 0xFF);
-				FontPrintToRenderer(font, busy_str, &dim);
-
-				dim.y += FONT_CHAR_HEIGHT + 1;
-				FontPrintToRenderer(font, fps_str, &dim);
-
-				dim.y += FONT_CHAR_HEIGHT + 1;
-				FontPrintToRenderer(font, acc_str, &dim);
-
-				dim.y += FONT_CHAR_HEIGHT + 1;
-				FontPrintToRenderer(font, aud_str, &dim);
-
-				SDL_SetRenderDrawColor(ctx.disp_rend, 0, 0, 0,
-						       0);
-			}
-
-			/* Only draw to screen if we're not falling behind. */
-			SDL_RenderPresent(ctx.disp_rend);
-		}
-
-		{
-			Uint32 ticks_next = SDL_GetTicks();
-			delta_ticks = ticks_next - ticks_before;
-			tim_cmd = timer_get_delay(&tim, delta_ticks);
-			ticks_before = ticks_next;
-		}
-
-		fps_curr_frame_dur--;
-		if(fps_curr_frame_dur == 0)
-		{
-			fps_end = SDL_GetTicks();
-			Uint32 fps_delta = fps_end - fps_beg;
-			fps = 1000.0 / ((double)fps_delta / (double)fps_calc_frame_dur);
-			fps_curr_frame_dur = fps_calc_frame_dur;
-			fps_beg = fps_end;
-		}
-	}
-
+	run(&ctx, &args);
 	ret = EXIT_SUCCESS;
 
 out:
+
 	if(ctx.env.status_bits.game_loaded)
 		unload_libretro_file(&ctx);
 
@@ -540,7 +542,6 @@ out:
 	SDL_VideoQuit();
 	SDL_Quit();
 	free_settings(&args);
-	FontExit(font);
 
 	if(ret == EXIT_SUCCESS)
 	{

@@ -59,7 +59,7 @@ void test_retro_init(void)
 
 static Uint16 fb;
 void test_retro_av_video_cb(const void *data, unsigned width, unsigned height,
-			    size_t pitch)
+	size_t pitch)
 {
 	const Uint16 *buf = data;
 
@@ -113,6 +113,7 @@ void test_retro_av(void)
 		lequal(timer_get_delay(&tim, 101), 0);
 
 		timer_init(&tim, 11.0);
+
 		for(int i = 1; i < 11; i++)
 			lequal(timer_get_delay(&tim, 100), -9 * i);
 
@@ -192,7 +193,7 @@ void test_retro_av(void)
 		lequal(timer_get_delay(&tim, 60), 1);
 	}
 
-		{
+	{
 		/* Testing 60.10 FPS core with 120.00 Hz display. */
 		timer_init(&tim, 60.10);
 
@@ -262,7 +263,7 @@ void test_retro_av(void)
 		frames++;
 
 		/* Simulate 10 Hz VSYNC. */
-		delay = timer_show_frame(&tim, (1.0/10.0) * 1000.0);
+		delay = timer_show_frame(&tim, (1.0 / 10.0) * 1000.0);
 
 		/* There should be no delay or skips, as the display has the
 		 * same refresh rate as the core. */
@@ -284,6 +285,7 @@ void test_retro_av(void)
 	display = 0;
 	ctx.fn.retro_init();
 	ctx.fn.retro_set_video_refresh(test_retro_av_video_cb);
+
 	do
 	{
 		int delay = 0;
@@ -297,7 +299,7 @@ void test_retro_av(void)
 		frames++;
 
 		/* Simulate 8 Hz VSYNC. */
-		delay = timer_show_frame(&tim, (1.0/8.0) * 1000.0);
+		delay = timer_show_frame(&tim, (1.0 / 8.0) * 1000.0);
 		display++;
 
 		/* The timer will report that the frame must be skipped. */
@@ -327,7 +329,7 @@ void test_retro_av(void)
 		frames++;
 
 		/* Simulate 12 Hz VSYNC. */
-		delay = timer_show_frame(&tim, (1.0/12.0) * 1000.0);
+		delay = timer_show_frame(&tim, (1.0 / 12.0) * 1000.0);
 
 		/* There should be no delay or skips, as the display has the
 		 * same refresh rate as the core. */

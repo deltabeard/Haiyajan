@@ -179,9 +179,10 @@ font_ctx *FontStartup(SDL_Renderer *renderer)
 
 	SDL_memcpy(pixels, bitmap_font, FONT_BITMAP_SIZE);
 	bmp_surf = SDL_CreateRGBSurfaceFrom(pixels,
-	                                    FONT_BITMAP_WIDTH,
-	                                    FONT_BITMAP_HEIGHT,
-	                                    1, FONT_PITCH, 0, 0, 0, 0);
+			FONT_BITMAP_WIDTH,
+			FONT_BITMAP_HEIGHT,
+			1, FONT_PITCH, 0, 0, 0, 0);
+
 	if(bmp_surf == NULL)
 		goto err;
 
@@ -198,6 +199,7 @@ font_ctx *FontStartup(SDL_Renderer *renderer)
 	}
 
 	ctx->tex = SDL_CreateTextureFromSurface(renderer, bmp_surf);
+
 	if(ctx->tex == NULL)
 	{
 		SDL_FreeSurface(bmp_surf);
@@ -224,7 +226,7 @@ void FontDrawSize(const size_t text_len, int *w, int *h)
 }
 
 int FontPrintToRenderer(font_ctx *const ctx, const char *text,
-			const SDL_Rect *dstscale)
+	const SDL_Rect *dstscale)
 {
 	SDL_Rect font_rect, screen_rect;
 	SDL_Rect dst;
@@ -251,7 +253,7 @@ int FontPrintToRenderer(font_ctx *const ctx, const char *text,
 	screen_rect.y = dst.y;
 
 	{
-		Uint8 r,g,b,a;
+		Uint8 r, g, b, a;
 		SDL_GetRenderDrawColor(ctx->rend, &r, &g, &b, &a);
 		SDL_SetTextureColorMod(ctx->tex, r, g, b);
 		SDL_SetTextureAlphaMod(ctx->tex, a);
@@ -271,7 +273,7 @@ int FontPrintToRenderer(font_ctx *const ctx, const char *text,
 		font_rect.y = (pos / FONT_COLUMNS) * FONT_CHAR_HEIGHT;
 
 		ret = SDL_RenderCopy(ctx->rend, ctx->tex,
-		                     &font_rect, &screen_rect);
+				&font_rect, &screen_rect);
 
 		if(ret < 0)
 			return ret;

@@ -111,7 +111,7 @@ void retro_run(void)
 	fb[0] = ~fb[0];
 
 	video_cb(fb, LIBRETRO_WIDTH, LIBRETRO_HEIGHT,
-		 LIBRETRO_WIDTH * sizeof(Uint16));
+		LIBRETRO_WIDTH * sizeof(Uint16));
 }
 
 bool retro_load_game(const struct retro_game_info *info)
