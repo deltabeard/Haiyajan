@@ -228,9 +228,16 @@ void cb_retro_audio_sample(int16_t left, int16_t right)
 
 size_t cb_retro_audio_sample_batch(const int16_t *data, size_t frames)
 {
-	if(ctx_retro->audio_dev != 0)
-		SDL_QueueAudio(ctx_retro->audio_dev, data, frames * sizeof(Uint16) * 2);
+	if(ctx_retro->audio_dev == 0)
+		goto out;
 
+	/* If the audio driver is lagging too far behind, reset the queue. */
+	if(SDL_GetQueuedAudioSize(ctx_retro->audio_dev) >= 32768UL)
+		SDL_ClearQueuedAudio(ctx_retro->audio_dev);
+
+	SDL_QueueAudio(ctx_retro->audio_dev, data, frames * sizeof(Uint16) * 2);
+
+out:
 	return frames;
 }
 

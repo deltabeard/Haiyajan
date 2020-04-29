@@ -389,6 +389,8 @@ int main(int argc, char *argv[])
 	SDL_SetWindowSize(win, ctx.game_logical_res.w, ctx.game_logical_res.h);
 	SDL_RenderSetLogicalSize(ctx.disp_rend, ctx.game_logical_res.w,
 		ctx.game_logical_res.h);
+	if(args.vid_info)
+		SDL_SetRenderDrawBlendMode(ctx.disp_rend, SDL_BLENDMODE_BLEND);
 	// SDL_RenderSetIntegerScale(ctx.disp_rend, SDL_ENABLE);
 
 	SDL_Event event;
@@ -430,12 +432,13 @@ int main(int argc, char *argv[])
 				static char busy_str[10] = { '\0' };
 				static char fps_str[10] = { '\0' };
 				static char acc_str[10] = { '\0' };
+				static char aud_str[10] = { '\0' };
 				SDL_Rect dim = {
 					.w = 1, .h = 1, .x = 0, .y = 0
 				};
 				const SDL_Rect font_bg = {
 					.w = 10 * FONT_CHAR_WIDTH,
-					.h = 3 * (FONT_CHAR_HEIGHT + 1),
+					.h = 4 * (FONT_CHAR_HEIGHT + 1),
 					.x = 0,
 					.y = 0
 				};
@@ -446,10 +449,12 @@ int main(int argc, char *argv[])
 				 * readable. */
 				if(fps_curr_frame_dur % 5 == 0)
 				{
-				SDL_snprintf(busy_str, 10, "%02d ms",
+				SDL_snprintf(busy_str, 10, "%6u ms",
 					     busy_diff);
 				SDL_snprintf(acc_str, 10, "%6.2f ms",
 					     tim.timer_accumulator);
+				SDL_snprintf(aud_str, 10, "%6lu",
+					     SDL_GetQueuedAudioSize(ctx.audio_dev) / sizeof(Uint16) / 2);
 				}
 
 				/* Update only after FPS has been recalculated.
@@ -462,8 +467,6 @@ int main(int argc, char *argv[])
 
 				SDL_SetRenderDrawColor(ctx.disp_rend, 0x00,
 						       0x00, 0x00, 0x40);
-				SDL_SetRenderDrawBlendMode(ctx.disp_rend,
-							   SDL_BLENDMODE_BLEND);
 				SDL_RenderFillRect(ctx.disp_rend, &font_bg);
 
 				SDL_SetRenderDrawColor(ctx.disp_rend, 0xFF,
@@ -475,6 +478,9 @@ int main(int argc, char *argv[])
 
 				dim.y += FONT_CHAR_HEIGHT + 1;
 				FontPrintToRenderer(font, acc_str, &dim);
+
+				dim.y += FONT_CHAR_HEIGHT + 1;
+				FontPrintToRenderer(font, aud_str, &dim);
 
 				SDL_SetRenderDrawColor(ctx.disp_rend, 0, 0, 0,
 						       0);
