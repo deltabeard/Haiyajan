@@ -6,6 +6,7 @@ struct timer_ctx_s
 {
 	double core_ms;
 	double timer_accumulator;
+	int delay_comp_ms;
 };
 
 /* TODO: update docs. */
