@@ -540,6 +540,7 @@ out:
 	SDL_VideoQuit();
 	SDL_Quit();
 	free_settings(&args);
+	FontExit(font);
 
 	if(ret == EXIT_SUCCESS)
 	{

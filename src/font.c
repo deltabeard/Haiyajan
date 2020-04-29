@@ -284,6 +284,9 @@ int FontPrintToRenderer(font_ctx *const ctx, const char *text,
 
 void FontExit(font_ctx *ctx)
 {
+	if(ctx == NULL)
+		return;
+
 	SDL_DestroyTexture(ctx->tex);
 	SDL_free(ctx);
 }
