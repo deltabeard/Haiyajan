@@ -184,6 +184,21 @@ static void print_help(void)
 		"  SDL_AUDIODRIVER\n");
 }
 
+static void free_settings(struct cmd_args_s *args)
+{
+	if(args->file_core != NULL)
+	{
+		SDL_free(args->file_core);
+		args->file_core = NULL;
+	}
+
+	if(args->file_content != NULL)
+	{
+		SDL_free(args->file_content);
+		args->file_content = NULL;
+	}
+}
+
 static void apply_settings(char **argv, struct cmd_args_s *args)
 {
 	const struct optparse_long longopts[] =
@@ -524,6 +539,7 @@ out:
 	SDL_DestroyWindow(win);
 	SDL_VideoQuit();
 	SDL_Quit();
+	free_settings(&args);
 
 	if(ret == EXIT_SUCCESS)
 	{
