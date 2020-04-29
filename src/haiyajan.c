@@ -427,19 +427,44 @@ int main(int argc, char *argv[])
 
 			if(args.vid_info)
 			{
-				char busy_str[10] = { '\0' };
-				char fps_str[10] = { '\0' };
-				char acc_str[10] = { '\0' };
+				static char busy_str[10] = { '\0' };
+				static char fps_str[10] = { '\0' };
+				static char acc_str[10] = { '\0' };
 				SDL_Rect dim = {
 					.w = 1, .h = 1, .x = 0, .y = 0
+				};
+				const SDL_Rect font_bg = {
+					.w = 10 * FONT_CHAR_WIDTH,
+					.h = 3 * (FONT_CHAR_HEIGHT + 1),
+					.x = 0,
+					.y = 0
 				};
 				Uint32 ticks_busy = SDL_GetTicks();
 				Uint32 busy_diff = ticks_busy - ticks_before;
 
-				SDL_snprintf(busy_str, 10, "%02d ms", busy_diff);
-				SDL_snprintf(fps_str, 10, "%6.2f", fps);
-				SDL_snprintf(acc_str, 10, "%6.2f",
+				/* Only update every five frames to make values
+				 * readable. */
+				if(fps_curr_frame_dur % 5 == 0)
+				{
+				SDL_snprintf(busy_str, 10, "%02d ms",
+					     busy_diff);
+				SDL_snprintf(acc_str, 10, "%6.2f ms",
 					     tim.timer_accumulator);
+				}
+
+				/* Update only after FPS has been recalculated.
+				 */
+				if(fps_curr_frame_dur == fps_calc_frame_dur)
+				{
+					SDL_snprintf(fps_str, 10, "%6.2f Hz",
+						     fps);
+				}
+
+				SDL_SetRenderDrawColor(ctx.disp_rend, 0x00,
+						       0x00, 0x00, 0x40);
+				SDL_SetRenderDrawBlendMode(ctx.disp_rend,
+							   SDL_BLENDMODE_BLEND);
+				SDL_RenderFillRect(ctx.disp_rend, &font_bg);
 
 				SDL_SetRenderDrawColor(ctx.disp_rend, 0xFF,
 						       0xFF, 0xFF, 0xFF);
@@ -459,8 +484,6 @@ int main(int argc, char *argv[])
 			SDL_RenderPresent(ctx.disp_rend);
 		}
 
-		fps_curr_frame_dur--;
-
 		{
 			Uint32 ticks_next = SDL_GetTicks();
 			delta_ticks = ticks_next - ticks_before;
@@ -468,6 +491,7 @@ int main(int argc, char *argv[])
 			ticks_before = ticks_next;
 		}
 
+		fps_curr_frame_dur--;
 		if(fps_curr_frame_dur == 0)
 		{
 			fps_end = SDL_GetTicks();
