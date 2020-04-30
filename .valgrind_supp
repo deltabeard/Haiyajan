@@ -1,0 +1,35 @@
+{
+   Pulseaudio_cond
+   Memcheck:Cond
+   ...
+   fun:pa_*
+   ...
+}
+{
+   Pulseaudio_leak
+   Memcheck:Leak
+   ...
+   fun:pa_*
+   ...
+}
+{
+   GLX
+   Memcheck:Leak
+   ...
+   obj:/usr/lib/libGLX*
+   ...
+}
+{
+   x11
+   Memcheck:Leak
+   ...
+   fun:X11_*
+   ...
+}
+{
+   glib_and_go
+   Memcheck:Leak
+   ...
+   obj:/usr/lib/libg*
+   ...
+}
