@@ -549,8 +549,7 @@ int main(int argc, char *argv[])
 	SDL_RenderSetLogicalSize(ctx.disp_rend, ctx.game_logical_res.w,
 		ctx.game_logical_res.h);
 
-	if(ctx.stngs.vid_info)
-		SDL_SetRenderDrawBlendMode(ctx.disp_rend, SDL_BLENDMODE_BLEND);
+	SDL_SetRenderDrawBlendMode(ctx.disp_rend, SDL_BLENDMODE_BLEND);
 
 	// SDL_RenderSetIntegerScale(ctx.disp_rend, SDL_ENABLE);
 
