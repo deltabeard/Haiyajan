@@ -159,6 +159,33 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		break;
 	}
 
+	case RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY:
+	{
+		const char **save_dir = data;
+		/* FIXME: temporary. */
+		*save_dir = SDL_GetBasePath();
+
+		if(*save_dir == NULL)
+			return false;
+
+		break;
+#if 0
+		char *base_path;
+		size_t base_path_len;
+		char path_sep;
+
+		/* Get path separator for current platform. */
+		base_path = SDL_GetBasePath();
+		if(base_path == NULL)
+			return false;
+
+		base_path_len = SDL_strlen(base_path);
+		/* SDL2 guarantees that this string ends with a path separator.
+		 */
+		path_sep = *(base_path + base_path_len - 1);
+#endif
+	}
+
 	case RETRO_ENVIRONMENT_SET_GEOMETRY:
 	{
 		const struct retro_game_geometry *geo = data;
@@ -250,7 +277,7 @@ void cb_retro_input_poll(void)
 int16_t cb_retro_input_state(unsigned port, unsigned device, unsigned index,
 	unsigned id)
 {
-	return input_get(&ctx_retro->in_ctx, port, device, index, id);
+	return input_get(&ctx_retro->inp, port, device, index, id);
 }
 
 static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,

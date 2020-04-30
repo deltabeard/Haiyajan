@@ -178,22 +178,22 @@ static void print_help(void)
 		"  SDL_AUDIODRIVER\n");
 }
 
-static void free_settings(struct cmd_args_s *args)
+static void free_settings(struct core_ctx_s *ctx)
 {
-	if(args->file_core != NULL)
+	if(ctx->file_core != NULL)
 	{
-		SDL_free(args->file_core);
-		args->file_core = NULL;
+		SDL_free(ctx->file_core);
+		ctx->file_core = NULL;
 	}
 
-	if(args->file_content != NULL)
+	if(ctx->file_content != NULL)
 	{
-		SDL_free(args->file_content);
-		args->file_content = NULL;
+		SDL_free(ctx->file_content);
+		ctx->file_content = NULL;
 	}
 }
 
-static void apply_settings(char **argv, struct cmd_args_s *args)
+static void apply_settings(char **argv, struct core_ctx_s *ctx)
 {
 	const struct optparse_long longopts[] =
 	{
@@ -217,11 +217,11 @@ static void apply_settings(char **argv, struct cmd_args_s *args)
 		switch(option)
 		{
 		case 'L':
-			args->file_core = SDL_strdup(options.optarg);
+			ctx->file_core = SDL_strdup(options.optarg);
 			break;
 
 		case 'I':
-			args->vid_info = 1;
+			ctx->stngs.vid_info = 1;
 			break;
 
 		case 'v':
@@ -275,7 +275,7 @@ static void apply_settings(char **argv, struct cmd_args_s *args)
 	rem_arg = optparse_arg(&options);
 
 	if(rem_arg != NULL)
-		args->file_content = SDL_strdup(rem_arg);
+		ctx->file_content = SDL_strdup(rem_arg);
 	else
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
@@ -283,7 +283,7 @@ static void apply_settings(char **argv, struct cmd_args_s *args)
 		goto err;
 	}
 
-	if(args->file_core == NULL)
+	if(ctx->file_core == NULL)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
 			"The path to a libretro core was not given");
@@ -306,7 +306,7 @@ err:
 	exit(EXIT_FAILURE);
 }
 
-static void run(struct core_ctx_s *ctx, struct cmd_args_s *args)
+static void run(struct core_ctx_s *ctx)
 {
 	font_ctx *font;
 	SDL_Event ev;
@@ -318,7 +318,13 @@ static void run(struct core_ctx_s *ctx, struct cmd_args_s *args)
 	const uint_fast8_t fps_calc_frame_dur = 64;
 	uint_fast8_t fps_curr_frame_dur = fps_calc_frame_dur;
 
-	input_init(&ctx->in_ctx, args);
+	if(input_init(&ctx->inp) != 0)
+	{
+		SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+			"User input commands may be unavailable: %s",
+			SDL_GetError());
+	}
+
 	ctx->fn.retro_set_controller_port_device(0, RETRO_DEVICE_JOYPAD);
 
 	font = FontStartup(ctx->disp_rend);
@@ -327,22 +333,45 @@ static void run(struct core_ctx_s *ctx, struct cmd_args_s *args)
 		SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
 			"Unable to start font drawer: %s", SDL_GetError());
 		/* Disable font drawing on error. */
-		args->vid_info = 0;
+		ctx->stngs.vid_info = 0;
 	}
 
 	tim_cmd = timer_init(&tim, ctx->av_info.timing.fps);
 	ticks_before = fps_beg = SDL_GetTicks();
 
-	while(1)
+	while(ctx->env.status_bits.shutdown == 0)
 	{
 		while(SDL_PollEvent(&ev) != 0)
 		{
 			if(ev.type == SDL_QUIT)
 				goto out;
 			else if(ev.type == SDL_KEYDOWN)
-				input_set(&ctx->in_ctx, ev.key.keysym.sym, 1);
+				input_set(&ctx->inp, ev.key.keysym.sym, 1);
 			else if(ev.type == SDL_KEYUP)
-				input_set(&ctx->in_ctx, ev.key.keysym.sym, 0);
+				input_set(&ctx->inp, ev.key.keysym.sym, 0);
+			else if(ev.type == ctx->inp.input_cmd_event)
+			{
+				switch(ev.user.code)
+				{
+				case INP_EVNT_TOGGLE_INFO:
+					ctx->stngs.vid_info = !ctx->stngs.vid_info;
+					if(!ctx->stngs.vid_info)
+						break;
+
+					/* Reset FPS counter. */
+					fps_beg = SDL_GetTicks();
+					fps_curr_frame_dur = fps_calc_frame_dur;
+					break;
+
+				case INP_EVENT_TOGGLE_FULLSCREEN:
+					ctx->stngs.fullscreen = !ctx->stngs.fullscreen;
+					if(ctx->stngs.fullscreen)
+						SDL_SetWindowFullscreen(ctx->win, SDL_WINDOW_FULLSCREEN_DESKTOP);
+					else
+						SDL_SetWindowFullscreen(ctx->win, 0);
+
+				}
+			}
 		}
 
 		if(tim_cmd < 0)
@@ -359,7 +388,7 @@ static void run(struct core_ctx_s *ctx, struct cmd_args_s *args)
 		SDL_RenderClear(ctx->disp_rend);
 		SDL_RenderCopy(ctx->disp_rend, ctx->core_tex, NULL, NULL);
 
-		if(args->vid_info)
+		if(ctx->stngs.vid_info)
 		{
 			static char busy_str[10] = { '\0' };
 			static char fps_str[10] = { '\0' };
@@ -422,10 +451,10 @@ timing:
 		tim_cmd = timer_get_delay(&tim, delta_ticks);
 		ticks_before = ticks_next;
 
-		if(args->vid_info)
+		if(ctx->stngs.vid_info)
 			fps_curr_frame_dur--;
 
-		if(args->vid_info && fps_curr_frame_dur == 0)
+		if(ctx->stngs.vid_info && fps_curr_frame_dur == 0)
 		{
 			Uint32 fps_delta;
 			Uint32 fps_end = SDL_GetTicks();
@@ -444,8 +473,6 @@ int main(int argc, char *argv[])
 {
 	int ret = EXIT_FAILURE;
 	struct core_ctx_s ctx = { 0 };
-	struct cmd_args_s args = { 0 };
-	SDL_Window *win = NULL;
 
 	/* Ignore argc being unused warning. */
 	(void)argc;
@@ -472,17 +499,17 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	apply_settings(argv, &args);
+	apply_settings(argv, &ctx);
 
-	win = SDL_CreateWindow(PROG_NAME, SDL_WINDOWPOS_UNDEFINED,
+	ctx.win= SDL_CreateWindow(PROG_NAME, SDL_WINDOWPOS_UNDEFINED,
 			SDL_WINDOWPOS_UNDEFINED, 320, 240,
 			SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
-	if(win == NULL)
+	if(ctx.win== NULL)
 		goto err;
 
 	ctx.disp_rend = SDL_CreateRenderer(
-			win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+			ctx.win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
 	if(ctx.disp_rend == NULL)
 		goto err;
@@ -490,7 +517,7 @@ int main(int argc, char *argv[])
 	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 		"Created window and renderer");
 
-	if(load_libretro_core(args.file_core, &ctx))
+	if(load_libretro_core(ctx.file_core, &ctx))
 		goto err;
 
 	/* TODO:
@@ -504,29 +531,29 @@ int main(int argc, char *argv[])
 		char title[MAX_TITLE_LEN];
 		SDL_snprintf(title, MAX_TITLE_LEN, "%s: %s", PROG_NAME,
 			ctx.sys_info.library_name);
-		SDL_SetWindowTitle(win, title);
+		SDL_SetWindowTitle(ctx.win, title);
 	}
 
 	play_init_cb(&ctx);
 
-	if(load_libretro_file(args.file_content, &ctx) != 0)
+	if(load_libretro_file(&ctx) != 0)
 		goto err;
 
 	if(play_init_av(&ctx) != 0)
 		goto err;
 
-	SDL_SetWindowMinimumSize(win, ctx.game_logical_res.w,
+	SDL_SetWindowMinimumSize(ctx.win, ctx.game_logical_res.w,
 		ctx.game_logical_res.h);
-	SDL_SetWindowSize(win, ctx.game_logical_res.w, ctx.game_logical_res.h);
+	SDL_SetWindowSize(ctx.win, ctx.game_logical_res.w, ctx.game_logical_res.h);
 	SDL_RenderSetLogicalSize(ctx.disp_rend, ctx.game_logical_res.w,
 		ctx.game_logical_res.h);
 
-	if(args.vid_info)
+	if(ctx.stngs.vid_info)
 		SDL_SetRenderDrawBlendMode(ctx.disp_rend, SDL_BLENDMODE_BLEND);
 
 	// SDL_RenderSetIntegerScale(ctx.disp_rend, SDL_ENABLE);
 
-	run(&ctx, &args);
+	run(&ctx);
 	ret = EXIT_SUCCESS;
 
 out:
@@ -541,10 +568,10 @@ out:
 	}
 
 	SDL_DestroyRenderer(ctx.disp_rend);
-	SDL_DestroyWindow(win);
+	SDL_DestroyWindow(ctx.win);
 	SDL_VideoQuit();
 	SDL_Quit();
-	free_settings(&args);
+	free_settings(&ctx);
 
 	if(ret == EXIT_SUCCESS)
 	{

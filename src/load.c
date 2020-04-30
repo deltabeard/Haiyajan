@@ -15,11 +15,80 @@
 #include <SDL2/SDL.h>
 #include <stdint.h>
 
+#include <haiyajan.h>
 #include <libretro.h>
 #include <load.h>
 
-uint_fast8_t load_libretro_file(const char *restrict file,
-	struct core_ctx_s *restrict ctx)
+static void save_sram_file(struct core_ctx_s *ctx)
+{
+	SDL_RWops *sram_rw;
+	size_t sram_size;
+	void *sram_dat;
+
+	if(ctx->file_content_sram == NULL)
+		goto out;
+
+	sram_rw = SDL_RWFromFile(ctx->file_content_sram, "wb");
+	if(sram_rw == NULL)
+		goto out;
+
+	sram_size = ctx->fn.retro_get_memory_size(RETRO_MEMORY_SAVE_RAM);
+	sram_dat = ctx->fn.retro_get_memory_data(RETRO_MEMORY_SAVE_RAM);
+	if(sram_dat != NULL)
+		SDL_RWwrite(sram_rw, sram_dat, sram_size, 1);
+
+	SDL_RWclose(sram_rw);
+	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION, "Saved SRAM file.");
+
+out:
+	SDL_free(ctx->file_content_sram);
+	ctx->file_content_sram = NULL;
+
+	return;
+}
+
+static void load_sram_file(struct core_ctx_s *ctx)
+{
+	SDL_RWops *sram_rw;
+	size_t sram_size;
+	size_t sram_size_exp;
+	size_t sram_len;
+	void *sram_dat;
+
+	ctx->file_content_sram = SDL_strdup(ctx->file_content);
+	if(ctx->file_content_sram == NULL)
+		goto out;
+
+	sram_len = SDL_strlen(ctx->file_content_sram) - 1;
+	*(ctx->file_content_sram + sram_len--) = 'm';
+	*(ctx->file_content_sram + sram_len--) = 'r';
+	*(ctx->file_content_sram + sram_len--) = 's';
+	*(ctx->file_content_sram + sram_len--) = '.';
+
+	sram_rw = SDL_RWFromFile(ctx->file_content_sram, "rb");
+	if(sram_rw == NULL)
+	{
+		SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+			    "Save file not found; a new one will be created.");
+		goto out;
+	}
+
+	sram_size = SDL_RWsize(sram_rw);
+	sram_size_exp =
+	ctx->fn.retro_get_memory_size(RETRO_MEMORY_SAVE_RAM);
+	sram_size = sram_size > sram_size_exp ? sram_size_exp : sram_size;
+	sram_dat = ctx->fn.retro_get_memory_data(RETRO_MEMORY_SAVE_RAM);
+	if(sram_dat != NULL)
+		SDL_RWread(sram_rw, sram_dat, sram_size, 1);
+
+	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION, "Read SRAM file.");
+	SDL_RWclose(sram_rw);
+
+out:
+	return;
+}
+
+uint_fast8_t load_libretro_file(struct core_ctx_s *restrict ctx)
 {
 	/* TODO:
 	 * - Check whether file must be loaded into RAM, or is read straight
@@ -30,7 +99,9 @@ uint_fast8_t load_libretro_file(const char *restrict file,
 	 * ROM into memory. If false, then Haiyajan must load the ROM image into
 	 * memory.
 	 */
-	struct retro_game_info game = { .path = file, .meta = NULL };
+	struct retro_game_info game = {
+		.path = ctx->file_content, .meta = NULL
+	};
 
 	SDL_assert_paranoid(ctx != NULL);
 	SDL_assert(ctx->env.status_bits.core_init == 1);
@@ -45,7 +116,7 @@ uint_fast8_t load_libretro_file(const char *restrict file,
 		/* Read file to memory. */
 		SDL_RWops *game_file;
 
-		game_file = SDL_RWFromFile(file, "rb");
+		game_file = SDL_RWFromFile(ctx->file_content, "rb");
 
 		if(game_file == NULL)
 			return 1;
@@ -71,6 +142,8 @@ uint_fast8_t load_libretro_file(const char *restrict file,
 
 	if(ctx->fn.retro_load_game(&game) == false)
 		return 1;
+
+	load_sram_file(ctx);
 
 	ctx->env.status_bits.game_loaded = 1;
 	ctx->env.status_bits.shutdown = 0;
@@ -196,6 +269,8 @@ uint_fast8_t load_libretro_core(const char *restrict so_file,
 
 void unload_libretro_file(struct core_ctx_s *restrict ctx)
 {
+	save_sram_file(ctx);
+
 	if(ctx->game_data != NULL)
 	{
 		free(ctx->game_data);

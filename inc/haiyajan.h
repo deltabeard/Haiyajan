@@ -17,12 +17,12 @@
 #include <SDL2/SDL.h>
 
 #include <libretro.h>
+#include <input.h>
 
-struct cmd_args_s
+struct settings_s
 {
-	char *file_core;
-	char *file_content;
 	unsigned char vid_info : 1;
+	unsigned char fullscreen : 1;
 };
 
 /**
@@ -78,6 +78,8 @@ struct core_ctx_s
 		 * This is an allocated buffer of content for libretro cores. */
 		Uint8 *game_data;
 
+		SDL_Window *win;
+
 		/* The renderer that is shown on screen. */
 		SDL_Renderer *disp_rend;
 
@@ -100,6 +102,9 @@ struct core_ctx_s
 	struct
 	{
 		char core_log_name[8];
+		char *file_core;
+		char *file_content;
+		char *file_content_sram;
 	};
 
 	/* Libretro core environment status. */
@@ -122,9 +127,6 @@ struct core_ctx_s
 		struct retro_audio_callback audio_cb;
 	} env;
 
-	struct input_ctx_s
-	{
-		Sint16 joypad_state[16];
-		struct cmd_args_s *args;
-	} in_ctx;
+	struct input_ctx_s inp;
+	struct settings_s stngs;
 };
