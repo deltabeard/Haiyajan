@@ -90,6 +90,7 @@ struct core_ctx_s
 		/* The resolution of the libretro core video output. */
 		/* FIXME: Use video_cb width/height for window size. */
 		SDL_Rect game_logical_res;
+		SDL_Rect game_target_res;
 
 		/* The context of the audio device. */
 		SDL_AudioDeviceID audio_dev;

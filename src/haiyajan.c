@@ -386,7 +386,8 @@ static void run(struct core_ctx_s *ctx)
 		play_frame(ctx);
 
 		SDL_RenderClear(ctx->disp_rend);
-		SDL_RenderCopy(ctx->disp_rend, ctx->core_tex, NULL, NULL);
+		SDL_RenderCopy(ctx->disp_rend, ctx->core_tex,
+			        &ctx->game_target_res, NULL);
 
 		if(ctx->stngs.vid_info)
 		{

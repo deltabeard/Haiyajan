@@ -244,6 +244,11 @@ void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 			SDL_GetError());
 	}
 
+	ctx_retro->game_target_res.h = height;
+	ctx_retro->game_target_res.w = width;
+	ctx_retro->game_target_res.x = 0;
+	ctx_retro->game_target_res.y = 0;
+
 	return;
 }
 
