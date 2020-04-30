@@ -24,6 +24,7 @@
 #include <optparse.h>
 
 #include <font.h>
+#include <input.h>
 #include <load.h>
 #include <play.h>
 #include <timer.h>
@@ -38,13 +39,6 @@
 #ifndef GIT_VERSION
 #define GIT_VERSION "NONE"
 #endif
-
-struct cmd_args_s
-{
-	char *file_core;
-	char *file_content;
-	unsigned char vid_info : 1;
-};
 
 static void prerun_checks(void)
 {
@@ -315,7 +309,7 @@ err:
 static void run(struct core_ctx_s *ctx, struct cmd_args_s *args)
 {
 	font_ctx *font;
-	SDL_Event event;
+	SDL_Event ev;
 	Uint32 ticks_before, ticks_next, delta_ticks;
 	struct timer_ctx_s tim;
 	int tim_cmd;
@@ -324,8 +318,10 @@ static void run(struct core_ctx_s *ctx, struct cmd_args_s *args)
 	const uint_fast8_t fps_calc_frame_dur = 64;
 	uint_fast8_t fps_curr_frame_dur = fps_calc_frame_dur;
 
-	font = FontStartup(ctx->disp_rend);
+	input_init(&ctx->in_ctx, args);
+	ctx->fn.retro_set_controller_port_device(0, RETRO_DEVICE_JOYPAD);
 
+	font = FontStartup(ctx->disp_rend);
 	if(font == NULL)
 	{
 		SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
@@ -339,10 +335,15 @@ static void run(struct core_ctx_s *ctx, struct cmd_args_s *args)
 
 	while(1)
 	{
-		SDL_PollEvent(&event);
-
-		if(event.type == SDL_QUIT)
-			break;
+		while(SDL_PollEvent(&ev) != 0)
+		{
+			if(ev.type == SDL_QUIT)
+				goto out;
+			else if(ev.type == SDL_KEYDOWN)
+				input_set(&ctx->in_ctx, ev.key.keysym.sym, 1);
+			else if(ev.type == SDL_KEYUP)
+				input_set(&ctx->in_ctx, ev.key.keysym.sym, 0);
+		}
 
 		if(tim_cmd < 0)
 		{
@@ -421,9 +422,10 @@ timing:
 		tim_cmd = timer_get_delay(&tim, delta_ticks);
 		ticks_before = ticks_next;
 
-		fps_curr_frame_dur--;
+		if(args->vid_info)
+			fps_curr_frame_dur--;
 
-		if(fps_curr_frame_dur == 0)
+		if(args->vid_info && fps_curr_frame_dur == 0)
 		{
 			Uint32 fps_delta;
 			Uint32 fps_end = SDL_GetTicks();
@@ -434,6 +436,7 @@ timing:
 		}
 	}
 
+out:
 	FontExit(font);
 }
 

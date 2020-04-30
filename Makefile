@@ -30,7 +30,7 @@ endif
 
 all: haiyajan haiyajan.debug
 haiyajan: ./src/haiyajan.o ./src/load.o ./src/play.o ./src/load.o \
-		./src/timer.o ./src/font.o
+		./src/timer.o ./src/font.o ./src/input.o
 	+$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 ./src/haiyajan.o: ./src/haiyajan.c ./inc/*.h

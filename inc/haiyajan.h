@@ -18,6 +18,13 @@
 
 #include <libretro.h>
 
+struct cmd_args_s
+{
+	char *file_core;
+	char *file_content;
+	unsigned char vid_info : 1;
+};
+
 /**
  * Context of libretro core.
  */
@@ -114,4 +121,10 @@ struct core_ctx_s
 		Uint32 pixel_fmt;
 		struct retro_audio_callback audio_cb;
 	} env;
+
+	struct input_ctx_s
+	{
+		Sint16 joypad_state[16];
+		struct cmd_args_s *args;
+	} in_ctx;
 };

@@ -17,6 +17,7 @@
 #include <libretro.h>
 #include <haiyajan.h>
 #include <play.h>
+#include <input.h>
 
 #define NUM_ELEMS(x) (sizeof(x) / sizeof(*x))
 
@@ -249,11 +250,7 @@ void cb_retro_input_poll(void)
 int16_t cb_retro_input_state(unsigned port, unsigned device, unsigned index,
 	unsigned id)
 {
-	(void)port;
-	(void)device;
-	(void)index;
-	(void)id;
-	return 0;
+	return input_get(&ctx_retro->in_ctx, port, device, index, id);
 }
 
 static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
