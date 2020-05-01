@@ -14,7 +14,6 @@
 
 #include <SDL2/SDL.h>
 #include <libretro.h>
-#include <haiyajan.h>
 #include <input.h>
 
 enum input_type_e {
@@ -35,6 +34,9 @@ struct keymap_s
 		void (*fn)(struct input_ctx_s *const);
 	};
 };
+
+/* Forward declarations. */
+static void input_set(struct input_ctx_s *in_ctx, SDL_Keycode code, Sint16 state);
 
 void input_toggle_ui_info(struct input_ctx_s *const in_ctx)
 {
@@ -84,11 +86,20 @@ static const struct keymap_s keymap[] =
 int input_init(struct input_ctx_s *in_ctx)
 {
 	SDL_zerop(in_ctx);
+	SDL_GameControllerAddMappingsFromFile("gamecontrollerdb.txt");
 	in_ctx->input_cmd_event = SDL_RegisterEvents(1);
 	return in_ctx->input_cmd_event == (Uint32)-1 ? 1 : 0;
 }
 
-void input_set(struct input_ctx_s *in_ctx, SDL_KeyCode code, Sint16 state)
+void input_handle_event(struct input_ctx_s *in_ctx, const SDL_Event *ev)
+{
+	if(ev->type == SDL_KEYDOWN)
+		input_set(in_ctx, ev->key.keysym.sym, SDL_PRESSED);
+	else if(ev->type == SDL_KEYUP)
+		input_set(in_ctx, ev->key.keysym.sym, SDL_RELEASED);
+}
+
+static void input_set(struct input_ctx_s *in_ctx, SDL_Keycode code, Sint16 state)
 {
 	for(size_t i = 0; i < SDL_arraysize(keymap); i++)
 	{

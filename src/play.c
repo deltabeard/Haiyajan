@@ -285,6 +285,7 @@ int16_t cb_retro_input_state(unsigned port, unsigned device, unsigned index,
 	return input_get(&ctx_retro->inp, port, device, index, id);
 }
 
+/* TODO: Initialise texture to max width/height. */
 static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 	const Uint32 *req_format,
 	const unsigned int *req_width,

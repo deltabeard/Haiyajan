@@ -345,10 +345,8 @@ static void run(struct core_ctx_s *ctx)
 		{
 			if(ev.type == SDL_QUIT)
 				goto out;
-			else if(ev.type == SDL_KEYDOWN)
-				input_set(&ctx->inp, ev.key.keysym.sym, 1);
-			else if(ev.type == SDL_KEYUP)
-				input_set(&ctx->inp, ev.key.keysym.sym, 0);
+			else if(INPUT_EVENT_CHK(ev.type))
+				input_handle_event(&ctx->inp, &ev);
 			else if(ev.type == ctx->inp.input_cmd_event)
 			{
 				switch(ev.user.code)

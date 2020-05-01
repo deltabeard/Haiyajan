@@ -29,7 +29,9 @@ enum input_cmd_event_codes_e {
 
 typedef enum input_cmd_event_codes_e inp_evnt_code;
 
+#define INPUT_EVENT_CHK(x) (x >= 0x300 && x < 0x900)
+
 int input_init(struct input_ctx_s *in_ctx);
-void input_set(struct input_ctx_s *in_ctx, SDL_KeyCode code, Sint16 state);
+void input_handle_event(struct input_ctx_s *in_ctx, const SDL_Event *ev);
 Sint16 input_get(struct input_ctx_s *in_ctx,
 		 unsigned port, unsigned device, unsigned index, unsigned id);
