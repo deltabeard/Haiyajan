@@ -318,12 +318,7 @@ static void run(struct core_ctx_s *ctx)
 	const uint_fast8_t fps_calc_frame_dur = 64;
 	uint_fast8_t fps_curr_frame_dur = fps_calc_frame_dur;
 
-	if(input_init(&ctx->inp) != 0)
-	{
-		SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-			"User input commands may be unavailable: %s",
-			SDL_GetError());
-	}
+	input_init(&ctx->inp);
 
 	ctx->fn.retro_set_controller_port_device(0, RETRO_DEVICE_JOYPAD);
 
@@ -367,7 +362,6 @@ static void run(struct core_ctx_s *ctx)
 						SDL_SetWindowFullscreen(ctx->win, SDL_WINDOW_FULLSCREEN_DESKTOP);
 					else
 						SDL_SetWindowFullscreen(ctx->win, 0);
-
 				}
 			}
 		}
@@ -490,7 +484,7 @@ int main(int argc, char *argv[])
 	print_info();
 	prerun_checks();
 
-	if(SDL_Init(SDL_INIT_AUDIO | SDL_INIT_EVENTS) != 0)
+	if(SDL_Init(SDL_INIT_AUDIO | SDL_INIT_EVENTS | SDL_INIT_GAMECONTROLLER) != 0)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
 			"SDL initialisation failed: %s",

@@ -37,6 +37,7 @@ haiyajan: ./src/haiyajan.o ./src/load.o ./src/play.o ./src/load.o \
 ./src/load.o: ./src/load.c ./inc/load.h ./inc/haiyajan.h ./inc/libretro.h
 ./src/play.o: ./src/play.c ./inc/play.h ./inc/haiyajan.h ./inc/libretro.h
 ./src/timer.o: ./src/timer.c ./inc/timer.h
+./src/input.o: ./src/input.c ./inc/input.h ./inc/gamecontrollerdb.h
 
 # Saves debug symbols in a separate file, and strips the main executable.
 # To get information from stack trace: `addr2line -e haiyajan.debug addr`
