@@ -39,32 +39,17 @@ static void input_set(struct input_ctx_s *const in_ctx, SDL_Scancode sc,
 void input_toggle_ui_info(struct input_ctx_s *const in_ctx);
 void input_toggle_fullscreen(struct input_ctx_s *const in_ctx);
 
-static const char *const lr_input_string[] = {
+static const char *const input_type_str[] = {
 	"None", "Joypad", "Mouse", "Keyboard", "Lightgun", "Analogue", "Pointer"
 };
-
-void input_toggle_ui_info(struct input_ctx_s *const in_ctx)
-{
-	SDL_Event event = { 0 };
-	event.type = in_ctx->input_cmd_event;
-	event.user.code = INPUT_EVENT_TOGGLE_INFO;
-	SDL_PushEvent(&event);
-}
-
-void input_toggle_fullscreen(struct input_ctx_s *const in_ctx)
-{
-	SDL_Event event = { 0 };
-	event.type = in_ctx->input_cmd_event;
-	event.user.code = INPUT_EVENT_TOGGLE_FULLSCREEN;
-	SDL_PushEvent(&event);
-}
 
 void input_map(struct input_ctx_s *const in_ctx, input_type input_type,
 	       union input_cmd_trigger_u trig,
 	       const struct keymap_info_s *const map)
 {
 	(void)in_ctx;
-	if(input_type == INPUT_TYPE_KEYBOARD)
+	if(input_type == RETRO_INPUT_JOYPAD ||
+		input_type == RETRO_INPUT_KEYBOARD)
 	{
 		keymap[trig.sc] = *map;
 	}
@@ -107,7 +92,7 @@ void input_init(struct input_ctx_s *restrict in_ctx)
 		{{ .sc = SDL_SCANCODE_T },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_L3 }},
 		{{ .sc = SDL_SCANCODE_Y },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_R3 }},
 		{{ .sc = SDL_SCANCODE_I },	{ INPUT_CMD_CALL_FUNC,   INPUT_EVENT_TOGGLE_INFO }},
-		{{ .sc = SDL_SCANCODE_F },	{ INPUT_CMD_RETRO_INPUT, INPUT_EVENT_TOGGLE_FULLSCREEN }}
+		{{ .sc = SDL_SCANCODE_F },	{ INPUT_CMD_CALL_FUNC, INPUT_EVENT_TOGGLE_FULLSCREEN }}
 	};
 
 	SDL_zerop(in_ctx);
@@ -130,14 +115,18 @@ void input_init(struct input_ctx_s *restrict in_ctx)
 	/* Set default keyboard keymap. */
 	for(unsigned i = 0; i < SDL_arraysize(keymap_defaults); i++)
 	{
-		input_map(in_ctx, INPUT_TYPE_KEYBOARD, keymap_defaults[i].trig,
+		/* Set keyboard to JOYPAD input by default. */
+		/* TODO: Make smart decisions on default input device based on
+		 * what the core supports. */
+		input_map(in_ctx, RETRO_INPUT_JOYPAD, keymap_defaults[i].trig,
 				  &keymap_defaults[i].map);
 	}
 
+	SDL_LogVerbose(SDL_LOG_CATEGORY_INPUT, "Initialised keyboard input");
 	return;
 }
 
-static libretro_input_type input_get_device_type(SDL_GameController *gc)
+static SDL_bool input_is_analogue(SDL_GameController *gc)
 {
 	SDL_GameControllerAxis axis;
 
@@ -149,10 +138,10 @@ static libretro_input_type input_get_device_type(SDL_GameController *gc)
 			SDL_GameControllerGetBindForAxis(gc, axis);
 
 		if(bind.bindType == SDL_CONTROLLER_BINDTYPE_AXIS)
-			return RETRO_INPUT_ANALOG;
+			return SDL_TRUE;
 	}
 
-	return RETRO_INPUT_JOYPAD;
+	return SDL_FALSE;
 }
 
 void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev)
@@ -191,8 +180,8 @@ void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev)
 			return;
 		}
 
-		in_ctx->player[0].type = INPUT_TYPE_CONTROLLER;
-		in_ctx->player[0].lr_type = input_get_device_type(gc);
+		in_ctx->player[0].type = input_is_analogue(gc) ?
+				RETRO_INPUT_ANALOG : RETRO_INPUT_JOYPAD;
 		in_ctx->player[0].player = 1;
 		in_ctx->player[0].gc = gc;
 
@@ -200,7 +189,7 @@ void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev)
 
 		SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
 			    "Controller \"%s\" connected as an %s device",
-			    gc_name, lr_input_string[in_ctx->player[0].lr_type]);
+			    gc_name, input_type_str[in_ctx->player[0].type]);
 	}
 	else if(ev->type == SDL_CONTROLLERDEVICEREMAPPED)
 	{
@@ -210,7 +199,7 @@ void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev)
 
 static void mod_bit(Uint16 *n, Uint8 pos, unsigned val)
 {
-	int mask = 1 << pos;
+	unsigned mask = 1 << pos;
 	*n = (*n & ~mask) | ((val << pos) & mask);
 }
 
@@ -220,14 +209,17 @@ static void input_set(struct input_ctx_s *const in_ctx, SDL_Scancode sc,
 	switch(keymap[sc].input_cmd_type)
 	{
 	case INPUT_CMD_RETRO_INPUT:
-		mod_bit(&in_ctx->player[0].retro_state, keymap[sc].input_cmd, state);
+		mod_bit(&in_ctx->player[0].retro_state, keymap[sc].input_cmd,
+			state);
 		break;
 
 	case INPUT_CMD_CALL_FUNC:
 		if(in_ctx->input_cmd_event == (Uint32) - 1)
 			break;
 
-		if(state)
+		if(!state)
+			break;
+
 		{
 			SDL_Event event = { 0 };
 			event.type = in_ctx->input_cmd_event;
@@ -239,16 +231,33 @@ static void input_set(struct input_ctx_s *const in_ctx, SDL_Scancode sc,
 }
 
 Sint16 input_get(const struct input_ctx_s *const in_ctx,
-		 unsigned port, unsigned device, unsigned index, unsigned id)
+				 unsigned port, unsigned device, unsigned index, unsigned id)
 {
-	if(port != 0 || index != 0 || device != RETRO_DEVICE_JOYPAD ||
-			id >= SDL_arraysize(keymap) || port >= MAX_PLAYERS)
+	if(index != 0 || device != RETRO_INPUT_JOYPAD || port >= MAX_PLAYERS)
 		return 0;
+
+	if(in_ctx->player[port].type == (input_type)device)
+	{
+		static Uint8 log_lim = 0;
+		if(!(log_lim >> port))
+		{
+			SDL_LogVerbose(SDL_LOG_CATEGORY_INPUT,
+				"Core has misidentified device %s on player %u "
+				"as %s",
+				input_type_str[in_ctx->player[port].type], port,
+				input_type_str[device]);
+			SDL_LogVerbose(SDL_LOG_CATEGORY_INPUT,
+				"This error will no longer appear for player "
+				"%d", port);
+		}
+		log_lim |= 0b1 << port;
+		return 0;
+	}
 
 	switch(device)
 	{
-		case RETRO_DEVICE_JOYPAD:
-			return (in_ctx->player[port].retro_state >> id) & 0b1;
+	case RETRO_INPUT_JOYPAD:
+		return (in_ctx->player[port].retro_state >> id) & 0b1;
 
 		//case RETRO_DEVICE_ANALOG:
 	}

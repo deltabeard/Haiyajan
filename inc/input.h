@@ -19,35 +19,24 @@
 
 #define MAX_PLAYERS 4
 
-/* Input types used in Haiyajan. */
-enum input_type_e {
-	/* No controller connected to device or mapped to content. */
-	INPUT_TYPE_DISCONNECTED,
-
-	/* Keyboards can be mapped to RETRO_DEVICE_{NONE, JOYPAD, KEYBOARD}. */
-	INPUT_TYPE_KEYBOARD,
-
-	/* Game controllers can be mapped to
-	 * RETRO_DEVICE_{NONE, JOYPAD } */
-	INPUT_TYPE_CONTROLLER,
-
-	/* Game controllers with axis inputs can be mapped to
-	 * RETRO_DEVICE_{NONE, JOYPAD, ANALOG } */
-	INPUT_TYPE_CONTROLLER_ANALOGUE
-};
-typedef enum input_type_e input_type;
-
 /* Input types used in libretro. */
-enum libretro_input_type_e {
+enum input_type_e {
+	/* Any unused device is set to NONE. */
 	RETRO_INPUT_NONE =	RETRO_DEVICE_NONE,
+
+	/* Any game controller without analogue input. */
 	RETRO_INPUT_JOYPAD =	RETRO_DEVICE_JOYPAD,
+
 	RETRO_INPUT_MOUSE =	RETRO_DEVICE_MOUSE,
 	RETRO_INPUT_KEYBOARD =	RETRO_DEVICE_KEYBOARD,
 	RETRO_INPUT_LIGHTGUN =	RETRO_DEVICE_LIGHTGUN,
+
+	/* Any game controller with analogue inputs. */
 	RETRO_INPUT_ANALOG =	RETRO_DEVICE_ANALOG,
+
 	RETRO_INPUT_POINTER =	RETRO_DEVICE_POINTER
 };
-typedef enum libretro_input_type_e libretro_input_type;
+typedef enum input_type_e input_type;
 
 enum input_cmd_type_e {
 	INPUT_CMD_NONE = 0,
@@ -95,11 +84,8 @@ union input_cmd_trigger_u {
 };
 
 struct input_device_s {
-	/* Type of SDL2 device connected to Haiyajan. */
+	/* Type of device connected to Haiyajan. */
 	input_type type;
-
-	/* Type of device connected to the core. */
-	libretro_input_type lr_type;
 
 	/* Player number. Undefined if lr_type is NONE. */
 	Uint8 player;
