@@ -124,6 +124,8 @@ static void print_help(void)
 		"      --version   Print version information.\n"
 		"  -L, --libretro  Path to libretro core.\n"
 		"  -I, --info      Print statistics onscreen.\n"
+		"  -b, --benchmark Benchmark and print average frames per "
+				"second.\n"
 		"  -v, --verbose   Print verbose log messages.\n"
 		"  -V, --video     Video driver to use\n"
 		"\n");
@@ -202,6 +204,7 @@ static void apply_settings(char **argv, struct core_ctx_s *ctx)
 		{ "verbose",	'v', OPTPARSE_NONE },
 		{ "video",	'V', OPTPARSE_REQUIRED },
 		{ "version",	 1 , OPTPARSE_NONE },
+		{ "benchmark",	'b', OPTPARSE_NONE },
 		{ "help",	'h', OPTPARSE_NONE },
 		{ 0 }
 	};
@@ -260,6 +263,13 @@ static void apply_settings(char **argv, struct core_ctx_s *ctx)
 			/* Version information has already been printed. */
 			exit(EXIT_SUCCESS);
 
+		case 'b':
+			ctx->stngs.benchmark = 1;
+			SDL_LogInfo(SDL_LOG_CATEGORY_VIDEO,
+					"Haiyajan will exit after performing a "
+					"benchmark");
+			break;
+
 		case 'h':
 			print_help();
 			exit(EXIT_SUCCESS);
@@ -317,6 +327,7 @@ static void run(struct core_ctx_s *ctx)
 	Uint32 fps_beg;
 	const uint_fast8_t fps_calc_frame_dur = 64;
 	uint_fast8_t fps_curr_frame_dur = fps_calc_frame_dur;
+	Uint32 benchmark_beg;
 
 	input_init(&ctx->inp);
 
@@ -332,7 +343,7 @@ static void run(struct core_ctx_s *ctx)
 	}
 
 	tim_cmd = timer_init(&tim, ctx->av_info.timing.fps);
-	ticks_before = fps_beg = SDL_GetTicks();
+	ticks_before = fps_beg = benchmark_beg = SDL_GetTicks();
 
 	while(ctx->env.status_bits.shutdown == 0)
 	{
@@ -342,7 +353,8 @@ static void run(struct core_ctx_s *ctx)
 				goto out;
 			else if(INPUT_EVENT_CHK(ev.type))
 				input_handle_event(&ctx->inp, &ev);
-			else if(ev.type == ctx->inp.input_cmd_event)
+			else if(ev.type == ctx->inp.input_cmd_event &&
+				!ctx->stngs.benchmark)
 			{
 				switch(ev.user.code)
 				{
@@ -365,6 +377,10 @@ static void run(struct core_ctx_s *ctx)
 				}
 			}
 		}
+
+		/* If in benchmark mode, run as fast as possible. */
+		if(ctx->stngs.benchmark)
+			tim_cmd = 0;
 
 		if(tim_cmd < 0)
 		{
@@ -456,6 +472,23 @@ timing:
 			fps_curr_frame_dur = fps_calc_frame_dur;
 			fps_beg = fps_end;
 		}
+
+		while(ctx->stngs.benchmark)
+		{
+			static unsigned frames = 0;
+			uint_fast32_t elapsed;
+			float fps;
+
+			frames++;
+			elapsed = SDL_GetTicks() - benchmark_beg;
+			if(elapsed < 10 * 1000)
+				break;
+
+			fps = (float)frames / ((float)elapsed / 1000.0);
+			SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+					"Benchmark: %.2f FPS", fps);
+			goto out;
+		}
 	}
 
 out:
@@ -503,8 +536,13 @@ int main(int argc, char *argv[])
 	if(ctx.win== NULL)
 		goto err;
 
-	ctx.disp_rend = SDL_CreateRenderer(
-			ctx.win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+	{
+		Uint32 flags = SDL_RENDERER_ACCELERATED;
+		if(!ctx.stngs.benchmark)
+			flags |= SDL_RENDERER_PRESENTVSYNC;
+
+		ctx.disp_rend = SDL_CreateRenderer(ctx.win, -1, flags);
+	}
 
 	if(ctx.disp_rend == NULL)
 		goto err;
@@ -547,8 +585,8 @@ int main(int argc, char *argv[])
 	SDL_SetRenderDrawBlendMode(ctx.disp_rend, SDL_BLENDMODE_BLEND);
 
 	// SDL_RenderSetIntegerScale(ctx.disp_rend, SDL_ENABLE);
-
 	run(&ctx);
+
 	ret = EXIT_SUCCESS;
 
 out:
