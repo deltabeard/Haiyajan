@@ -17,6 +17,8 @@
 #include <SDL2/SDL.h>
 #include <libretro.h>
 
+#define MAX_PLAYERS 4
+
 /* Input types used in Haiyajan. */
 enum input_type_e {
 	/* No controller connected to device or mapped to content. */
@@ -26,8 +28,12 @@ enum input_type_e {
 	INPUT_TYPE_KEYBOARD,
 
 	/* Game controllers can be mapped to
+	 * RETRO_DEVICE_{NONE, JOYPAD } */
+	INPUT_TYPE_CONTROLLER,
+
+	/* Game controllers with axis inputs can be mapped to
 	 * RETRO_DEVICE_{NONE, JOYPAD, ANALOG } */
-	INPUT_TYPE_CONTROLLER
+	INPUT_TYPE_CONTROLLER_ANALOGUE
 };
 typedef enum input_type_e input_type;
 
@@ -43,6 +49,51 @@ enum libretro_input_type_e {
 };
 typedef enum libretro_input_type_e libretro_input_type;
 
+enum input_cmd_type_e {
+	INPUT_CMD_NONE = 0,
+	INPUT_CMD_RETRO_INPUT = 1,
+	INPUT_CMD_CALL_FUNC = 2
+};
+typedef enum input_cmd_type_e input_cmd_type;
+
+enum input_cmd_event_codes_e {
+	INPUT_EVENT_TOGGLE_INFO = 0,
+	INPUT_EVENT_TOGGLE_FULLSCREEN = 1
+};
+typedef enum input_cmd_event_codes_e input_cmd_event;
+
+enum input_cmd_joypad_codes_e {
+	INPUT_JOYPAD_B = RETRO_DEVICE_ID_JOYPAD_B,
+	INPUT_JOYPAD_Y,
+	INPUT_JOYPAD_SELECT,
+	INPUT_JOYPAD_START,
+	INPUT_JOYPAD_UP,
+	INPUT_JOYPAD_DOWN,
+	INPUT_JOYPAD_LEFT,
+	INPUT_JOYPAD_RIGHT,
+	INPUT_JOYPAD_A,
+	INPUT_JOYPAD_X,
+	INPUT_JOYPAD_L,
+	INPUT_JOYPAD_R,
+	INPUT_JOYPAD_L2,
+	INPUT_JOYPAD_R2,
+	INPUT_JOYPAD_L3,
+	INPUT_JOYPAD_R3
+};
+typedef enum input_cmd_joypad_codes_e input_cmd_joypad;
+
+union input_cmd_u {
+	input_cmd_event event;
+	input_cmd_joypad joypad;
+	unsigned char byte;
+};
+
+union input_cmd_trigger_u {
+	SDL_GameControllerButton btn;
+	//SDL_GameControllerAxis axis;
+	SDL_Scancode sc;
+};
+
 struct input_device_s {
 	/* Type of SDL2 device connected to Haiyajan. */
 	input_type type;
@@ -51,26 +102,25 @@ struct input_device_s {
 	libretro_input_type lr_type;
 
 	/* Player number. Undefined if lr_type is NONE. */
-	unsigned player;
+	Uint8 player;
 
-	/* Pointer to gamecontroller if type is INPUT_TYPE_CONTROLLER. */
+	/* State of all the retro_device buttons. */
+	Uint8 retro_state[16];
+
+	/* Pointer to gamecontroller if type is INPUT_TYPE_CONTROLLER*. */
 	SDL_GameController *gc;
+	/* Game Controller mapping if type is INPUT_TYPE_CONTROLLER*. */
+	SDL_GameControllerButton gcbtn[SDL_CONTROLLER_BUTTON_MAX];
+	/* Additional mappings if the controller has axis input, and hence is a
+	 * INPUT_TYPE_CONTROLLER_ANALOGUE only. */
+	SDL_GameControllerAxis gcax[SDL_CONTROLLER_AXIS_MAX];
 };
 
 struct input_ctx_s
 {
-	Sint16 joypad_state[16];
 	Uint32 input_cmd_event;
-
-	struct input_device_s device[4];
+	struct input_device_s player[MAX_PLAYERS];
 };
-
-enum input_cmd_event_codes_e {
-	INP_EVNT_TOGGLE_INFO,
-	INP_EVENT_TOGGLE_FULLSCREEN
-};
-
-typedef enum input_cmd_event_codes_e inp_evnt_code;
 
 #define INPUT_EVENT_CHK(x) (x >= 0x300 && x < 0x900)
 

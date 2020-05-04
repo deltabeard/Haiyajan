@@ -346,7 +346,7 @@ static void run(struct core_ctx_s *ctx)
 			{
 				switch(ev.user.code)
 				{
-				case INP_EVNT_TOGGLE_INFO:
+				case INPUT_EVENT_TOGGLE_INFO:
 					ctx->stngs.vid_info = !ctx->stngs.vid_info;
 					if(!ctx->stngs.vid_info)
 						break;
@@ -356,7 +356,7 @@ static void run(struct core_ctx_s *ctx)
 					fps_curr_frame_dur = fps_calc_frame_dur;
 					break;
 
-				case INP_EVENT_TOGGLE_FULLSCREEN:
+				case INPUT_EVENT_TOGGLE_FULLSCREEN:
 					ctx->stngs.fullscreen = !ctx->stngs.fullscreen;
 					if(ctx->stngs.fullscreen)
 						SDL_SetWindowFullscreen(ctx->win, SDL_WINDOW_FULLSCREEN_DESKTOP);
@@ -484,6 +484,8 @@ int main(int argc, char *argv[])
 	print_info();
 	prerun_checks();
 
+	SDL_SetHint("SDL_AUDIO_DEVICE_APP_NAME", PROG_NAME);
+
 	if(SDL_Init(SDL_INIT_AUDIO | SDL_INIT_EVENTS | SDL_INIT_GAMECONTROLLER) != 0)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
@@ -519,6 +521,7 @@ int main(int argc, char *argv[])
 	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
 		"Libretro core \"%.32s\" loaded successfully.",
 		ctx.sys_info.library_name);
+	SDL_SetHint("SDL_AUDIO_DEVICE_STREAM_NAME", ctx.sys_info.library_name);
 
 	{
 		char title[MAX_TITLE_LEN];
