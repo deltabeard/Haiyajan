@@ -43,31 +43,6 @@ static const char *const lr_input_string[] = {
 	"None", "Joypad", "Mouse", "Keyboard", "Lightgun", "Analogue", "Pointer"
 };
 
-#if 0
-static const struct keymap_s keymap[] =
-{
-	{ SDLK_x,	{ .btn = SDL_CONTROLLER_BUTTON_B },		INPUT_CMD_RETRO_INPUT,	{ RETRO_DEVICE_ID_JOYPAD_B }	},
-	{ SDLK_s,	SDL_CONTROLLER_BUTTON_Y,		INPUT_CMD_RETRO_INPUT,	{ RETRO_DEVICE_ID_JOYPAD_Y }	},
-	{ SDLK_BACKSPACE, SDL_CONTROLLER_BUTTON_BACK,		INPUT_CMD_RETRO_INPUT,	{ RETRO_DEVICE_ID_JOYPAD_SELECT}},
-	{ SDLK_RETURN,	SDL_CONTROLLER_BUTTON_START,		INPUT_CMD_RETRO_INPUT,	{ RETRO_DEVICE_ID_JOYPAD_START }},
-	{ SDLK_UP,	SDL_CONTROLLER_BUTTON_DPAD_UP,		INPUT_CMD_RETRO_INPUT,	{ RETRO_DEVICE_ID_JOYPAD_UP }	},
-	{ SDLK_DOWN,	SDL_CONTROLLER_BUTTON_DPAD_DOWN,	INPUT_CMD_RETRO_INPUT,	{ RETRO_DEVICE_ID_JOYPAD_DOWN }	},
-	{ SDLK_LEFT,	SDL_CONTROLLER_BUTTON_DPAD_LEFT,	INPUT_CMD_RETRO_INPUT,	{ RETRO_DEVICE_ID_JOYPAD_LEFT }	},
-	{ SDLK_RIGHT,	SDL_CONTROLLER_BUTTON_DPAD_RIGHT,	INPUT_CMD_RETRO_INPUT,	{ RETRO_DEVICE_ID_JOYPAD_RIGHT }},
-	{ SDLK_z,	SDL_CONTROLLER_BUTTON_A,		INPUT_CMD_RETRO_INPUT,	{ RETRO_DEVICE_ID_JOYPAD_A }	},
-	{ SDLK_a,	SDL_CONTROLLER_BUTTON_X,		INPUT_CMD_RETRO_INPUT,	{ RETRO_DEVICE_ID_JOYPAD_X }	},
-	{ SDLK_q,	SDL_CONTROLLER_BUTTON_LEFTSHOULDER,	INPUT_CMD_RETRO_INPUT,	{ RETRO_DEVICE_ID_JOYPAD_L }	},
-	{ SDLK_w,	SDL_CONTROLLER_BUTTON_RIGHTSHOULDER,	INPUT_CMD_RETRO_INPUT,	{ RETRO_DEVICE_ID_JOYPAD_R }	},
-	{ SDLK_e,	SDL_CONTROLLER_AXIS_TRIGGERLEFT,	INPUT_CMD_RETRO_INPUT,	{ RETRO_DEVICE_ID_JOYPAD_L2 }	},
-	{ SDLK_r,	SDL_CONTROLLER_AXIS_TRIGGERRIGHT,	INPUT_CMD_RETRO_INPUT,	{ RETRO_DEVICE_ID_JOYPAD_R2 }	},
-	{ SDLK_t,	SDL_CONTROLLER_BUTTON_LEFTSTICK,	INPUT_CMD_RETRO_INPUT,	{ RETRO_DEVICE_ID_JOYPAD_L3 }	},
-	{ SDLK_y,	SDL_CONTROLLER_BUTTON_RIGHTSTICK,	INPUT_CMD_RETRO_INPUT,	{ RETRO_DEVICE_ID_JOYPAD_R3 }	},
-
-	{ SDLK_i,	SDL_CONTROLLER_BUTTON_INVALID,		INPUT_CMD_CALL_FUNC,	{ .fn = input_toggle_ui_info }	},
-	{ SDLK_f,	SDL_CONTROLLER_BUTTON_INVALID,		INPUT_CMD_CALL_FUNC,	{ .fn = input_toggle_fullscreen }}
-};
-#endif
-
 void input_toggle_ui_info(struct input_ctx_s *const in_ctx)
 {
 	SDL_Event event = { 0 };
@@ -115,23 +90,24 @@ void input_init(struct input_ctx_s *restrict in_ctx)
 				.input_cmd = INPUT_JOYPAD_B
 			}
 		},
-		{{ .sc = SDL_SCANCODE_S },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_Y }},
-		{{ .sc = SDL_SCANCODE_BACKSPACE},{INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_Y }},
-		{{ .sc = SDL_SCANCODE_RETURN },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_Y }},
-		{{ .sc = SDL_SCANCODE_UP},	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_Y }},
-		{{ .sc = SDL_SCANCODE_DOWN},	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_Y }},
-		{{ .sc = SDL_SCANCODE_LEFT},	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_Y }},
-		{{ .sc = SDL_SCANCODE_RIGHT},	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_Y }},
-		{{ .sc = SDL_SCANCODE_Z},	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_Y }},
-		{{ .sc = SDL_SCANCODE_A},	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_Y }},
-		{{ .sc = SDL_SCANCODE_Q},	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_Y }},
-		{{ .sc = SDL_SCANCODE_W},	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_Y }},
-		{{ .sc = SDL_SCANCODE_E},	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_Y }},
-		{{ .sc = SDL_SCANCODE_R},	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_Y }},
-		{{ .sc = SDL_SCANCODE_T},	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_Y }},
-		{{ .sc = SDL_SCANCODE_Y},	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_Y }},
-		{{ .sc = SDL_SCANCODE_I},	{ INPUT_CMD_CALL_FUNC,   INPUT_EVENT_TOGGLE_INFO }},
-		{{ .sc = SDL_SCANCODE_F},	{ INPUT_CMD_RETRO_INPUT, INPUT_EVENT_TOGGLE_FULLSCREEN }}
+		{{ .sc = SDL_SCANCODE_X },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_B }},
+		{{ .sc = SDL_SCANCODE_S },	{INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_Y }},
+		{{ .sc = SDL_SCANCODE_RETURN },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_SELECT }},
+		{{ .sc = SDL_SCANCODE_BACKSPACE},{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_START }},
+		{{ .sc = SDL_SCANCODE_UP },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_UP }},
+		{{ .sc = SDL_SCANCODE_DOWN },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_DOWN }},
+		{{ .sc = SDL_SCANCODE_LEFT },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_LEFT }},
+		{{ .sc = SDL_SCANCODE_RIGHT },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_RIGHT }},
+		{{ .sc = SDL_SCANCODE_Z },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_A }},
+		{{ .sc = SDL_SCANCODE_A },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_X }},
+		{{ .sc = SDL_SCANCODE_Q },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_L }},
+		{{ .sc = SDL_SCANCODE_W },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_R }},
+		{{ .sc = SDL_SCANCODE_E },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_L2 }},
+		{{ .sc = SDL_SCANCODE_R },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_R2 }},
+		{{ .sc = SDL_SCANCODE_T },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_L3 }},
+		{{ .sc = SDL_SCANCODE_Y },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_R3 }},
+		{{ .sc = SDL_SCANCODE_I },	{ INPUT_CMD_CALL_FUNC,   INPUT_EVENT_TOGGLE_INFO }},
+		{{ .sc = SDL_SCANCODE_F },	{ INPUT_CMD_RETRO_INPUT, INPUT_EVENT_TOGGLE_FULLSCREEN }}
 	};
 
 	SDL_zerop(in_ctx);
@@ -179,12 +155,12 @@ static libretro_input_type input_get_device_type(SDL_GameController *gc)
 	return RETRO_INPUT_JOYPAD;
 }
 
-void input_handle_event(struct input_ctx_s *in_ctx, const SDL_Event *ev)
+void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev)
 {
 	if(ev->type == SDL_KEYDOWN)
-		input_set(in_ctx, ev->key.keysym.sym, SDL_PRESSED);
+		input_set(in_ctx, ev->key.keysym.scancode, SDL_PRESSED);
 	else if(ev->type == SDL_KEYUP)
-		input_set(in_ctx, ev->key.keysym.sym, SDL_RELEASED);
+		input_set(in_ctx, ev->key.keysym.scancode, SDL_RELEASED);
 	else if(ev->type == SDL_CONTROLLERDEVICEADDED)
 	{
 		SDL_GameController *gc;
@@ -256,17 +232,17 @@ static void input_set(struct input_ctx_s *const in_ctx, SDL_Scancode sc,
 	}
 }
 
-Sint16 input_get(struct input_ctx_s *in_ctx,
+Sint16 input_get(const struct input_ctx_s *const in_ctx,
 		 unsigned port, unsigned device, unsigned index, unsigned id)
 {
 	if(port != 0 || index != 0 || device != RETRO_DEVICE_JOYPAD ||
-		id >= SDL_arraysize(keymap) || port >= MAX_PLAYERS)
+			id >= SDL_arraysize(keymap) || port >= MAX_PLAYERS)
 		return 0;
 
 	switch(device)
 	{
 		case RETRO_DEVICE_JOYPAD:
-			return (Sint16) in_ctx->player[port].retro_state[id];
+			return in_ctx->player[port].retro_state[id];
 
 		//case RETRO_DEVICE_ANALOG:
 	}

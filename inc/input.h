@@ -104,7 +104,8 @@ struct input_device_s {
 	/* Player number. Undefined if lr_type is NONE. */
 	Uint8 player;
 
-	/* State of all the retro_device buttons. */
+	/* State of all the retro_device buttons.
+	 *Where bit 0 is RETRO_DEVICE_ID_JOYPAD_B. */
 	Uint8 retro_state[16];
 
 	/* Pointer to gamecontroller if type is INPUT_TYPE_CONTROLLER*. */
@@ -125,6 +126,6 @@ struct input_ctx_s
 #define INPUT_EVENT_CHK(x) (x >= 0x300 && x < 0x900)
 
 void input_init(struct input_ctx_s *restrict in_ctx);
-void input_handle_event(struct input_ctx_s *in_ctx, const SDL_Event *ev);
-Sint16 input_get(struct input_ctx_s *in_ctx,
+void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev);
+Sint16 input_get(const struct input_ctx_s *const in_ctx,
 		 unsigned port, unsigned device, unsigned index, unsigned id);
