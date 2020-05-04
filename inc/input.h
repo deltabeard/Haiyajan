@@ -106,7 +106,7 @@ struct input_device_s {
 
 	/* State of all the retro_device buttons.
 	 *Where bit 0 is RETRO_DEVICE_ID_JOYPAD_B. */
-	Uint8 retro_state[16];
+	Uint16 retro_state;
 
 	/* Pointer to gamecontroller if type is INPUT_TYPE_CONTROLLER*. */
 	SDL_GameController *gc;

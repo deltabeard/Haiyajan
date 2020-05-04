@@ -208,13 +208,19 @@ void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev)
 	}
 }
 
+static void mod_bit(Uint16 *n, Uint8 pos, unsigned val)
+{
+	int mask = 1 << pos;
+	*n = (*n & ~mask) | ((val << pos) & mask);
+}
+
 static void input_set(struct input_ctx_s *const in_ctx, SDL_Scancode sc,
 		      Uint8 state)
 {
 	switch(keymap[sc].input_cmd_type)
 	{
 	case INPUT_CMD_RETRO_INPUT:
-		in_ctx->player[0].retro_state[keymap[sc].input_cmd] = state;
+		mod_bit(&in_ctx->player[0].retro_state, keymap[sc].input_cmd, state);
 		break;
 
 	case INPUT_CMD_CALL_FUNC:
@@ -242,7 +248,7 @@ Sint16 input_get(const struct input_ctx_s *const in_ctx,
 	switch(device)
 	{
 		case RETRO_DEVICE_JOYPAD:
-			return in_ctx->player[port].retro_state[id];
+			return (in_ctx->player[port].retro_state >> id) & 0b1;
 
 		//case RETRO_DEVICE_ANALOG:
 	}
