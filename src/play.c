@@ -197,8 +197,8 @@ bool cb_retro_environment(unsigned cmd, void *data)
 
 		ctx_retro->av_info.geometry.aspect_ratio = geo->aspect_ratio;
 
-		if(play_reinit_texture(ctx_retro, NULL, &geo->base_width,
-				&geo->base_width) != 0)
+		/* Update aspect ratio only. */
+		if(play_reinit_texture(ctx_retro, NULL, NULL, NULL) != 0)
 			return false;
 
 		SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
@@ -220,9 +220,6 @@ void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 {
 	SDL_assert(width <= ctx_retro->av_info.geometry.max_width);
 	SDL_assert(height <= ctx_retro->av_info.geometry.max_height);
-	SDL_assert_paranoid(width <= ctx_retro->av_info.geometry.base_width);
-	SDL_assert_paranoid(height <= ctx_retro->av_info.geometry.base_height);
-	// SDL_Rect rect = { .w = width, .h = height, .x = 0, .y = 0 };
 
 #if SDL_ASSERT_LEVEL == 3
 	size_t tex_pitch;
@@ -312,9 +309,9 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 
 	format = req_format != NULL ? *req_format : ctx->env.pixel_fmt;
 	width = req_width != NULL ? *req_width
-		: ctx->av_info.geometry.base_width;
+		: ctx->av_info.geometry.max_width;
 	height = req_height != NULL ? *req_height
-		: ctx->av_info.geometry.base_height;
+		: ctx->av_info.geometry.max_height;
 
 	test_texture =
 		SDL_CreateTexture(ctx->disp_rend, format,
