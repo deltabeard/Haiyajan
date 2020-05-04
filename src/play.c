@@ -288,7 +288,6 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 	const unsigned int *req_width,
 	const unsigned int *req_height)
 {
-	float aspect;
 	SDL_Texture *test_texture;
 	Uint32 format;
 	unsigned width;
@@ -333,29 +332,8 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 
 	ctx->core_tex = test_texture;
 	ctx->env.pixel_fmt = format;
-	ctx->av_info.geometry.base_width = width;
-	ctx->av_info.geometry.base_height = height;
-
-	aspect = ctx->av_info.geometry.aspect_ratio;
-
-	if(aspect <= 0.0)
-	{
-		ctx->game_logical_res.w = ctx->av_info.geometry.base_width;
-		ctx->game_logical_res.h = ctx->av_info.geometry.base_height;
-	}
-	else if(ctx->av_info.geometry.base_height >
-		ctx->av_info.geometry.base_width)
-	{
-		ctx->game_logical_res.w = ctx->av_info.geometry.base_width;
-		ctx->game_logical_res.h = SDL_ceilf(
-				(float)ctx->av_info.geometry.base_width / aspect);
-	}
-	else
-	{
-		ctx->game_logical_res.w =
-			SDL_ceilf(ctx->av_info.geometry.base_height * aspect);
-		ctx->game_logical_res.h = ctx->av_info.geometry.base_height;
-	}
+	ctx->av_info.geometry.max_width = width;
+	ctx->av_info.geometry.max_height = height;
 
 	SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO, "Created texture: %s %d*%d",
 		SDL_GetPixelFormatName(format), width, height);
