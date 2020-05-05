@@ -234,17 +234,17 @@ void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 	SDL_assert_paranoid(format == ctx_retro->env.pixel_fmt);
 #endif
 
-	if(SDL_UpdateTexture(ctx_retro->core_tex, NULL, data, pitch) != 0)
+	ctx_retro->game_target_res.h = height;
+	ctx_retro->game_target_res.w = width;
+	ctx_retro->game_target_res.x = 0;
+	ctx_retro->game_target_res.y = 0;
+
+	if(SDL_UpdateTexture(ctx_retro->core_tex, &ctx_retro->game_target_res, data, pitch) != 0)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
 			"Texture could not updated: %s",
 			SDL_GetError());
 	}
-
-	ctx_retro->game_target_res.h = height;
-	ctx_retro->game_target_res.w = width;
-	ctx_retro->game_target_res.x = 0;
-	ctx_retro->game_target_res.y = 0;
 
 	return;
 }
