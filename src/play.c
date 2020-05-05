@@ -70,6 +70,11 @@ bool cb_retro_environment(unsigned cmd, void *data)
 
 	switch(cmd)
 	{
+	case RETRO_ENVIRONMENT_GET_CAN_DUPE:
+		/* Passing NULL to the video callback will not update the
+		 * texture. */
+		break;
+
 	case RETRO_ENVIRONMENT_SHUTDOWN:
 		ctx_retro->env.status_bits.shutdown = 1;
 		break;
@@ -209,15 +214,22 @@ bool cb_retro_environment(unsigned cmd, void *data)
 	}
 
 	default:
+		SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
+			"Unsupported environment command %u", cmd);
 		return false;
 	}
 
+	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
+			"Environment command %u was successful", cmd);
 	return true;
 }
 
 void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 	size_t pitch)
 {
+	if(data == NULL)
+		return;
+
 	SDL_assert(width <= ctx_retro->av_info.geometry.max_width);
 	SDL_assert(height <= ctx_retro->av_info.geometry.max_height);
 
