@@ -360,6 +360,8 @@ static void run(struct core_ctx_s *ctx)
 				{
 				case INPUT_EVENT_TOGGLE_INFO:
 					ctx->stngs.vid_info = !ctx->stngs.vid_info;
+					SDL_SetRenderDrawBlendMode(ctx->disp_rend,
+								   ctx->stngs.vid_info ? SDL_BLENDMODE_BLEND : SDL_BLENDMODE_NONE);
 					if(!ctx->stngs.vid_info)
 						break;
 
@@ -581,8 +583,6 @@ int main(int argc, char *argv[])
 	SDL_SetWindowSize(ctx.win, ctx.game_logical_res.w, ctx.game_logical_res.h);
 	SDL_RenderSetLogicalSize(ctx.disp_rend, ctx.game_logical_res.w,
 		ctx.game_logical_res.h);
-
-	SDL_SetRenderDrawBlendMode(ctx.disp_rend, SDL_BLENDMODE_BLEND);
 
 	// SDL_RenderSetIntegerScale(ctx.disp_rend, SDL_ENABLE);
 	run(&ctx);
