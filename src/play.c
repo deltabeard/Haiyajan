@@ -24,10 +24,10 @@
 static struct core_ctx_s *ctx_retro = NULL;
 
 /* Forward declarations. */
-static uint_fast8_t play_reinit_texture(struct core_ctx_s *c,
+static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 	const Uint32 *req_format,
-	const unsigned int *req_width,
-	const unsigned int *req_height);
+	const unsigned int *new_max_width,
+	const unsigned int *new_max_height);
 
 void play_frame(struct core_ctx_s *ctx)
 {
@@ -285,8 +285,8 @@ int16_t cb_retro_input_state(unsigned port, unsigned device, unsigned index,
 /* TODO: Initialise texture to max width/height. */
 static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 	const Uint32 *req_format,
-	const unsigned int *req_width,
-	const unsigned int *req_height)
+	const unsigned int *new_max_width,
+	const unsigned int *new_max_height)
 {
 	SDL_Texture *test_texture;
 	Uint32 format;
@@ -307,9 +307,9 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 		ctx->fn.retro_get_system_av_info(&ctx->av_info);
 
 	format = req_format != NULL ? *req_format : ctx->env.pixel_fmt;
-	width = req_width != NULL ? *req_width
+	width = new_max_width != NULL ? *new_max_width
 		: ctx->av_info.geometry.max_width;
-	height = req_height != NULL ? *req_height
+	height = new_max_height != NULL ? *new_max_height
 		: ctx->av_info.geometry.max_height;
 
 	test_texture =
