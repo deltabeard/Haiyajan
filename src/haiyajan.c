@@ -386,7 +386,11 @@ static void run(struct core_ctx_s *ctx)
 
 		if(tim_cmd < 0)
 		{
+			/* Disable video for the skipped frame to improve
+			 * performance. */
+			ctx->env.status_bits.video_disabled = 1;
 			play_frame(ctx);
+			ctx->env.status_bits.video_disabled = 0;
 			goto timing;
 		}
 

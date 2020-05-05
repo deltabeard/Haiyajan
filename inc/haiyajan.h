@@ -120,6 +120,7 @@ struct core_ctx_s
 				unsigned char shutdown : 1;
 				unsigned char game_loaded : 1;
 				unsigned char running : 1;
+				unsigned char video_disabled : 1;
 			} status_bits;
 			Uint8 status;
 		};

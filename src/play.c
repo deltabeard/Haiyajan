@@ -68,6 +68,7 @@ bool cb_retro_environment(unsigned cmd, void *data)
 {
 	SDL_assert_release(ctx_retro != NULL);
 
+	cmd &= 0xFF;
 	switch(cmd)
 	{
 	case RETRO_ENVIRONMENT_GET_CAN_DUPE:
@@ -212,22 +213,29 @@ bool cb_retro_environment(unsigned cmd, void *data)
 			geo->aspect_ratio);
 		break;
 	}
+	case (RETRO_ENVIRONMENT_GET_AUDIO_VIDEO_ENABLE & 0xFF):
+	{
+		/* An unsigned integer is a better choice than signed for bit
+		 * flipping. */
+		Uint8 *av_en = data;
+		/* Audio is always enabled. */
+		const Uint8 audio_disabled = 0;
 
-	default:
-		SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
-			"Unsupported environment command %u", cmd);
-		return false;
+		*av_en = ((!audio_disabled) << 1) |
+			((!ctx_retro->env.status_bits.video_disabled) << 0);
+		break;
 	}
 
-	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
-			"Environment command %u was successful", cmd);
+	default:
+		return false;
+	}
 	return true;
 }
 
 void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 	size_t pitch)
 {
-	if(data == NULL)
+	if(data == NULL || ctx_retro->env.status_bits.video_disabled)
 		return;
 
 	SDL_assert(width <= ctx_retro->av_info.geometry.max_width);
