@@ -103,7 +103,7 @@ struct core_ctx_s
 
 	struct
 	{
-		char core_log_name[8];
+		char core_log_name[10];
 		char *file_core;
 		char *file_content;
 		char *file_content_sram;
