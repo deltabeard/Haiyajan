@@ -15,8 +15,10 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 
+#if 1
 #include <GL/glext.h>
 PFNGLUSEPROGRAMOBJECTARBPROC glUseProgramObjectARB = NULL;
+#endif
 
 #include <libretro.h>
 #include <haiyajan.h>
@@ -52,13 +54,21 @@ void play_frame(struct core_ctx_s *ctx)
 		glViewport(0, 0, 640, 480);
 		glScissor(0, 0, 640, 480);
 #endif
+		//glUseProgramObjectARB(0);
+		//glPushMatrix();
+		//glTranslatef(1.0f, 1.0f, 0);
+
 		SDL_SetRenderTarget(ctx->disp_rend, ctx->core_tex);
+
+		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 		SDL_GL_BindTexture(ctx_retro->core_tex, NULL, NULL);
+
+		glEnable(GL_TEXTURE_2D);
 #if 0
 		glOrtho(0.0F, ctx->game_target_res.w, ctx->game_target_res.h, 0.0F, 0.0F, 1.0F);
 		glViewport(0, 0, ctx->game_target_res.w, ctx->game_target_res.h);
 
-		//glUseProgramObjectARB(0);
+
 		//glBindRenderbuffer(GL_RENDERBUFFER, 0);
 		//glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
@@ -66,6 +76,7 @@ void play_frame(struct core_ctx_s *ctx)
 		glEnable(GL_CULL_FACE);
 		glEnable(GL_TEXTURE_2D);
 #endif
+
 	}
 
 	if(ctx_retro->env.ftcb != NULL)
@@ -81,13 +92,15 @@ void play_frame(struct core_ctx_s *ctx)
 	{
 #if 0
 		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
+		glLoadIdentity
 		glDisable(GL_DEPTH_TEST);
 		glDisable(GL_CULL_FACE);
 		glDisable(GL_TEXTURE_2D);
 #endif
 
+glDisable(GL_TEXTURE_2D);
 		SDL_GL_UnbindTexture(ctx_retro->core_tex);
+		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 		SDL_SetRenderTarget(ctx->disp_rend, NULL);
 #if 0
 		glOrtho(0.0F, ctx->game_target_res.w, ctx->game_target_res.h, 0.0F, 0.0F, 1.0F);
@@ -135,7 +148,7 @@ retro_proc_address_t cb_hw_get_proc_address(const char *sym)
 
 uintptr_t cb_hw_get_current_framebuffer(void)
 {
-#if 1
+#if 0
 	return ctx_retro->gl.enabled;
 #else
 	/* FIXME: do this on OpenGL init. */
@@ -335,7 +348,7 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		case RETRO_HW_CONTEXT_OPENGLES3:
 		{
 			Uint32 fmt = SDL_PIXELFORMAT_RGB888;
-#if 0
+#if 1
 			ctx_retro->gl.glctx = SDL_GL_CreateContext(ctx_retro->win);
 			if(ctx_retro->gl.glctx == NULL)
 				return false;
@@ -391,6 +404,13 @@ bool cb_retro_environment(unsigned cmd, void *data)
 			var++;
 		}
 		return false;
+	}
+
+	case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE:
+	{
+		bool *updated = data;
+		*updated = SDL_FALSE;
+		break;
 	}
 
 	case RETRO_ENVIRONMENT_GET_LIBRETRO_PATH:
@@ -528,6 +548,11 @@ unsupported:
 void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 	size_t pitch)
 {
+	ctx_retro->game_target_res.h = height;
+	ctx_retro->game_target_res.w = width;
+	ctx_retro->game_target_res.x = 0;
+	ctx_retro->game_target_res.y = 0;
+
 	if(data == NULL || ctx_retro->env.status_bits.video_disabled ||
 			data == RETRO_HW_FRAME_BUFFER_VALID || ctx_retro->gl.enabled == 1)
 		return;
@@ -547,11 +572,6 @@ void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 	SDL_assert_paranoid(pitch <= tex_pitch);
 	SDL_assert_paranoid(format == ctx_retro->env.pixel_fmt);
 #endif
-
-	ctx_retro->game_target_res.h = height;
-	ctx_retro->game_target_res.w = width;
-	ctx_retro->game_target_res.x = 0;
-	ctx_retro->game_target_res.y = 0;
 
 	if(SDL_UpdateTexture(ctx_retro->core_tex, &ctx_retro->game_target_res, data, pitch) != 0)
 	{

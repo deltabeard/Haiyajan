@@ -330,7 +330,7 @@ static void run(struct core_ctx_s *ctx)
 	Uint32 benchmark_beg;
 
 	input_init(&ctx->inp);
-	ctx->fn.retro_set_controller_port_device(0, RETRO_DEVICE_ANALOG);
+	ctx->fn.retro_set_controller_port_device(0, RETRO_DEVICE_JOYPAD);
 
 	font = FontStartup(ctx->disp_rend);
 	if(font == NULL)
@@ -387,7 +387,7 @@ static void run(struct core_ctx_s *ctx)
 
 		frames++;
 
-#if 1
+#if 0
 		if(tim_cmd < 0)
 		{
 			/* Disable video for the skipped frame to improve
@@ -405,8 +405,11 @@ static void run(struct core_ctx_s *ctx)
 
 		SDL_RenderClear(ctx->disp_rend);
 		play_frame(ctx);
+		//SDL_GL_SwapWindow(ctx->win);
+#if 1
 		SDL_RenderCopy(ctx->disp_rend, ctx->core_tex,
 			        &ctx->game_target_res, NULL);
+#endif
 
 		if(ctx->stngs.vid_info)
 		{
@@ -566,6 +569,8 @@ int main(int argc, char *argv[])
 
 	/* Used to select created OpenGL context. */
 	SDL_RenderClear(ctx.disp_rend);
+	if(ctx.stngs.vid_info)
+		SDL_SetRenderDrawBlendMode(ctx.disp_rend, SDL_BLENDMODE_BLEND);
 
 	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 		"Created window and renderer");
