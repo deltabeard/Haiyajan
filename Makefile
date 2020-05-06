@@ -1,4 +1,4 @@
-CFLAGS := -std=c99 -g3 -fPIE -Wall -Wextra -pipe -I./inc $(shell sdl2-config --cflags)
+CFLAGS := -std=c99 -g3 -fPIE -Wall -Wextra -pipe -I./inc $(shell sdl2-config --cflags) -lGL
 
 ifeq ($(DEBUG),1)
 	CFLAGS += -D DEBUG=1 -D SDL_ASSERT_LEVEL=3

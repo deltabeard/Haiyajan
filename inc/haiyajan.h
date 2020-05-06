@@ -97,6 +97,15 @@ struct core_ctx_s
 		SDL_AudioDeviceID audio_dev;
 	};
 
+	struct {
+		SDL_GLContext glctx;
+		unsigned int enabled;
+		unsigned int glfb_name;
+		unsigned int gltex_id;
+		retro_hw_context_reset_t context_reset;
+		retro_hw_context_reset_t context_destroy;
+	} gl;
+
 	/* Libretro core information. */
 	struct retro_system_info sys_info;
 	struct retro_system_av_info av_info;
@@ -107,6 +116,7 @@ struct core_ctx_s
 		char *file_core;
 		char *file_content;
 		char *file_content_sram;
+		char path_sep;
 	};
 
 	/* Libretro core environment status. */
@@ -128,6 +138,8 @@ struct core_ctx_s
 		unsigned perf_lvl;
 		Uint32 pixel_fmt;
 		struct retro_audio_callback audio_cb;
+		retro_frame_time_callback_t ftcb;
+		retro_usec_t ftref;
 	} env;
 
 	struct input_ctx_s inp;

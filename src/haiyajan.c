@@ -330,8 +330,7 @@ static void run(struct core_ctx_s *ctx)
 	Uint32 benchmark_beg;
 
 	input_init(&ctx->inp);
-
-	ctx->fn.retro_set_controller_port_device(0, RETRO_DEVICE_JOYPAD);
+	ctx->fn.retro_set_controller_port_device(0, RETRO_DEVICE_ANALOG);
 
 	font = FontStartup(ctx->disp_rend);
 	if(font == NULL)
@@ -347,6 +346,8 @@ static void run(struct core_ctx_s *ctx)
 
 	while(ctx->env.status_bits.shutdown == 0)
 	{
+		static Uint32 frames = 0;
+
 		while(SDL_PollEvent(&ev) != 0)
 		{
 			if(ev.type == SDL_QUIT)
@@ -384,6 +385,9 @@ static void run(struct core_ctx_s *ctx)
 		if(ctx->stngs.benchmark)
 			tim_cmd = 0;
 
+		frames++;
+
+#if 1
 		if(tim_cmd < 0)
 		{
 			/* Disable video for the skipped frame to improve
@@ -394,12 +398,13 @@ static void run(struct core_ctx_s *ctx)
 			goto timing;
 		}
 
+
 		if(tim_cmd > 0)
 			SDL_Delay(tim_cmd);
+#endif
 
+		//SDL_RenderClear(ctx->disp_rend);
 		play_frame(ctx);
-
-		SDL_RenderClear(ctx->disp_rend);
 		SDL_RenderCopy(ctx->disp_rend, ctx->core_tex,
 			        &ctx->game_target_res, NULL);
 
@@ -409,10 +414,11 @@ static void run(struct core_ctx_s *ctx)
 			static char fps_str[10] = { '\0' };
 			static char acc_str[10] = { '\0' };
 			static char aud_str[10] = { '\0' };
+			static char frames_str[10] = { '\0' };
 			const SDL_Rect font_bg =
 			{
 				.w = 10 * FONT_CHAR_WIDTH,
-				.h = 4 * (FONT_CHAR_HEIGHT + 1),
+				.h = 5 * (FONT_CHAR_HEIGHT + 1),
 				.x = 0,
 				.y = 0
 			};
@@ -430,6 +436,7 @@ static void run(struct core_ctx_s *ctx)
 				SDL_snprintf(aud_str, 10, "%6lu",
 					SDL_GetQueuedAudioSize(ctx->audio_dev) /
 					sizeof(Uint16) / 2);
+				SDL_snprintf(frames_str, 10, "%6u", frames);
 			}
 
 			/* Update only after FPS has been recalculated. */
@@ -452,6 +459,9 @@ static void run(struct core_ctx_s *ctx)
 
 			dim.y += FONT_CHAR_HEIGHT + 1;
 			FontPrintToRenderer(font, aud_str, &dim);
+
+			dim.y += FONT_CHAR_HEIGHT + 1;
+			FontPrintToRenderer(font, frames_str, &dim);
 
 			SDL_SetRenderDrawColor(ctx->disp_rend,
 				0x00, 0x00, 0x00, 0x00);
@@ -481,16 +491,16 @@ timing:
 
 		while(ctx->stngs.benchmark)
 		{
-			static unsigned frames = 0;
 			uint_fast32_t elapsed;
 			float fps;
+			static Uint32 bench_frames = 0;
 
-			frames++;
+			bench_frames++;
 			elapsed = SDL_GetTicks() - benchmark_beg;
 			if(elapsed < 10 * 1000)
 				break;
 
-			fps = (float)frames / ((float)elapsed / 1000.0);
+			fps = (float)bench_frames / ((float)elapsed / 1000.0);
 			SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
 					"Benchmark: %.2f FPS", fps);
 			goto out;
@@ -523,7 +533,8 @@ int main(int argc, char *argv[])
 	print_info();
 	prerun_checks();
 
-	SDL_SetHint("SDL_AUDIO_DEVICE_APP_NAME", PROG_NAME);
+	//SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengles2");
+	SDL_SetHint(SDL_HINT_AUDIO_DEVICE_APP_NAME, PROG_NAME);
 
 	if(SDL_Init(SDL_INIT_AUDIO | SDL_INIT_EVENTS | SDL_INIT_GAMECONTROLLER) != 0)
 	{
@@ -543,7 +554,7 @@ int main(int argc, char *argv[])
 		goto err;
 
 	{
-		Uint32 flags = SDL_RENDERER_ACCELERATED;
+		Uint32 flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE;
 		if(!ctx.stngs.benchmark)
 			flags |= SDL_RENDERER_PRESENTVSYNC;
 
@@ -552,6 +563,9 @@ int main(int argc, char *argv[])
 
 	if(ctx.disp_rend == NULL)
 		goto err;
+
+	/* Used to select created OpenGL context. */
+	SDL_RenderClear(ctx.disp_rend);
 
 	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 		"Created window and renderer");
@@ -565,7 +579,7 @@ int main(int argc, char *argv[])
 	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
 		"Libretro core \"%.32s\" loaded successfully.",
 		ctx.sys_info.library_name);
-	SDL_SetHint("SDL_AUDIO_DEVICE_STREAM_NAME", ctx.sys_info.library_name);
+	SDL_SetHint(SDL_HINT_AUDIO_DEVICE_STREAM_NAME, ctx.sys_info.library_name);
 
 	{
 		char title[MAX_TITLE_LEN];

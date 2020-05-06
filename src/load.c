@@ -264,6 +264,24 @@ uint_fast8_t load_libretro_core(const char *restrict so_file,
 	/* Initialise ctx status information to zero. */
 	ctx->env.status = 0;
 
+	/* Get path separator used for current platform. */
+	{
+		char *base_path;
+		size_t base_path_len;
+
+		/* Get path separator for current platform. */
+		base_path = SDL_GetBasePath();
+		if(base_path == NULL)
+			goto ret;
+
+		base_path_len = SDL_strlen(base_path);
+		/* SDL2 guarantees that this string ends with a path separator.
+		 */
+		ctx->path_sep = *(base_path + base_path_len - 1);
+		SDL_free(base_path);
+	}
+
+ret:
 	return 0;
 }
 

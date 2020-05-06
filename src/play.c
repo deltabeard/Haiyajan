@@ -13,6 +13,10 @@
  */
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_opengl.h>
+
+#include <GL/glext.h>
+PFNGLUSEPROGRAMOBJECTARBPROC glUseProgramObjectARB = NULL;
 
 #include <libretro.h>
 #include <haiyajan.h>
@@ -31,9 +35,68 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 
 void play_frame(struct core_ctx_s *ctx)
 {
+	/* If OpenGL is in use, set render target to the texture. */
+	if(ctx->gl.enabled)
+	{
+		//SDL_RenderFlush(ctx->disp_rend);
+#if 0
+		if(SDL_GL_BindTexture(ctx->core_tex, NULL, NULL) != 0)
+		{
+			SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO, "GL Bind error: %s",
+				SDL_GetError());
+		}
+		SDL_SetRenderTarget(ctx->disp_rend, ctx->core_tex);
+		SDL_SetRenderDrawColor(ctx->disp_rend, 0, 0, 0, 255);
+		SDL_RenderClear(ctx->disp_rend);
+
+		glViewport(0, 0, 640, 480);
+		glScissor(0, 0, 640, 480);
+#endif
+		SDL_SetRenderTarget(ctx->disp_rend, ctx->core_tex);
+		SDL_GL_BindTexture(ctx_retro->core_tex, NULL, NULL);
+#if 0
+		glOrtho(0.0F, ctx->game_target_res.w, ctx->game_target_res.h, 0.0F, 0.0F, 1.0F);
+		glViewport(0, 0, ctx->game_target_res.w, ctx->game_target_res.h);
+
+		//glUseProgramObjectARB(0);
+		//glBindRenderbuffer(GL_RENDERBUFFER, 0);
+		//glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_CULL_FACE);
+		glEnable(GL_TEXTURE_2D);
+#endif
+	}
+
+	if(ctx_retro->env.ftcb != NULL)
+	{
+		ctx_retro->env.ftcb(ctx_retro->env.ftref);
+	}
+
 	ctx->env.status_bits.running = 1;
 	ctx->fn.retro_run();
 	ctx->env.status_bits.running = 0;
+
+	if(ctx->gl.enabled)
+	{
+#if 0
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_CULL_FACE);
+		glDisable(GL_TEXTURE_2D);
+#endif
+
+		SDL_GL_UnbindTexture(ctx_retro->core_tex);
+		SDL_SetRenderTarget(ctx->disp_rend, NULL);
+#if 0
+		glOrtho(0.0F, ctx->game_target_res.w, ctx->game_target_res.h, 0.0F, 0.0F, 1.0F);
+		glViewport(0, 0, ctx->game_target_res.w, ctx->game_target_res.h);
+
+		//SDL_GL_UnbindTexture(ctx->core_tex);
+		//SDL_RenderFlush(ctx->disp_rend);
+#endif
+	}
 }
 
 /**
@@ -43,7 +106,7 @@ void play_libretro_log(enum retro_log_level level, const char *fmt, ...)
 {
 	va_list ap;
 	SDL_LogPriority priority;
-	char buf[128];
+	char buf[192];
 
 	if(level > RETRO_LOG_ERROR)
 		return;
@@ -64,8 +127,102 @@ void play_libretro_log(enum retro_log_level level, const char *fmt, ...)
 		ctx_retro->core_log_name, buf);
 }
 
+retro_proc_address_t cb_hw_get_proc_address(const char *sym)
+{
+	/* TODO: inline this. */
+	return SDL_GL_GetProcAddress(sym);
+}
+
+uintptr_t cb_hw_get_current_framebuffer(void)
+{
+#if 0
+	return ctx_retro->gl.enabled;
+#else
+	/* FIXME: do this on OpenGL init. */
+	struct sdl_tex_s
+	{
+		const void *magic;
+		Uint32 format;              /**< The pixel format of the texture */
+		int access;                 /**< SDL_TextureAccess */
+		int w;                      /**< The width of the texture */
+		int h;                      /**< The height of the texture */
+		int modMode;                /**< The texture modulation mode */
+		SDL_BlendMode blendMode;    /**< The texture blend mode */
+		SDL_ScaleMode scaleMode;    /**< The texture scale mode */
+		Uint8 r, g, b, a;           /**< Texture modulation values */
+
+		SDL_Renderer *renderer;
+
+		/* Support for formats not supported directly by the renderer */
+		SDL_Texture *native;
+		void *yuv;
+		void *pixels;
+		int pitch;
+		SDL_Rect locked_rect;
+		SDL_Surface *locked_surface;
+		Uint32 last_command_generation;
+
+		void *driverdata;
+
+		SDL_Texture *prev;
+		SDL_Texture *next;
+	};
+	struct gl_fbo_list
+	{
+		Uint32 w, h;
+		unsigned int fbo;
+		struct gl_fbo_list *next;
+	};
+	struct sdl_gl_texdat
+	{
+		unsigned int texture;
+		float texw;
+		float texh;
+		int format;
+		int formattype;
+		void *pixels;
+		int pitch;
+		SDL_Rect locked_rect;
+
+		/* YUV texture support */
+		SDL_bool yuv;
+		SDL_bool nv12;
+		unsigned int utexture;
+		unsigned int vtexture;
+
+		struct gl_fbo_list *fbo_list;
+	};
+	struct sdl_tex_s *tex = (struct sdl_tex_s *)ctx_retro->core_tex;
+
+	SDL_assert_always(tex != NULL);
+
+	while(tex->prev != NULL)
+		tex = (struct sdl_tex_s *)tex->prev;
+
+	while(tex != NULL)
+	{
+		struct sdl_gl_texdat *texdat = tex->driverdata;
+		if(texdat == NULL || texdat->fbo_list == NULL)
+		{
+			tex = (struct sdl_tex_s *)tex->next;
+			continue;
+		}
+
+		/* FIXME: always returns 1? Could just do that. */
+		/* SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO,
+				"Using FBO %u", texdat->fbo_list->fbo); */
+		return texdat->fbo_list->fbo;
+	}
+
+	/* Failure. */
+	SDL_assert_always(SDL_FALSE);
+	return 0;
+#endif
+}
+
 bool cb_retro_environment(unsigned cmd, void *data)
 {
+	const Uint8 exp = (cmd >> 4);
 	SDL_assert_release(ctx_retro != NULL);
 
 	cmd &= 0xFF;
@@ -78,6 +235,8 @@ bool cb_retro_environment(unsigned cmd, void *data)
 
 	case RETRO_ENVIRONMENT_SHUTDOWN:
 		ctx_retro->env.status_bits.shutdown = 1;
+		SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
+			       "Core requested the frontend to shutdown");
 		break;
 
 	case RETRO_ENVIRONMENT_SET_PERFORMANCE_LEVEL:
@@ -157,6 +316,115 @@ bool cb_retro_environment(unsigned cmd, void *data)
 	}
 
 #endif
+	case RETRO_ENVIRONMENT_SET_HW_RENDER:
+	{
+		struct retro_hw_render_callback *hw_cb = data;
+		SDL_assert(ctx_retro->env.status_bits.game_loaded == 0);
+		const char *const ctx_type[] =
+		{
+			"None", "OpenGL 2.x", "OpenGL ES 2",
+			"OpenGL Specific", "OpenGL ES 3",
+			"OpenGL ES Specific", "Vulkan", "Direct3D"
+		};
+
+		switch(hw_cb->context_type)
+		{
+		case RETRO_HW_CONTEXT_OPENGL_CORE:
+		case RETRO_HW_CONTEXT_OPENGL:
+		case RETRO_HW_CONTEXT_OPENGLES2:
+		case RETRO_HW_CONTEXT_OPENGLES3:
+		{
+			Uint32 fmt = SDL_PIXELFORMAT_RGB888;
+#if 0
+			ctx_retro->gl.glctx = SDL_GL_CreateContext(ctx_retro->win);
+			if(ctx_retro->gl.glctx == NULL)
+				return false;
+#endif
+			ctx_retro->gl.enabled = 1;
+			hw_cb->get_current_framebuffer = cb_hw_get_current_framebuffer;
+			hw_cb->get_proc_address = cb_hw_get_proc_address;
+			ctx_retro->gl.context_reset = hw_cb->context_reset;
+			ctx_retro->gl.context_destroy = hw_cb->context_destroy;
+
+			play_reinit_texture(ctx_retro, &fmt, NULL, NULL);
+
+#if 0
+			/* FIXME: SDL OpenGL driver stored FBO in
+			 * GL_TextureData data->fbo */
+			glGenFramebuffers(1, &ctx_retro->gl.glfb);
+			glBindFramebuffer(GL_FRAMEBUFFER, &ctx_retro->gl.glfb);
+			// The texture we're going to render to
+			/* FIXME: SDL OpenGL renderer does this in
+			 * GL_TextureData create_texture. */
+			glGenTextures(1, &ctx_retro->gl.gltex_id);
+
+// "Bind" the newly created texture : all future texture functions will modify this texture
+			/* FIXME: SDL_GL_BindTexture can do this. */
+			glBindTexture(GL_TEXTURE_2D, renderedTexture);
+#endif
+
+			SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+					"Hardware context %s initalised",
+					ctx_type[hw_cb->context_type]);
+			break;
+		}
+
+		default:
+			SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+						"Hardware context %s (%u.%u) is not supported",
+						ctx_type[hw_cb->context_type],
+						hw_cb->version_major, hw_cb->version_minor);
+			return false;
+		}
+
+		break;
+	}
+
+	case RETRO_ENVIRONMENT_SET_VARIABLES:
+	{
+		const struct retro_variable *var = data;
+		while(var->key != NULL)
+		{
+			SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
+				"Core set variable: %s, %s",
+				var->key, var->value);
+			var++;
+		}
+		return false;
+	}
+
+	case RETRO_ENVIRONMENT_GET_LIBRETRO_PATH:
+	{
+		const char **core_path = data;
+
+		/* FIXME: fix memory leak. */
+		char *tmp = SDL_strdup(ctx_retro->file_core);
+		//size_t len = SDL_strlen(ctx_retro->file_core);
+		*core_path = tmp;
+
+#if 0
+		for(char *i = tmp + len; i != tmp; i--)
+		{
+			if(*i == ctx_retro->path_sep)
+			{
+				*i = '\0';
+				break;
+			}
+		}
+#endif
+
+		break;
+	}
+
+	case RETRO_ENVIRONMENT_SET_FRAME_TIME_CALLBACK:
+	{
+		const struct retro_frame_time_callback *ftcb = data;
+		ctx_retro->env.ftcb = ftcb->callback;
+		ctx_retro->env.ftref = ftcb->reference;
+		SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
+				"Set frame time callback");
+		break;
+	}
 
 	case RETRO_ENVIRONMENT_GET_LOG_INTERFACE:
 	{
@@ -226,8 +494,33 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		break;
 	}
 
+	case (RETRO_ENVIRONMENT_SET_HW_SHARED_CONTEXT & 0xFF):
+	{
+		/* Check if RETRO_ENVIRONMENT_SET_SERIALIZATION_QUIRKS */
+		if(!exp)
+			goto unsupported;
+
+		break;
+	}
+
 	default:
+unsupported:
+	{
+#if 0
+		static char log_hist[64] = { 0 };
+		if(log_hist[cmd] == 0)
+		{
+			SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
+				"Unsupported environment command %u", cmd);
+			log_hist[cmd] = 1;
+		}
+#else
+		SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
+				"Unsupported environment command %u", cmd);
+#endif
+
 		return false;
+	}
 	}
 	return true;
 }
@@ -235,7 +528,8 @@ bool cb_retro_environment(unsigned cmd, void *data)
 void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 	size_t pitch)
 {
-	if(data == NULL || ctx_retro->env.status_bits.video_disabled)
+	if(data == NULL || ctx_retro->env.status_bits.video_disabled ||
+			data == RETRO_HW_FRAME_BUFFER_VALID || ctx_retro->gl.enabled == 1)
 		return;
 
 	SDL_assert(width <= ctx_retro->av_info.geometry.max_width);
@@ -332,9 +626,16 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 	height = new_max_height != NULL ? *new_max_height
 		: ctx->av_info.geometry.max_height;
 
-	test_texture =
-		SDL_CreateTexture(ctx->disp_rend, format,
-			SDL_TEXTUREACCESS_STREAMING, width, height);
+	if(ctx->gl.enabled)
+	{
+		test_texture = SDL_CreateTexture(ctx->disp_rend, format,
+				SDL_TEXTUREACCESS_TARGET, width, height);
+	}
+	else
+	{
+		test_texture = SDL_CreateTexture(ctx->disp_rend, format,
+				SDL_TEXTUREACCESS_STREAMING, width, height);
+	}
 
 	if(test_texture == NULL)
 	{
@@ -354,6 +655,17 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 	ctx->env.pixel_fmt = format;
 	ctx->av_info.geometry.max_width = width;
 	ctx->av_info.geometry.max_height = height;
+
+#if 0
+	if(ctx->gl.glctx)
+	{
+		SDL_assert_always(ctx->gl.context_destroy != NULL);
+		ctx_retro->gl.context_destroy();
+
+		SDL_assert_always(ctx->gl.context_reset != NULL);
+		ctx->gl.context_reset();
+	}
+#endif
 
 	SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO, "Created texture: %s %d*%d",
 		SDL_GetPixelFormatName(format), width, height);
@@ -392,6 +704,30 @@ uint_fast8_t play_init_av(struct core_ctx_s *ctx)
 			return 1;
 		}
 	}
+#if 0
+	{
+		glShadeModel(GL_SMOOTH);
+		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+		glClearDepth(1.0f);
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LEQUAL);
+		glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+
+		glViewport(0, 0, ctx->av_info.geometry.max_width, ctx->av_info.geometry.max_height);
+
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		glOrtho(0, ctx->av_info.geometry.max_width, ctx->av_info.geometry.max_height, 0, -10, 10.0);
+
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+	}
+#endif
+	//glUseProgram(0);
+	glUseProgramObjectARB = (PFNGLUSEPROGRAMOBJECTARBPROC) SDL_GL_GetProcAddress("glUseProgramObjectARB");
+
+	if(ctx->gl.context_reset != NULL)
+		ctx->gl.context_reset();
 
 	want.freq = ctx->av_info.timing.sample_rate;
 	want.format = AUDIO_S16SYS;
@@ -444,7 +780,7 @@ void play_init_cb(struct core_ctx_s *ctx)
 				sizeof(ctx->core_log_name));
 		}
 
-		while(printed > 0)
+		while(printed >= 0)
 		{
 			ctx->core_log_name[printed] =
 				SDL_toupper(ctx->core_log_name[printed]);
@@ -466,6 +802,7 @@ void play_init_cb(struct core_ctx_s *ctx)
 	/* Error in libretro core dev overview: retro_init() should be called
 	 * after retro_set_*() functions. */
 	ctx->fn.retro_init();
+	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION, "Core initialised");
 
 	ctx->env.status_bits.core_init = 1;
 }
