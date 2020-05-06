@@ -135,7 +135,7 @@ retro_proc_address_t cb_hw_get_proc_address(const char *sym)
 
 uintptr_t cb_hw_get_current_framebuffer(void)
 {
-#if 0
+#if 1
 	return ctx_retro->gl.enabled;
 #else
 	/* FIXME: do this on OpenGL init. */

@@ -403,7 +403,7 @@ static void run(struct core_ctx_s *ctx)
 			SDL_Delay(tim_cmd);
 #endif
 
-		//SDL_RenderClear(ctx->disp_rend);
+		SDL_RenderClear(ctx->disp_rend);
 		play_frame(ctx);
 		SDL_RenderCopy(ctx->disp_rend, ctx->core_tex,
 			        &ctx->game_target_res, NULL);
