@@ -406,10 +406,20 @@ static void run(struct core_ctx_s *ctx)
 		SDL_RenderClear(ctx->disp_rend);
 		play_frame(ctx);
 		//SDL_GL_SwapWindow(ctx->win);
-#if 1
-		SDL_RenderCopy(ctx->disp_rend, ctx->core_tex,
-			        &ctx->game_target_res, NULL);
-#endif
+
+		if(ctx->gl.enabled)
+		{
+			SDL_RenderCopyEx(ctx->disp_rend, ctx->core_tex,
+					 &ctx->game_target_res, NULL, 0.0, NULL,
+					 SDL_FLIP_VERTICAL);
+		}
+		else
+		{
+
+			SDL_RenderCopy(ctx->disp_rend, ctx->core_tex,
+					&ctx->game_target_res, NULL);
+		}
+
 
 		if(ctx->stngs.vid_info)
 		{
@@ -538,6 +548,14 @@ int main(int argc, char *argv[])
 
 	//SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengles2");
 	SDL_SetHint(SDL_HINT_AUDIO_DEVICE_APP_NAME, PROG_NAME);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+#if 0
+	// No change
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
+#endif
 
 	if(SDL_Init(SDL_INIT_AUDIO | SDL_INIT_EVENTS | SDL_INIT_GAMECONTROLLER) != 0)
 	{

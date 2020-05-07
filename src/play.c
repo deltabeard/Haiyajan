@@ -54,29 +54,55 @@ void play_frame(struct core_ctx_s *ctx)
 		glViewport(0, 0, 640, 480);
 		glScissor(0, 0, 640, 480);
 #endif
-		//glUseProgramObjectARB(0);
-		//glPushMatrix();
-		//glTranslatef(1.0f, 1.0f, 0);
 
 		SDL_SetRenderTarget(ctx->disp_rend, ctx->core_tex);
 
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+		/* Unfinished example 1 */
+		//glUseProgramObjectARB(0);
+		//glPushMatrix();
+		//glTranslatef(1.0f, -1.0f, 0); // TODO: Check this
+		//glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+		SDL_Rect rvp;
+		SDL_RenderGetViewport(ctx->disp_rend, &rvp);
+
+		float texw, texh;
+		SDL_GL_BindTexture(ctx->core_tex, &texw, &texh);
+
+		//glEnableClientState(GL_VERTEX_ARRAY);
+		//glEnableClientState(GL_COLOR_ARRAY);
+		//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+		//glEnable(GL_BLEND);
+		//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		//glOrtho(0.0F, ctx->game_target_res.w, ctx->game_target_res.h, 0.0F, 1.0F, 1.0F);
+#if 0
+		glUseProgramObjectARB(0);
 		SDL_GL_BindTexture(ctx_retro->core_tex, NULL, NULL);
 
-		glEnable(GL_TEXTURE_2D);
-#if 0
-		glOrtho(0.0F, ctx->game_target_res.w, ctx->game_target_res.h, 0.0F, 0.0F, 1.0F);
-		glViewport(0, 0, ctx->game_target_res.w, ctx->game_target_res.h);
+		glPixelZoom(1,-1);
+#endif
+
+		//glMatrixMode(GL_COLOR);
+		//glTranslatef(1.0f, -1.0f, 0);
+		//glPushMatrix();
+		//glEnable(GL_TEXTURE_2D);
+		//glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+		//glViewport(0, 0, 640, 480);
+		//glScissor(0, 0, 640, 480);
+
+#if 1
+		//glOrtho(0.0F, ctx->game_target_res.w, ctx->game_target_res.h, 0.0F, -1.0F, 1.0F);
+		//glViewport(0, 0, ctx->game_target_res.w, ctx->game_target_res.h);
+		//glScissor(0, 0, ctx->game_target_res.w, ctx->game_target_res.h);
 
 
 		//glBindRenderbuffer(GL_RENDERBUFFER, 0);
 		//glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-		glEnable(GL_DEPTH_TEST);
-		glEnable(GL_CULL_FACE);
-		glEnable(GL_TEXTURE_2D);
-#endif
+		//glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+		//glEnable(GL_DEPTH_TEST);
+		//glEnable(GL_CULL_FACE);
+		//glEnable(GL_TEXTURE_2D);
 
+#endif
 	}
 
 	if(ctx_retro->env.ftcb != NULL)
@@ -90,23 +116,33 @@ void play_frame(struct core_ctx_s *ctx)
 
 	if(ctx->gl.enabled)
 	{
-#if 0
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity
-		glDisable(GL_DEPTH_TEST);
-		glDisable(GL_CULL_FACE);
-		glDisable(GL_TEXTURE_2D);
+#if 1
+		/* THis breaks libretro-mpv */
+		//glMatrixMode(GL_MODELVIEW);
+		//glLoadIdentity();
+		//glDisable(GL_DEPTH_TEST);
+		//glDisable(GL_CULL_FACE);
+		//glDisable(GL_TEXTURE_2D);
 #endif
+		//glPopMatrix();
+		//glDisableClientState(GL_VERTEX_ARRAY);
+		//glDisableClientState(GL_COLOR_ARRAY);
+		//SDL_GL_UnbindTexture(ctx_retro->core_tex);
+		//glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		//glColor4f(1.0, 1.0, 1.0, 1.0);
+		//glPopMatrix();
 
-glDisable(GL_TEXTURE_2D);
-		SDL_GL_UnbindTexture(ctx_retro->core_tex);
-		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		//glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		//glUseProgramObjectARB(1);
+		SDL_GL_UnbindTexture(ctx->core_tex);
 		SDL_SetRenderTarget(ctx->disp_rend, NULL);
+
+
 #if 0
 		glOrtho(0.0F, ctx->game_target_res.w, ctx->game_target_res.h, 0.0F, 0.0F, 1.0F);
 		glViewport(0, 0, ctx->game_target_res.w, ctx->game_target_res.h);
 
-		//SDL_GL_UnbindTexture(ctx->core_tex);
+
 		//SDL_RenderFlush(ctx->disp_rend);
 #endif
 	}
@@ -148,7 +184,7 @@ retro_proc_address_t cb_hw_get_proc_address(const char *sym)
 
 uintptr_t cb_hw_get_current_framebuffer(void)
 {
-#if 0
+#if 1
 	return ctx_retro->gl.enabled;
 #else
 	/* FIXME: do this on OpenGL init. */
@@ -347,19 +383,15 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		case RETRO_HW_CONTEXT_OPENGLES2:
 		case RETRO_HW_CONTEXT_OPENGLES3:
 		{
-			Uint32 fmt = SDL_PIXELFORMAT_RGB888;
-#if 1
-			ctx_retro->gl.glctx = SDL_GL_CreateContext(ctx_retro->win);
-			if(ctx_retro->gl.glctx == NULL)
-				return false;
-#endif
+			//Uint32 fmt = SDL_PIXELFORMAT_RGB888;
+
 			ctx_retro->gl.enabled = 1;
 			hw_cb->get_current_framebuffer = cb_hw_get_current_framebuffer;
 			hw_cb->get_proc_address = cb_hw_get_proc_address;
 			ctx_retro->gl.context_reset = hw_cb->context_reset;
 			ctx_retro->gl.context_destroy = hw_cb->context_destroy;
 
-			play_reinit_texture(ctx_retro, &fmt, NULL, NULL);
+			play_reinit_texture(ctx_retro, NULL, NULL, NULL);
 
 #if 0
 			/* FIXME: SDL OpenGL driver stored FBO in
@@ -377,8 +409,10 @@ bool cb_retro_environment(unsigned cmd, void *data)
 #endif
 
 			SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-					"Hardware context %s initalised",
-					ctx_type[hw_cb->context_type]);
+					"Hardware context %s (%u.%u) initalised",
+					ctx_type[hw_cb->context_type],
+					hw_cb->version_major,
+					hw_cb->version_minor);
 			break;
 		}
 
@@ -520,6 +554,13 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		if(!exp)
 			goto unsupported;
 
+		break;
+	}
+
+	case RETRO_ENVIRONMENT_GET_PREFERRED_HW_RENDER:
+	{
+		unsigned *pref = data;
+		*pref = RETRO_HW_CONTEXT_OPENGL_CORE;
 		break;
 	}
 
@@ -676,17 +717,6 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 	ctx->av_info.geometry.max_width = width;
 	ctx->av_info.geometry.max_height = height;
 
-#if 0
-	if(ctx->gl.glctx)
-	{
-		SDL_assert_always(ctx->gl.context_destroy != NULL);
-		ctx_retro->gl.context_destroy();
-
-		SDL_assert_always(ctx->gl.context_reset != NULL);
-		ctx->gl.context_reset();
-	}
-#endif
-
 	SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO, "Created texture: %s %d*%d",
 		SDL_GetPixelFormatName(format), width, height);
 
@@ -724,6 +754,7 @@ uint_fast8_t play_init_av(struct core_ctx_s *ctx)
 			return 1;
 		}
 	}
+
 #if 0
 	{
 		glShadeModel(GL_SMOOTH);
@@ -737,14 +768,15 @@ uint_fast8_t play_init_av(struct core_ctx_s *ctx)
 
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
-		glOrtho(0, ctx->av_info.geometry.max_width, ctx->av_info.geometry.max_height, 0, -10, 10.0);
+		glOrtho(0, ctx->av_info.geometry.max_width, ctx->av_info.geometry.max_height, 0, 1.0, 1.0);
 
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
 	}
-#endif
-	//glUseProgram(0);
+
 	glUseProgramObjectARB = (PFNGLUSEPROGRAMOBJECTARBPROC) SDL_GL_GetProcAddress("glUseProgramObjectARB");
+	glUseProgramObjectARB(0);
+#endif
 
 	if(ctx->gl.context_reset != NULL)
 		ctx->gl.context_reset();
