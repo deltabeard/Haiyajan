@@ -18,6 +18,7 @@
 
 #include <libretro.h>
 #include <input.h>
+#include <gl.h>
 
 struct settings_s
 {
@@ -97,14 +98,7 @@ struct core_ctx_s
 		SDL_AudioDeviceID audio_dev;
 	};
 
-	struct {
-		SDL_GLContext glctx;
-		unsigned int enabled;
-		unsigned int glfb_name;
-		unsigned int gltex_id;
-		retro_hw_context_reset_t context_reset;
-		retro_hw_context_reset_t context_destroy;
-	} gl;
+	glctx *gl;
 
 	/* Libretro core information. */
 	struct retro_system_info sys_info;

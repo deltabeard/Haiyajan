@@ -387,7 +387,7 @@ static void run(struct core_ctx_s *ctx)
 
 		frames++;
 
-#if 0
+#if 1
 		if(tim_cmd < 0)
 		{
 			/* Disable video for the skipped frame to improve
@@ -403,11 +403,9 @@ static void run(struct core_ctx_s *ctx)
 			SDL_Delay(tim_cmd);
 #endif
 
-		SDL_RenderClear(ctx->disp_rend);
 		play_frame(ctx);
-		//SDL_GL_SwapWindow(ctx->win);
 
-		if(ctx->gl.enabled)
+		if(0)
 		{
 			SDL_RenderCopyEx(ctx->disp_rend, ctx->core_tex,
 					 &ctx->game_target_res, NULL, 0.0, NULL,
@@ -547,13 +545,14 @@ int main(int argc, char *argv[])
 	prerun_checks();
 
 	//SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengles2");
-	SDL_SetHint(SDL_HINT_AUDIO_DEVICE_APP_NAME, PROG_NAME);
+//	SDL_SetHint(SDL_HINT_AUDIO_DEVICE_APP_NAME, PROG_NAME);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-#if 0
+#if 1
 	// No change
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 #endif
 
@@ -567,11 +566,11 @@ int main(int argc, char *argv[])
 
 	apply_settings(argv, &ctx);
 
-	ctx.win= SDL_CreateWindow(PROG_NAME, SDL_WINDOWPOS_UNDEFINED,
+	ctx.win = SDL_CreateWindow(PROG_NAME, SDL_WINDOWPOS_UNDEFINED,
 			SDL_WINDOWPOS_UNDEFINED, 320, 240,
 			SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
-	if(ctx.win== NULL)
+	if(ctx.win == NULL)
 		goto err;
 
 	{
@@ -602,7 +601,7 @@ int main(int argc, char *argv[])
 	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
 		"Libretro core \"%.32s\" loaded successfully.",
 		ctx.sys_info.library_name);
-	SDL_SetHint(SDL_HINT_AUDIO_DEVICE_STREAM_NAME, ctx.sys_info.library_name);
+//	SDL_SetHint(SDL_HINT_AUDIO_DEVICE_STREAM_NAME, ctx.sys_info.library_name);
 
 	{
 		char title[MAX_TITLE_LEN];

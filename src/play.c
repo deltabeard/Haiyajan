@@ -15,11 +15,6 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 
-#if 1
-#include <GL/glext.h>
-PFNGLUSEPROGRAMOBJECTARBPROC glUseProgramObjectARB = NULL;
-#endif
-
 #include <libretro.h>
 #include <haiyajan.h>
 #include <play.h>
@@ -37,115 +32,18 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 
 void play_frame(struct core_ctx_s *ctx)
 {
-	/* If OpenGL is in use, set render target to the texture. */
-	if(ctx->gl.enabled)
-	{
-		//SDL_RenderFlush(ctx->disp_rend);
-#if 0
-		if(SDL_GL_BindTexture(ctx->core_tex, NULL, NULL) != 0)
-		{
-			SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO, "GL Bind error: %s",
-				SDL_GetError());
-		}
-		SDL_SetRenderTarget(ctx->disp_rend, ctx->core_tex);
-		SDL_SetRenderDrawColor(ctx->disp_rend, 0, 0, 0, 255);
-		SDL_RenderClear(ctx->disp_rend);
-
-		glViewport(0, 0, 640, 480);
-		glScissor(0, 0, 640, 480);
-#endif
-
-		SDL_SetRenderTarget(ctx->disp_rend, ctx->core_tex);
-
-		/* Unfinished example 1 */
-		//glUseProgramObjectARB(0);
-		//glPushMatrix();
-		//glTranslatef(1.0f, -1.0f, 0); // TODO: Check this
-		//glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		SDL_Rect rvp;
-		SDL_RenderGetViewport(ctx->disp_rend, &rvp);
-
-		float texw, texh;
-		SDL_GL_BindTexture(ctx->core_tex, &texw, &texh);
-
-		//glEnableClientState(GL_VERTEX_ARRAY);
-		//glEnableClientState(GL_COLOR_ARRAY);
-		//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-		//glEnable(GL_BLEND);
-		//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		//glOrtho(0.0F, ctx->game_target_res.w, ctx->game_target_res.h, 0.0F, 1.0F, 1.0F);
-#if 0
-		glUseProgramObjectARB(0);
-		SDL_GL_BindTexture(ctx_retro->core_tex, NULL, NULL);
-
-		glPixelZoom(1,-1);
-#endif
-
-		//glMatrixMode(GL_COLOR);
-		//glTranslatef(1.0f, -1.0f, 0);
-		//glPushMatrix();
-		//glEnable(GL_TEXTURE_2D);
-		//glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		//glViewport(0, 0, 640, 480);
-		//glScissor(0, 0, 640, 480);
-
-#if 1
-		//glOrtho(0.0F, ctx->game_target_res.w, ctx->game_target_res.h, 0.0F, -1.0F, 1.0F);
-		//glViewport(0, 0, ctx->game_target_res.w, ctx->game_target_res.h);
-		//glScissor(0, 0, ctx->game_target_res.w, ctx->game_target_res.h);
-
-
-		//glBindRenderbuffer(GL_RENDERBUFFER, 0);
-		//glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		//glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-		//glEnable(GL_DEPTH_TEST);
-		//glEnable(GL_CULL_FACE);
-		//glEnable(GL_TEXTURE_2D);
-
-#endif
-	}
+	if(ctx->gl != NULL)
+		gl_prerun(ctx->gl);
 
 	if(ctx_retro->env.ftcb != NULL)
-	{
 		ctx_retro->env.ftcb(ctx_retro->env.ftref);
-	}
 
 	ctx->env.status_bits.running = 1;
 	ctx->fn.retro_run();
 	ctx->env.status_bits.running = 0;
 
-	if(ctx->gl.enabled)
-	{
-#if 1
-		/* THis breaks libretro-mpv */
-		//glMatrixMode(GL_MODELVIEW);
-		//glLoadIdentity();
-		//glDisable(GL_DEPTH_TEST);
-		//glDisable(GL_CULL_FACE);
-		//glDisable(GL_TEXTURE_2D);
-#endif
-		//glPopMatrix();
-		//glDisableClientState(GL_VERTEX_ARRAY);
-		//glDisableClientState(GL_COLOR_ARRAY);
-		//SDL_GL_UnbindTexture(ctx_retro->core_tex);
-		//glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-		//glColor4f(1.0, 1.0, 1.0, 1.0);
-		//glPopMatrix();
-
-		//glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-		//glUseProgramObjectARB(1);
-		SDL_GL_UnbindTexture(ctx->core_tex);
-		SDL_SetRenderTarget(ctx->disp_rend, NULL);
-
-
-#if 0
-		glOrtho(0.0F, ctx->game_target_res.w, ctx->game_target_res.h, 0.0F, 0.0F, 1.0F);
-		glViewport(0, 0, ctx->game_target_res.w, ctx->game_target_res.h);
-
-
-		//SDL_RenderFlush(ctx->disp_rend);
-#endif
-	}
+	if(ctx->gl != NULL)
+		gl_postrun(ctx->gl, &ctx->game_target_res);
 }
 
 /**
@@ -176,6 +74,7 @@ void play_libretro_log(enum retro_log_level level, const char *fmt, ...)
 		ctx_retro->core_log_name, buf);
 }
 
+#if 0
 retro_proc_address_t cb_hw_get_proc_address(const char *sym)
 {
 	/* TODO: inline this. */
@@ -268,6 +167,7 @@ uintptr_t cb_hw_get_current_framebuffer(void)
 	return 0;
 #endif
 }
+#endif
 
 bool cb_retro_environment(unsigned cmd, void *data)
 {
@@ -383,36 +283,28 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		case RETRO_HW_CONTEXT_OPENGLES2:
 		case RETRO_HW_CONTEXT_OPENGLES3:
 		{
-			//Uint32 fmt = SDL_PIXELFORMAT_RGB888;
+			if(ctx_retro->core_tex != NULL)
+			{
+				int w, h;
+				SDL_QueryTexture(ctx_retro->core_tex, NULL, NULL, &w, &h);
+				SDL_DestroyTexture(ctx_retro->core_tex);
+				ctx_retro->core_tex =
+					SDL_CreateTexture(ctx_retro->disp_rend,
+						SDL_PIXELFORMAT_RGB888,
+						SDL_TEXTUREACCESS_TARGET, w, h);
+			}
 
-			ctx_retro->gl.enabled = 1;
-			hw_cb->get_current_framebuffer = cb_hw_get_current_framebuffer;
-			hw_cb->get_proc_address = cb_hw_get_proc_address;
-			ctx_retro->gl.context_reset = hw_cb->context_reset;
-			ctx_retro->gl.context_destroy = hw_cb->context_destroy;
+			ctx_retro->gl = gl_init(ctx_retro->disp_rend,
+						ctx_retro->core_tex, hw_cb);
+			if(ctx_retro->gl == NULL)
+			{
+				SDL_LogWarn(SDL_LOG_CATEGORY_RENDER,
+					"The requested OpenGL context could "
+					"not be initialised: %s",
+					SDL_GetError());
+				return false;
+			}
 
-			play_reinit_texture(ctx_retro, NULL, NULL, NULL);
-
-#if 0
-			/* FIXME: SDL OpenGL driver stored FBO in
-			 * GL_TextureData data->fbo */
-			glGenFramebuffers(1, &ctx_retro->gl.glfb);
-			glBindFramebuffer(GL_FRAMEBUFFER, &ctx_retro->gl.glfb);
-			// The texture we're going to render to
-			/* FIXME: SDL OpenGL renderer does this in
-			 * GL_TextureData create_texture. */
-			glGenTextures(1, &ctx_retro->gl.gltex_id);
-
-// "Bind" the newly created texture : all future texture functions will modify this texture
-			/* FIXME: SDL_GL_BindTexture can do this. */
-			glBindTexture(GL_TEXTURE_2D, renderedTexture);
-#endif
-
-			SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-					"Hardware context %s (%u.%u) initalised",
-					ctx_type[hw_cb->context_type],
-					hw_cb->version_major,
-					hw_cb->version_minor);
 			break;
 		}
 
@@ -560,7 +452,7 @@ bool cb_retro_environment(unsigned cmd, void *data)
 	case RETRO_ENVIRONMENT_GET_PREFERRED_HW_RENDER:
 	{
 		unsigned *pref = data;
-		*pref = RETRO_HW_CONTEXT_OPENGL_CORE;
+		*pref = RETRO_HW_CONTEXT_OPENGL;
 		break;
 	}
 
@@ -595,7 +487,7 @@ void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 	ctx_retro->game_target_res.y = 0;
 
 	if(data == NULL || ctx_retro->env.status_bits.video_disabled ||
-			data == RETRO_HW_FRAME_BUFFER_VALID || ctx_retro->gl.enabled == 1)
+			data == RETRO_HW_FRAME_BUFFER_VALID)
 		return;
 
 	SDL_assert(width <= ctx_retro->av_info.geometry.max_width);
@@ -668,6 +560,7 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 	unsigned width;
 	unsigned height;
 
+#if 0
 	if(ctx->env.status_bits.game_loaded == 0)
 	{
 		SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO, "Not initialising video "
@@ -676,7 +569,7 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 			*req_format : SDL_PIXELFORMAT_RGB555;
 		return 0;
 	}
-
+#endif
 	/* Only initialise video if the core hasn't requested it earlier. */
 	if(ctx->core_tex == NULL)
 		ctx->fn.retro_get_system_av_info(&ctx->av_info);
@@ -687,7 +580,7 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 	height = new_max_height != NULL ? *new_max_height
 		: ctx->av_info.geometry.max_height;
 
-	if(ctx->gl.enabled)
+	if(ctx->gl != NULL)
 	{
 		test_texture = SDL_CreateTexture(ctx->disp_rend, format,
 				SDL_TEXTUREACCESS_TARGET, width, height);
@@ -716,6 +609,8 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 	ctx->env.pixel_fmt = format;
 	ctx->av_info.geometry.max_width = width;
 	ctx->av_info.geometry.max_height = height;
+
+	gl_set_texture(ctx->gl, ctx->core_tex);
 
 	SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO, "Created texture: %s %d*%d",
 		SDL_GetPixelFormatName(format), width, height);
@@ -756,30 +651,9 @@ uint_fast8_t play_init_av(struct core_ctx_s *ctx)
 	}
 
 #if 0
-	{
-		glShadeModel(GL_SMOOTH);
-		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-		glClearDepth(1.0f);
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LEQUAL);
-		glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-
-		glViewport(0, 0, ctx->av_info.geometry.max_width, ctx->av_info.geometry.max_height);
-
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		glOrtho(0, ctx->av_info.geometry.max_width, ctx->av_info.geometry.max_height, 0, 1.0, 1.0);
-
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-	}
-
-	glUseProgramObjectARB = (PFNGLUSEPROGRAMOBJECTARBPROC) SDL_GL_GetProcAddress("glUseProgramObjectARB");
-	glUseProgramObjectARB(0);
-#endif
-
 	if(ctx->gl.context_reset != NULL)
 		ctx->gl.context_reset();
+#endif
 
 	want.freq = ctx->av_info.timing.sample_rate;
 	want.format = AUDIO_S16SYS;
@@ -841,7 +715,9 @@ void play_init_cb(struct core_ctx_s *ctx)
 	}
 
 	/* Set default pixel format. */
-	ctx->env.pixel_fmt = SDL_PIXELFORMAT_RGB555;
+	if(ctx->env.pixel_fmt == 0)
+		ctx->env.pixel_fmt = SDL_PIXELFORMAT_RGB555;
+
 	ctx->core_tex = NULL;
 
 	ctx->fn.retro_set_environment(cb_retro_environment);
@@ -861,6 +737,8 @@ void play_init_cb(struct core_ctx_s *ctx)
 
 void play_deinit_cb(struct core_ctx_s *ctx)
 {
+	gl_deinit(ctx->gl);
+
 	if(ctx == NULL)
 		return;
 
