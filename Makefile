@@ -1,12 +1,14 @@
-CFLAGS := -std=c99 -g3 -fPIE -Wall -Wextra -pipe -I./inc $(shell sdl2-config --cflags) -lGL
+CFLAGS := -std=c99 -g3 -fPIE -Wall -Wextra -pipe -I./inc $(shell sdl2-config --cflags)
+TARGETS := haiyajan
 
 ifeq ($(DEBUG),1)
 	CFLAGS += -D DEBUG=1 -D SDL_ASSERT_LEVEL=3
 	OPT ?= -Og
 else
 	# I don't want any warnings in release builds
-	CFLAGS += -Werror -D SDL_ASSERT_LEVEL=1 -fPIE -flto=auto -fno-fat-lto-objects
+	CFLAGS += -Werror -D SDL_ASSERT_LEVEL=1 -flto=auto -fno-fat-lto-objects
 	OPT ?= -O2
+	TARGETS += haiyajan.sym
 endif
 CFLAGS += $(OPT)
 
@@ -15,6 +17,10 @@ ifeq ($(STATIC),1)
 	CFLAGS += -static
 else
 	LDLIBS := $(shell sdl2-config --libs)
+endif
+
+ifeq ($(OPENGL),1)
+	CFLAGS += -lGL
 endif
 
 GIT_VERSION := $(shell git rev-parse --short HEAD 2>/dev/null)
@@ -28,13 +34,13 @@ endif
 
 .PHONY: test
 
-all: haiyajan haiyajan.debug
+all: $(TARGETS)
 haiyajan: ./src/haiyajan.o ./src/load.o ./src/play.o ./src/load.o \
 		./src/timer.o ./src/font.o ./src/input.o ./src/gl.o
 	+$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 ./src/haiyajan.o: ./src/haiyajan.c ./inc/*.h
-./src/gl.o: ./src/gl.c ./inc/gl.h
+./src/gl.o: ./src/gl.c ./inc/gl.h ./inc/libretro.h
 ./src/load.o: ./src/load.c ./inc/load.h ./inc/haiyajan.h ./inc/libretro.h
 ./src/play.o: ./src/play.c ./inc/play.h ./inc/haiyajan.h ./inc/libretro.h
 ./src/timer.o: ./src/timer.c ./inc/timer.h
@@ -42,7 +48,7 @@ haiyajan: ./src/haiyajan.o ./src/load.o ./src/play.o ./src/load.o \
 
 # Saves debug symbols in a separate file, and strips the main executable.
 # To get information from stack trace: `addr2line -e haiyajan.debug addr`
-haiyajan.debug: haiyajan
+haiyajan.sym: haiyajan
 	strip --only-keep-debug -o $@ $<
 	strip -s $<
 	@chmod -x $@
@@ -51,8 +57,8 @@ test: haiyajan
 	$(MAKE) -C ./test run
 
 clean:
-	$(RM) ./src/*.o
-	$(RM) ./haiyajan
+	$(RM) ./src/*.o ./src/*.gcda
+	$(RM) ./haiyajan ./haiyajan.exe ./haiyajan.sym
 	$(MAKE) -C ./test clean
 
 help:

@@ -1,12 +1,9 @@
 *.o
 *.so
 *.dll
-
-*.exe
-haiyajan
-haiyajan.debug
-test
-
 *.gcda
 
-*.kdev4
+haiyajan
+haiyajan.exe
+haiyajan.stripped
+test
