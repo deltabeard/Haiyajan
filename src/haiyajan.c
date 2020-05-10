@@ -402,6 +402,7 @@ static void run(struct core_ctx_s *ctx)
 		if(tim_cmd > 0)
 			SDL_Delay(tim_cmd);
 
+		SDL_RenderClear(ctx->disp_rend);
 		play_frame(ctx);
 
 #if 0

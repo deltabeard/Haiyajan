@@ -122,7 +122,7 @@ uintptr_t get_current_framebuffer(void)
 {
 	/* The texture will be bound before retro_run() is called. */
 	int result;
-	glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, &result);
+	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &result);
 	/* SDL_LogVerbose(SDL_LOG_CATEGORY_RENDER, "Using FBO %d", result); */
 	return result != 0 ? result : 1;
 }

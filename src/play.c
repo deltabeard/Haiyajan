@@ -476,8 +476,8 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 
 	ctx->core_tex = test_texture;
 	ctx->env.pixel_fmt = format;
-	ctx->av_info.geometry.max_width = width;
-	ctx->av_info.geometry.max_height = height;
+	ctx->game_max_res.w = width;
+	ctx->game_max_res.h = height;
 
 	SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO, "Created texture: %s %d*%d",
 		SDL_GetPixelFormatName(format), width, height);
@@ -514,6 +514,9 @@ uint_fast8_t play_init_av(struct core_ctx_s *ctx)
 					 SDL_GetError());
 		return 1;
 	}
+
+	if(ctx->env.pixel_fmt == 0)
+		ctx->env.pixel_fmt = SDL_PIXELFORMAT_RGB888;
 
 	if(ctx->gl != NULL)
 		gl_reset_context(ctx->gl);
