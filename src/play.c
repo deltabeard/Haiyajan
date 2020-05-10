@@ -38,12 +38,12 @@ void play_frame(struct core_ctx_s *ctx)
 	if(ctx_retro->env.ftcb != NULL)
 		ctx_retro->env.ftcb(ctx_retro->env.ftref);
 
-	ctx->env.status_bits.running = 1;
+	ctx->env.status_bits.playing = 1;
 	ctx->fn.retro_run();
-	ctx->env.status_bits.running = 0;
+	ctx->env.status_bits.playing = 0;
 
 	if(ctx->gl != NULL)
-		gl_postrun(ctx->gl, &ctx->game_target_res);
+		gl_postrun(ctx->gl, &ctx->game_frame_res);
 }
 
 /**
@@ -73,101 +73,6 @@ void play_libretro_log(enum retro_log_level level, const char *fmt, ...)
 		(int)sizeof(ctx_retro->core_log_name),
 		ctx_retro->core_log_name, buf);
 }
-
-#if 0
-retro_proc_address_t cb_hw_get_proc_address(const char *sym)
-{
-	/* TODO: inline this. */
-	return SDL_GL_GetProcAddress(sym);
-}
-
-uintptr_t cb_hw_get_current_framebuffer(void)
-{
-#if 1
-	return ctx_retro->gl.enabled;
-#else
-	/* FIXME: do this on OpenGL init. */
-	struct sdl_tex_s
-	{
-		const void *magic;
-		Uint32 format;              /**< The pixel format of the texture */
-		int access;                 /**< SDL_TextureAccess */
-		int w;                      /**< The width of the texture */
-		int h;                      /**< The height of the texture */
-		int modMode;                /**< The texture modulation mode */
-		SDL_BlendMode blendMode;    /**< The texture blend mode */
-		SDL_ScaleMode scaleMode;    /**< The texture scale mode */
-		Uint8 r, g, b, a;           /**< Texture modulation values */
-
-		SDL_Renderer *renderer;
-
-		/* Support for formats not supported directly by the renderer */
-		SDL_Texture *native;
-		void *yuv;
-		void *pixels;
-		int pitch;
-		SDL_Rect locked_rect;
-		SDL_Surface *locked_surface;
-		Uint32 last_command_generation;
-
-		void *driverdata;
-
-		SDL_Texture *prev;
-		SDL_Texture *next;
-	};
-	struct gl_fbo_list
-	{
-		Uint32 w, h;
-		unsigned int fbo;
-		struct gl_fbo_list *next;
-	};
-	struct sdl_gl_texdat
-	{
-		unsigned int texture;
-		float texw;
-		float texh;
-		int format;
-		int formattype;
-		void *pixels;
-		int pitch;
-		SDL_Rect locked_rect;
-
-		/* YUV texture support */
-		SDL_bool yuv;
-		SDL_bool nv12;
-		unsigned int utexture;
-		unsigned int vtexture;
-
-		struct gl_fbo_list *fbo_list;
-	};
-	struct sdl_tex_s *tex = (struct sdl_tex_s *)ctx_retro->core_tex;
-
-	SDL_assert_always(tex != NULL);
-
-	while(tex->prev != NULL)
-		tex = (struct sdl_tex_s *)tex->prev;
-
-	while(tex != NULL)
-	{
-		struct sdl_gl_texdat *texdat = tex->driverdata;
-		if(texdat == NULL || texdat->fbo_list == NULL)
-		{
-			tex = (struct sdl_tex_s *)tex->next;
-			continue;
-		}
-
-		/* FIXME: always returns 1? Could just do that. */
-		/* SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO,
-				"Using FBO %u", texdat->fbo_list->fbo); */
-		return texdat->fbo_list->fbo;
-	}
-
-	/* Failure. */
-	SDL_assert_always(SDL_FALSE);
-	return 0;
-#endif
-}
-#endif
 
 bool cb_retro_environment(unsigned cmd, void *data)
 {
@@ -224,10 +129,18 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		const Uint32 fmt_tran[] = { SDL_PIXELFORMAT_RGB555,
 				SDL_PIXELFORMAT_RGB888,
 				SDL_PIXELFORMAT_RGB565
-			};
+		};
 
-		/* Check that the game hasn't called retro_run() yet. */
-		SDL_assert_paranoid(ctx_retro->env.status_bits.running == 0);
+		/* Pixel format must be set before the video display is
+		 * initialised. */
+		if(ctx_retro->env.status_bits.av_init == 1)
+		{
+			SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO,
+				    "The core's request to change the pixel "
+				    "format of the display after video "
+				    "initialisation was denied");
+			return false;
+		}
 
 		if(*fmt >= NUM_ELEMS(fmt_tran))
 		{
@@ -236,17 +149,7 @@ bool cb_retro_environment(unsigned cmd, void *data)
 			return false;
 		}
 
-		if(ctx_retro->env.status_bits.running != 0)
-		{
-			SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-				"Pixel format change was requested, but "
-				"not from within retro_run().");
-			return false;
-		}
-
-		if(play_reinit_texture(ctx_retro, &fmt_tran[*fmt], NULL,
-				NULL) != 0)
-			return false;
+		ctx_retro->env.pixel_fmt = fmt_tran[*fmt];
 
 		SDL_LogVerbose(
 			SDL_LOG_CATEGORY_APPLICATION,
@@ -283,19 +186,8 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		case RETRO_HW_CONTEXT_OPENGLES2:
 		case RETRO_HW_CONTEXT_OPENGLES3:
 		{
-			if(ctx_retro->core_tex != NULL)
-			{
-				int w, h;
-				SDL_QueryTexture(ctx_retro->core_tex, NULL, NULL, &w, &h);
-				SDL_DestroyTexture(ctx_retro->core_tex);
-				ctx_retro->core_tex =
-					SDL_CreateTexture(ctx_retro->disp_rend,
-						SDL_PIXELFORMAT_RGB888,
-						SDL_TEXTUREACCESS_TARGET, w, h);
-			}
-
 			ctx_retro->gl = gl_init(ctx_retro->disp_rend,
-						ctx_retro->core_tex, hw_cb);
+						&ctx_retro->core_tex, hw_cb);
 			if(ctx_retro->gl == NULL)
 			{
 				SDL_LogWarn(SDL_LOG_CATEGORY_RENDER,
@@ -417,10 +309,6 @@ bool cb_retro_environment(unsigned cmd, void *data)
 
 		ctx_retro->av_info.geometry.aspect_ratio = geo->aspect_ratio;
 
-		/* Update aspect ratio only. */
-		if(play_reinit_texture(ctx_retro, NULL, NULL, NULL) != 0)
-			return false;
-
 		SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 			"Modified geometry to %u*%u (%.1f)",
 			geo->base_width, geo->base_height,
@@ -481,10 +369,8 @@ unsupported:
 void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 	size_t pitch)
 {
-	ctx_retro->game_target_res.h = height;
-	ctx_retro->game_target_res.w = width;
-	ctx_retro->game_target_res.x = 0;
-	ctx_retro->game_target_res.y = 0;
+	ctx_retro->game_frame_res.h = height;
+	ctx_retro->game_frame_res.w = width;
 
 	if(data == NULL || ctx_retro->env.status_bits.video_disabled ||
 			data == RETRO_HW_FRAME_BUFFER_VALID)
@@ -506,7 +392,7 @@ void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 	SDL_assert_paranoid(format == ctx_retro->env.pixel_fmt);
 #endif
 
-	if(SDL_UpdateTexture(ctx_retro->core_tex, &ctx_retro->game_target_res, data, pitch) != 0)
+	if(SDL_UpdateTexture(ctx_retro->core_tex, &ctx_retro->game_frame_res, data, pitch) != 0)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
 			"Texture could not updated: %s",
@@ -560,20 +446,6 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 	unsigned width;
 	unsigned height;
 
-#if 0
-	if(ctx->env.status_bits.game_loaded == 0)
-	{
-		SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO, "Not initialising video "
-			"until game is loaded.");
-		ctx_retro->env.pixel_fmt = req_format != NULL ?
-			*req_format : SDL_PIXELFORMAT_RGB555;
-		return 0;
-	}
-#endif
-	/* Only initialise video if the core hasn't requested it earlier. */
-	if(ctx->core_tex == NULL)
-		ctx->fn.retro_get_system_av_info(&ctx->av_info);
-
 	format = req_format != NULL ? *req_format : ctx->env.pixel_fmt;
 	width = new_max_width != NULL ? *new_max_width
 		: ctx->av_info.geometry.max_width;
@@ -610,8 +482,6 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 	ctx->av_info.geometry.max_width = width;
 	ctx->av_info.geometry.max_height = height;
 
-	gl_set_texture(ctx->gl, ctx->core_tex);
-
 	SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO, "Created texture: %s %d*%d",
 		SDL_GetPixelFormatName(format), width, height);
 
@@ -625,35 +495,31 @@ uint_fast8_t play_init_av(struct core_ctx_s *ctx)
 	SDL_assert(ctx->env.status_bits.core_init == 1);
 	SDL_assert(ctx->env.status_bits.shutdown == 0);
 	SDL_assert(ctx->env.status_bits.game_loaded == 1);
+	SDL_assert(ctx->env.status_bits.av_init == 0);
 
-	/* If texture is already initialised, don't recreate it. */
-	if(ctx->core_tex == NULL)
+	ctx->fn.retro_get_system_av_info(&ctx->av_info);
+	SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO,
+				   "Core is requesting %.2f FPS, %.0f Hz, "
+				   "%u*%u, %u*%u, %.1f ratio",
+				   ctx->av_info.timing.fps,
+				   ctx->av_info.timing.sample_rate,
+				   ctx->av_info.geometry.base_width,
+				   ctx->av_info.geometry.base_height,
+				   ctx->av_info.geometry.max_width,
+				   ctx->av_info.geometry.max_height,
+				   ctx->av_info.geometry.aspect_ratio);
+
+	if(play_reinit_texture(ctx, &ctx->env.pixel_fmt,
+		&ctx->av_info.geometry.max_width,
+		&ctx->av_info.geometry.max_height) != 0)
 	{
-		ctx->fn.retro_get_system_av_info(&ctx->av_info);
-		SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO,
-			"Core is requesting %.2f FPS, %.0f Hz, "
-			"%u*%u, %u*%u, %.1f ratio",
-			ctx->av_info.timing.fps,
-			ctx->av_info.timing.sample_rate,
-			ctx->av_info.geometry.base_width,
-			ctx->av_info.geometry.base_height,
-			ctx->av_info.geometry.max_width,
-			ctx->av_info.geometry.max_height,
-			ctx->av_info.geometry.aspect_ratio);
-
-		if(play_reinit_texture(ctx, &ctx->env.pixel_fmt, NULL, NULL) !=
-			0)
-		{
-			SDL_SetError("Unable to create texture: %s",
-				SDL_GetError());
-			return 1;
-		}
+		SDL_SetError("Unable to create texture: %s",
+					 SDL_GetError());
+		return 1;
 	}
 
-#if 0
-	if(ctx->gl.context_reset != NULL)
-		ctx->gl.context_reset();
-#endif
+	if(ctx->gl != NULL)
+		gl_reset_context(ctx->gl);
 
 	want.freq = ctx->av_info.timing.sample_rate;
 	want.format = AUDIO_S16SYS;
@@ -717,8 +583,6 @@ void play_init_cb(struct core_ctx_s *ctx)
 	/* Set default pixel format. */
 	if(ctx->env.pixel_fmt == 0)
 		ctx->env.pixel_fmt = SDL_PIXELFORMAT_RGB555;
-
-	ctx->core_tex = NULL;
 
 	ctx->fn.retro_set_environment(cb_retro_environment);
 	ctx->fn.retro_set_video_refresh(cb_retro_video_refresh);

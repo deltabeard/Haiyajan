@@ -387,7 +387,6 @@ static void run(struct core_ctx_s *ctx)
 
 		frames++;
 
-#if 1
 		if(tim_cmd < 0)
 		{
 			/* Disable video for the skipped frame to improve
@@ -401,10 +400,10 @@ static void run(struct core_ctx_s *ctx)
 
 		if(tim_cmd > 0)
 			SDL_Delay(tim_cmd);
-#endif
 
 		play_frame(ctx);
 
+#if 0
 		if(0)
 		{
 			SDL_RenderCopyEx(ctx->disp_rend, ctx->core_tex,
@@ -412,10 +411,11 @@ static void run(struct core_ctx_s *ctx)
 					 SDL_FLIP_VERTICAL);
 		}
 		else
+#endif
 		{
 
 			SDL_RenderCopy(ctx->disp_rend, ctx->core_tex,
-					&ctx->game_target_res, NULL);
+					&ctx->game_frame_res, NULL);
 		}
 
 
@@ -549,11 +549,8 @@ int main(int argc, char *argv[])
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 #if 1
 	// No change
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
-	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
-	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 #endif
 
 	if(SDL_Init(SDL_INIT_AUDIO | SDL_INIT_EVENTS | SDL_INIT_GAMECONTROLLER) != 0)
@@ -584,10 +581,12 @@ int main(int argc, char *argv[])
 	if(ctx.disp_rend == NULL)
 		goto err;
 
+#if 0
 	/* Used to select created OpenGL context. */
 	SDL_RenderClear(ctx.disp_rend);
 	if(ctx.stngs.vid_info)
 		SDL_SetRenderDrawBlendMode(ctx.disp_rend, SDL_BLENDMODE_BLEND);
+#endif
 
 	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 		"Created window and renderer");
@@ -618,11 +617,11 @@ int main(int argc, char *argv[])
 	if(play_init_av(&ctx) != 0)
 		goto err;
 
-	SDL_SetWindowMinimumSize(ctx.win, ctx.game_logical_res.w,
-		ctx.game_logical_res.h);
-	SDL_SetWindowSize(ctx.win, ctx.game_logical_res.w, ctx.game_logical_res.h);
-	SDL_RenderSetLogicalSize(ctx.disp_rend, ctx.game_logical_res.w,
-		ctx.game_logical_res.h);
+	SDL_SetWindowMinimumSize(ctx.win, ctx.game_max_res.w,
+		ctx.game_max_res.h);
+	SDL_SetWindowSize(ctx.win, ctx.game_max_res.w, ctx.game_max_res.h);
+	SDL_RenderSetLogicalSize(ctx.disp_rend, ctx.game_max_res.w,
+		ctx.game_max_res.h);
 
 	// SDL_RenderSetIntegerScale(ctx.disp_rend, SDL_ENABLE);
 	run(&ctx);

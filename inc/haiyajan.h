@@ -89,10 +89,12 @@ struct core_ctx_s
 		/* FIXME: Make texture max-width/height */
 		SDL_Texture *core_tex;
 
-		/* The resolution of the libretro core video output. */
-		/* FIXME: Use video_cb width/height for window size. */
-		SDL_Rect game_logical_res;
-		SDL_Rect game_target_res;
+		/* The maximum resolution of the libretro core video output.
+		 * The texture must be at least this size. x and y are unused.*/
+		SDL_Rect game_max_res;
+
+		/* The resolution of the drawn frame. x and y are unused. */
+		SDL_Rect game_frame_res;
 
 		/* The context of the audio device. */
 		SDL_AudioDeviceID audio_dev;
@@ -123,7 +125,9 @@ struct core_ctx_s
 				unsigned char core_init : 1;
 				unsigned char shutdown : 1;
 				unsigned char game_loaded : 1;
-				unsigned char running : 1;
+				unsigned char av_init : 1;
+				unsigned char opengl_required : 1;
+				unsigned char playing : 1;
 				unsigned char video_disabled : 1;
 			} status_bits;
 			Uint8 status;
@@ -131,6 +135,7 @@ struct core_ctx_s
 
 		unsigned perf_lvl;
 		Uint32 pixel_fmt;
+
 		struct retro_audio_callback audio_cb;
 		retro_frame_time_callback_t ftcb;
 		retro_usec_t ftref;

@@ -107,23 +107,24 @@ struct gl_ctx_s
 	unsigned char depth : 1;
 	unsigned char stencil : 1;
 	unsigned char bottom_left_origin : 1;
-	unsigned char reset : 1;
-	Uint8 framebuffer;
 	retro_hw_context_reset_t context_reset;
 	retro_hw_context_reset_t context_destroy;
 
 	/* Internal. */
 	int w, h;
 	SDL_Renderer *rend;
-	SDL_Texture *tex;
+	SDL_Texture **tex;
 	struct gl_shader gl_sh;
 	struct gl_fn fn;
 };
 
 uintptr_t get_current_framebuffer(void)
 {
-	/* FIXME */
-	return 1;
+	/* The texture will be bound before retro_run() is called. */
+	int result;
+	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &result);
+	/* SDL_LogVerbose(SDL_LOG_CATEGORY_RENDER, "Using FBO %d", result); */
+	return (unsigned)result;
 }
 
 static int gl_init_fn(glctx *ctx)
@@ -286,11 +287,11 @@ static void init_shaders(glctx *ctx)
 	ctx->fn.glUseProgram(0);
 }
 
-static void refresh_vertex_data(glctx *ctx, int w, int h)
+static void refresh_vertex_data(const glctx *ctx, int w, int h)
 {
 	int tex_w, tex_h;
 
-	if(SDL_QueryTexture(ctx->tex, NULL, NULL, &tex_w, &tex_h) != 0)
+	if(SDL_QueryTexture(*ctx->tex, NULL, NULL, &tex_w, &tex_h) != 0)
 		return;
 
 	const float bottom = (float)h / tex_h;
@@ -320,13 +321,15 @@ static void refresh_vertex_data(glctx *ctx, int w, int h)
 	ctx->fn.glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-glctx *gl_init(SDL_Renderer *rend, SDL_Texture *tex,
+/**
+ * FIXME: Do checks, but initialise context in reset function.
+ */
+glctx *gl_init(SDL_Renderer *rend, SDL_Texture **tex,
 			   struct retro_hw_render_callback *lrhw)
 {
 	SDL_RendererInfo info;
 	glctx *ctx;
-	int access, major, minor, w, h;
-	Uint32 format;
+	int major, minor;
 
 	if(SDL_GetRendererInfo(rend, &info) != 0)
 		return NULL;
@@ -338,18 +341,12 @@ glctx *gl_init(SDL_Renderer *rend, SDL_Texture *tex,
 		return NULL;
 	}
 
-	if(SDL_QueryTexture(tex, &format, &access, &w, &h) != 0)
-		return NULL;
+	SDL_LogInfo(SDL_LOG_CATEGORY_RENDER, "OpenGL %s in use",
+		    glGetString(GL_VERSION));
 
-	if((access & SDL_TEXTUREACCESS_TARGET) == 0)
+	if((info.flags & SDL_RENDERER_TARGETTEXTURE) == 0)
 	{
-		SDL_SetError("Texture does not support render target");
-		return NULL;
-	}
-
-	if(format != SDL_PIXELFORMAT_RGB888)
-	{
-		SDL_SetError("Texture was not RGB888");
+		SDL_SetError("Renderer does not support texture as a target");
 		return NULL;
 	}
 
@@ -357,8 +354,9 @@ glctx *gl_init(SDL_Renderer *rend, SDL_Texture *tex,
 			SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &minor) != 0)
 		return NULL;
 
-	if(major < lrhw->version_major ||
-			(major == lrhw->version_major && minor < lrhw->version_minor))
+	if(major < (int)lrhw->version_major ||
+			(major == (int)lrhw->version_major &&
+			minor < (int)lrhw->version_minor))
 	{
 		SDL_SetError("The initialised version of OpenGL (%d.%d) does "
 					 "not meet the minimum requested (%u.%u)",
@@ -378,24 +376,37 @@ glctx *gl_init(SDL_Renderer *rend, SDL_Texture *tex,
 		return NULL;
 	}
 
+	SDL_LogVerbose(SDL_LOG_CATEGORY_RENDER, "OpenGL functions initialised");
+
 	ctx->depth = lrhw->depth != 0;
 	ctx->stencil = lrhw->stencil != 0;
 	ctx->bottom_left_origin = lrhw->bottom_left_origin != 0;
 	ctx->context_reset = lrhw->context_reset;
 	ctx->context_destroy = lrhw->context_destroy;
+	ctx->rend = rend;
+	ctx->tex = tex;
 	lrhw->get_current_framebuffer = get_current_framebuffer;
 	lrhw->get_proc_address = (retro_hw_get_proc_address_t)SDL_GL_GetProcAddress;
 
 	init_shaders(ctx);
+	SDL_LogInfo(SDL_LOG_CATEGORY_RENDER, "OpenGL initialisation successful");
+	return ctx;
+}
 
-	SDL_SetRenderTarget(ctx->rend, ctx->tex);
+void gl_reset_context(const glctx *const ctx)
+{
+	int access, w, h;
+
+	SDL_QueryTexture(*ctx->tex, NULL, &access, &w, &h);
+	SDL_SetRenderTarget(ctx->rend, *ctx->tex);
 
 	if(ctx->depth && ctx->stencil)
 	{
 		GLuint rbo_id;
 		ctx->fn.glGenRenderbuffers(1, &rbo_id);
 		ctx->fn.glBindRenderbuffer(GL_RENDERBUFFER, rbo_id);
-		ctx->fn.glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, w, h);
+		ctx->fn.glRenderbufferStorage(GL_RENDERBUFFER,
+					      GL_DEPTH24_STENCIL8, w, h);
 
 		ctx->fn.glFramebufferRenderbuffer(GL_FRAMEBUFFER,
 						  GL_DEPTH_STENCIL_ATTACHMENT,
@@ -406,36 +417,24 @@ glctx *gl_init(SDL_Renderer *rend, SDL_Texture *tex,
 		GLuint rbo_id;
 		ctx->fn.glGenRenderbuffers(1, &rbo_id);
 		ctx->fn.glBindRenderbuffer(GL_RENDERBUFFER, rbo_id);
-		ctx->fn.glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, w, h);
+		ctx->fn.glRenderbufferStorage(GL_RENDERBUFFER,
+					      GL_DEPTH_COMPONENT24, w, h);
 
 		ctx->fn.glFramebufferRenderbuffer(GL_FRAMEBUFFER,
 						  GL_DEPTH_ATTACHMENT,
 				    GL_RENDERBUFFER, rbo_id);
 	}
+
 	SDL_RenderClear(ctx->rend);
-
 	refresh_vertex_data(ctx, w, h);
-
-	SDL_LogInfo(SDL_LOG_CATEGORY_RENDER, "OpenGL %s initialised",
-			glGetString(GL_VERSION));
-	return ctx;
-}
-
-void gl_set_texture(glctx *ctx, SDL_Texture *tex)
-{
-	if(ctx != NULL)
-		ctx->tex = tex;
+	SDL_SetRenderTarget(ctx->rend, NULL);
+	ctx->context_reset();
 }
 
 void gl_prerun(glctx *ctx)
 {
-	if(ctx->reset == 0)
-	{
-		ctx->context_reset();
-		ctx->reset = 1;
-	}
-	SDL_SetRenderTarget(ctx->rend, ctx->tex);
-	SDL_GL_BindTexture(ctx->tex, NULL, NULL);
+	SDL_SetRenderTarget(ctx->rend, *ctx->tex);
+	SDL_GL_BindTexture(*ctx->tex, NULL, NULL);
 }
 
 void gl_postrun(glctx *ctx, const SDL_Rect *screen_dim)
@@ -458,7 +457,7 @@ void gl_postrun(glctx *ctx, const SDL_Rect *screen_dim)
 
 	ctx->fn.glUseProgram(0);
 
-	SDL_GL_UnbindTexture(ctx->tex);
+	SDL_GL_UnbindTexture(*ctx->tex);
 	SDL_RenderFlush(ctx->rend); /* TODO: Check if this is required. */
 	SDL_SetRenderTarget(ctx->rend, NULL);
 }
