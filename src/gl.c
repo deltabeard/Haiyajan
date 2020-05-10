@@ -122,9 +122,9 @@ uintptr_t get_current_framebuffer(void)
 {
 	/* The texture will be bound before retro_run() is called. */
 	int result;
-	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &result);
+	glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, &result);
 	/* SDL_LogVerbose(SDL_LOG_CATEGORY_RENDER, "Using FBO %d", result); */
-	return (unsigned)result;
+	return result != 0 ? result : 1;
 }
 
 static int gl_init_fn(glctx *ctx)
@@ -260,7 +260,8 @@ static void init_shaders(glctx *ctx)
 	{
 		char buffer[256];
 		ctx->fn.glGetProgramInfoLog(program, sizeof(buffer), NULL, buffer);
-		SDL_SetError("Failed to link shader program: %s", buffer);
+		SDL_LogWarn(SDL_LOG_CATEGORY_RENDER,
+			    "Failed to link shader program: %s", buffer);
 	}
 
 	ctx->gl_sh.program = program;

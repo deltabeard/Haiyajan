@@ -24,12 +24,6 @@
 
 static struct core_ctx_s *ctx_retro = NULL;
 
-/* Forward declarations. */
-static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
-	const Uint32 *req_format,
-	const unsigned int *new_max_width,
-	const unsigned int *new_max_height);
-
 void play_frame(struct core_ctx_s *ctx)
 {
 	if(ctx->gl != NULL)
@@ -196,6 +190,7 @@ bool cb_retro_environment(unsigned cmd, void *data)
 					SDL_GetError());
 				return false;
 			}
+			ctx_retro->env.status_bits.opengl_required = 1;
 
 			break;
 		}
@@ -391,6 +386,8 @@ void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 	SDL_assert_paranoid(pitch <= tex_pitch);
 	SDL_assert_paranoid(format == ctx_retro->env.pixel_fmt);
 #endif
+	if(ctx_retro->env.status_bits.opengl_required)
+		return;
 
 	if(SDL_UpdateTexture(ctx_retro->core_tex, &ctx_retro->game_frame_res, data, pitch) != 0)
 	{
@@ -452,7 +449,7 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 	height = new_max_height != NULL ? *new_max_height
 		: ctx->av_info.geometry.max_height;
 
-	if(ctx->gl != NULL)
+	if(ctx->env.status_bits.opengl_required)
 	{
 		test_texture = SDL_CreateTexture(ctx->disp_rend, format,
 				SDL_TEXTUREACCESS_TARGET, width, height);

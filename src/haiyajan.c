@@ -387,6 +387,7 @@ static void run(struct core_ctx_s *ctx)
 
 		frames++;
 
+#if 0
 		if(tim_cmd < 0)
 		{
 			/* Disable video for the skipped frame to improve
@@ -396,7 +397,7 @@ static void run(struct core_ctx_s *ctx)
 			ctx->env.status_bits.video_disabled = 0;
 			goto timing;
 		}
-
+#endif
 
 		if(tim_cmd > 0)
 			SDL_Delay(tim_cmd);
@@ -404,10 +405,10 @@ static void run(struct core_ctx_s *ctx)
 		play_frame(ctx);
 
 #if 0
-		if(0)
+		if(1)
 		{
 			SDL_RenderCopyEx(ctx->disp_rend, ctx->core_tex,
-					 &ctx->game_target_res, NULL, 0.0, NULL,
+					 &ctx->game_frame_res, NULL, 0.0, NULL,
 					 SDL_FLIP_VERTICAL);
 		}
 		else
@@ -546,12 +547,14 @@ int main(int argc, char *argv[])
 
 	//SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengles2");
 //	SDL_SetHint(SDL_HINT_AUDIO_DEVICE_APP_NAME, PROG_NAME);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-#if 1
-	// No change
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-#endif
+	    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
+
+    /* Force OpenGL Core for this test. */
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
 	if(SDL_Init(SDL_INIT_AUDIO | SDL_INIT_EVENTS | SDL_INIT_GAMECONTROLLER) != 0)
 	{
