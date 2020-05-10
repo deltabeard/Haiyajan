@@ -50,18 +50,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <libretro.h>
 #include <gl.h>
 
-struct gl_shader
-{
-	GLuint vao;
-	GLuint vbo;
-	GLuint program;
-
-	GLint i_pos;
-	GLint i_coord;
-	GLint u_tex;
-	GLint u_mvp;
-};
-
 struct gl_fn
 {
 	GLuint (*glCreateShader)(GLenum type);
@@ -114,17 +102,18 @@ struct gl_ctx_s
 	int w, h;
 	SDL_Renderer *rend;
 	SDL_Texture **tex;
-	struct gl_shader gl_sh;
 	struct gl_fn fn;
 };
+
+static unsigned framebuffer = 1;
 
 uintptr_t get_current_framebuffer(void)
 {
 	/* The texture will be bound before retro_run() is called. */
-	int result;
-	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &result);
+	//int result;
+	//glGetIntegerv(GL_FRAMEBUFFER_BINDING, &result);
 	/* SDL_LogVerbose(SDL_LOG_CATEGORY_RENDER, "Using FBO %d", result); */
-	return result != 0 ? result : 1;
+	return framebuffer;
 }
 
 static int gl_init_fn(glctx *ctx)
@@ -179,149 +168,6 @@ static int gl_init_fn(glctx *ctx)
 	return ret;
 }
 
-static GLuint compile_shader(glctx *ctx, GLenum type, GLsizei count,
-			     const char *const *strings)
-{
-    GLuint shader = ctx->fn.glCreateShader(type);
-    ctx->fn.glShaderSource(shader, count, strings, NULL);
-    ctx->fn.glCompileShader(shader);
-
-    GLint status;
-    ctx->fn.glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
-
-    if (status == GL_FALSE)
-    {
- 	char buffer[256];
-	ctx->fn.glGetShaderInfoLog(shader, sizeof(buffer), NULL, buffer);
-	SDL_SetError("Failed to compile %s shader: %s",
-			type == GL_VERTEX_SHADER ? "vertex" : "fragment",
-			buffer);
-    }
-
-    return shader;
-}
-
-static void ortho2d(float m[4][4], float left, float right, float bottom,
-		    float top)
-{
-    m[0][0] = 1; m[0][1] = 0; m[0][2] = 0; m[0][3] = 0;
-    m[1][0] = 0; m[1][1] = 1; m[1][2] = 0; m[1][3] = 0;
-    m[2][0] = 0; m[2][1] = 0; m[2][2] = 1; m[2][3] = 0;
-    m[3][0] = 0; m[3][1] = 0; m[3][2] = 0; m[3][3] = 1;
-
-    m[0][0] = 2.0f / (right - left);
-    m[1][1] = 2.0f / (top - bottom);
-    m[2][2] = -1.0f;
-    m[3][0] = -(right + left) / (right - left);
-    m[3][1] = -(top + bottom) / (top - bottom);
-}
-
-
-static void init_shaders(glctx *ctx)
-{
-	const char *g_vshader_src =
-	"#version 150\n"
-	"in vec2 i_pos;\n"
-	"in vec2 i_coord;\n"
-	"out vec2 o_coord;\n"
-	"uniform mat4 u_mvp;\n"
-	"void main() {\n"
-	"o_coord = i_coord;\n"
-	"gl_Position = vec4(i_pos, 0.0, 1.0) * u_mvp;\n"
-	"}";
-
-	const char *g_fshader_src =
-	"#version 150\n"
-	"in vec2 o_coord;\n"
-	"uniform sampler2D u_tex;\n"
-	"void main() {\n"
-	"gl_FragColor = texture2D(u_tex, o_coord);\n"
-	"}";
-
-	GLuint vshader = compile_shader(ctx, GL_VERTEX_SHADER, 1, &g_vshader_src);
-	GLuint fshader = compile_shader(ctx, GL_FRAGMENT_SHADER, 1, &g_fshader_src);
-	GLuint program = ctx->fn.glCreateProgram();
-
-	SDL_assert(program);
-
-	ctx->fn.glAttachShader(program, vshader);
-	ctx->fn.glAttachShader(program, fshader);
-	ctx->fn.glLinkProgram(program);
-
-	ctx->fn.glDeleteShader(vshader);
-	ctx->fn.glDeleteShader(fshader);
-
-	ctx->fn.glValidateProgram(program);
-
-	GLint status;
-	ctx->fn.glGetProgramiv(program, GL_LINK_STATUS, &status);
-
-	if(status == GL_FALSE)
-	{
-		char buffer[256];
-		ctx->fn.glGetProgramInfoLog(program, sizeof(buffer), NULL, buffer);
-		SDL_LogWarn(SDL_LOG_CATEGORY_RENDER,
-			    "Failed to link shader program: %s", buffer);
-	}
-
-	ctx->gl_sh.program = program;
-	ctx->gl_sh.i_pos   = ctx->fn.glGetAttribLocation(program,  "i_pos");
-	ctx->gl_sh.i_coord = ctx->fn.glGetAttribLocation(program,  "i_coord");
-	ctx->gl_sh.u_tex   = ctx->fn.glGetUniformLocation(program, "u_tex");
-	ctx->gl_sh.u_mvp   = ctx->fn.glGetUniformLocation(program, "u_mvp");
-
-	ctx->fn.glGenVertexArrays(1, &ctx->gl_sh.vao);
-	ctx->fn.glGenBuffers(1, &ctx->gl_sh.vbo);
-
-	ctx->fn.glUseProgram(ctx->gl_sh.program);
-
-	ctx->fn.glUniform1i(ctx->gl_sh.u_tex, 0);
-
-	float m[4][4];
-	if(ctx->bottom_left_origin)
-		ortho2d(m, -1, 1, 1, -1);
-	else
-		ortho2d(m, -1, 1, -1, 1);
-
-	ctx->fn.glUniformMatrix4fv(ctx->gl_sh.u_mvp, 1, GL_FALSE, (float *)m);
-
-	ctx->fn.glUseProgram(0);
-}
-
-static void refresh_vertex_data(const glctx *ctx, int w, int h)
-{
-	int tex_w, tex_h;
-
-	if(SDL_QueryTexture(*ctx->tex, NULL, NULL, &tex_w, &tex_h) != 0)
-		return;
-
-	const float bottom = (float)h / tex_h;
-	const float right  = (float)w / tex_w;
-
-	const float vertex_data[] = {
-		// pos, coord
-		-1.0f, -1.0f,  0.0f,  bottom, // left-bottom
-		-1.0f,  1.0f,  0.0f,  0.0f,   // left-top
-		 1.0f, -1.0f, right,  bottom,// right-bottom
-		 1.0f,  1.0f, right,  0.0f,  // right-top
-	};
-
-	ctx->fn.glBindVertexArray(ctx->gl_sh.vao);
-
-	ctx->fn.glBindBuffer(GL_ARRAY_BUFFER, ctx->gl_sh.vbo);
-	ctx->fn.glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data, GL_STREAM_DRAW);
-
-	ctx->fn.glEnableVertexAttribArray(ctx->gl_sh.i_pos);
-	ctx->fn.glEnableVertexAttribArray(ctx->gl_sh.i_coord);
-	ctx->fn.glVertexAttribPointer(ctx->gl_sh.i_pos, 2, GL_FLOAT, GL_FALSE,
-				      sizeof(float) * 4, 0);
-	ctx->fn.glVertexAttribPointer(ctx->gl_sh.i_coord, 2, GL_FLOAT, GL_FALSE,
-				      sizeof(float) * 4, (void *)(2 * sizeof(float)));
-
-	ctx->fn.glBindVertexArray(0);
-	ctx->fn.glBindBuffer(GL_ARRAY_BUFFER, 0);
-}
-
 /**
  * FIXME: Do checks, but initialise context in reset function.
  */
@@ -342,8 +188,10 @@ glctx *gl_init(SDL_Renderer *rend, SDL_Texture **tex,
 		return NULL;
 	}
 
+#if 0
 	SDL_LogInfo(SDL_LOG_CATEGORY_RENDER, "OpenGL %s in use",
 		    glGetString(GL_VERSION));
+#endif
 
 	if((info.flags & SDL_RENDERER_TARGETTEXTURE) == 0)
 	{
@@ -389,16 +237,15 @@ glctx *gl_init(SDL_Renderer *rend, SDL_Texture **tex,
 	lrhw->get_current_framebuffer = get_current_framebuffer;
 	lrhw->get_proc_address = (retro_hw_get_proc_address_t)SDL_GL_GetProcAddress;
 
-	init_shaders(ctx);
 	SDL_LogInfo(SDL_LOG_CATEGORY_RENDER, "OpenGL initialisation successful");
 	return ctx;
 }
 
 void gl_reset_context(const glctx *const ctx)
 {
-	int access, w, h;
+	int w, h;
 
-	SDL_QueryTexture(*ctx->tex, NULL, &access, &w, &h);
+	SDL_QueryTexture(*ctx->tex, NULL, NULL, &w, &h);
 	SDL_SetRenderTarget(ctx->rend, *ctx->tex);
 
 	if(ctx->depth && ctx->stencil)
@@ -426,10 +273,9 @@ void gl_reset_context(const glctx *const ctx)
 				    GL_RENDERBUFFER, rbo_id);
 	}
 
-	SDL_RenderClear(ctx->rend);
-	refresh_vertex_data(ctx, w, h);
-	SDL_SetRenderTarget(ctx->rend, NULL);
 	ctx->context_reset();
+ 	SDL_RenderClear(ctx->rend);
+	SDL_SetRenderTarget(ctx->rend, NULL);
 }
 
 void gl_prerun(glctx *ctx)
@@ -447,16 +293,7 @@ void gl_postrun(glctx *ctx, const SDL_Rect *screen_dim)
 	{
 		ctx->w = screen_dim->w;
 		ctx->h = screen_dim->h;
-
-		refresh_vertex_data(ctx, screen_dim->w, screen_dim->h);
 	}
-
-	ctx->fn.glUseProgram(ctx->gl_sh.program);
-	ctx->fn.glBindVertexArray(ctx->gl_sh.vao);
-	ctx->fn.glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-	ctx->fn.glBindVertexArray(0);
-
-	ctx->fn.glUseProgram(0);
 
 	SDL_GL_UnbindTexture(*ctx->tex);
 	SDL_RenderFlush(ctx->rend); /* TODO: Check if this is required. */
@@ -465,8 +302,11 @@ void gl_postrun(glctx *ctx, const SDL_Rect *screen_dim)
 
 void gl_deinit(glctx *ctx)
 {
+#if 0
+	/* FIXME: Causes Seg fault. */
 	if(ctx != NULL && ctx->context_destroy != NULL)
 		ctx->context_destroy();
+#endif
 
 	if(ctx != NULL)
 	{

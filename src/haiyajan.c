@@ -332,7 +332,7 @@ static void run(struct core_ctx_s *ctx)
 	input_init(&ctx->inp);
 	ctx->fn.retro_set_controller_port_device(0, RETRO_DEVICE_JOYPAD);
 
-	font = FontStartup(ctx->disp_rend);
+	//font = FontStartup(ctx->disp_rend);
 	if(font == NULL)
 	{
 		SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
@@ -360,6 +360,9 @@ static void run(struct core_ctx_s *ctx)
 				switch(ev.user.code)
 				{
 				case INPUT_EVENT_TOGGLE_INFO:
+					if(font == NULL)
+						break;
+
 					ctx->stngs.vid_info = !ctx->stngs.vid_info;
 					SDL_SetRenderDrawBlendMode(ctx->disp_rend,
 								   ctx->stngs.vid_info ? SDL_BLENDMODE_BLEND : SDL_BLENDMODE_NONE);
@@ -387,7 +390,6 @@ static void run(struct core_ctx_s *ctx)
 
 		frames++;
 
-#if 0
 		if(tim_cmd < 0)
 		{
 			/* Disable video for the skipped frame to improve
@@ -397,7 +399,6 @@ static void run(struct core_ctx_s *ctx)
 			ctx->env.status_bits.video_disabled = 0;
 			goto timing;
 		}
-#endif
 
 		if(tim_cmd > 0)
 			SDL_Delay(tim_cmd);
@@ -405,21 +406,9 @@ static void run(struct core_ctx_s *ctx)
 		SDL_RenderClear(ctx->disp_rend);
 		play_frame(ctx);
 
-#if 0
-		if(1)
-		{
-			SDL_RenderCopyEx(ctx->disp_rend, ctx->core_tex,
-					 &ctx->game_frame_res, NULL, 0.0, NULL,
-					 SDL_FLIP_VERTICAL);
-		}
-		else
-#endif
-		{
-
-			SDL_RenderCopy(ctx->disp_rend, ctx->core_tex,
-					&ctx->game_frame_res, NULL);
-		}
-
+		SDL_RenderCopyEx(ctx->disp_rend, ctx->core_tex,
+				 &ctx->game_frame_res, NULL, 0.0, NULL,
+				 SDL_FLIP_VERTICAL);
 
 		if(ctx->stngs.vid_info)
 		{
@@ -548,14 +537,6 @@ int main(int argc, char *argv[])
 
 	//SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengles2");
 //	SDL_SetHint(SDL_HINT_AUDIO_DEVICE_APP_NAME, PROG_NAME);
-	    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
-
-    /* Force OpenGL Core for this test. */
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
 	if(SDL_Init(SDL_INIT_AUDIO | SDL_INIT_EVENTS | SDL_INIT_GAMECONTROLLER) != 0)
 	{
@@ -567,8 +548,8 @@ int main(int argc, char *argv[])
 
 	apply_settings(argv, &ctx);
 
-	ctx.win = SDL_CreateWindow(PROG_NAME, SDL_WINDOWPOS_UNDEFINED,
-			SDL_WINDOWPOS_UNDEFINED, 320, 240,
+	ctx.win = SDL_CreateWindow(PROG_NAME, SDL_WINDOWPOS_CENTERED,
+				   SDL_WINDOWPOS_CENTERED, 320, 240,
 			SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
 	if(ctx.win == NULL)
@@ -585,7 +566,7 @@ int main(int argc, char *argv[])
 	if(ctx.disp_rend == NULL)
 		goto err;
 
-#if 0
+#if 1
 	/* Used to select created OpenGL context. */
 	SDL_RenderClear(ctx.disp_rend);
 	if(ctx.stngs.vid_info)
