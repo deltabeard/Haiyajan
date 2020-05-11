@@ -99,7 +99,6 @@ struct gl_ctx_s
 	retro_hw_context_reset_t context_destroy;
 
 	/* Internal. */
-	int w, h;
 	SDL_Renderer *rend;
 	SDL_Texture **tex;
 	struct gl_fn fn;
@@ -199,6 +198,7 @@ glctx *gl_init(SDL_Renderer *rend, SDL_Texture **tex,
 		return NULL;
 	}
 
+#if 0
 	if(SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &major) != 0 ||
 			SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &minor) != 0)
 		return NULL;
@@ -213,6 +213,7 @@ glctx *gl_init(SDL_Renderer *rend, SDL_Texture **tex,
 					 lrhw->version_major, lrhw->version_minor);
 		return NULL;
 	}
+#endif
 
 	/* The parameters have passed all checks by this point. */
 	if((ctx = SDL_calloc(1, sizeof(glctx))) == NULL)
@@ -284,17 +285,8 @@ void gl_prerun(glctx *ctx)
 	SDL_GL_BindTexture(*ctx->tex, NULL, NULL);
 }
 
-void gl_postrun(glctx *ctx, const SDL_Rect *screen_dim)
+void gl_postrun(glctx *ctx)
 {
-	if(screen_dim->w == 0 || screen_dim->h == 0)
-		return;
-
-	if(screen_dim->w != ctx->w || screen_dim->h != ctx->h)
-	{
-		ctx->w = screen_dim->w;
-		ctx->h = screen_dim->h;
-	}
-
 	SDL_GL_UnbindTexture(*ctx->tex);
 	SDL_RenderFlush(ctx->rend); /* TODO: Check if this is required. */
 	SDL_SetRenderTarget(ctx->rend, NULL);

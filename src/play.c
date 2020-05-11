@@ -37,7 +37,7 @@ void play_frame(struct core_ctx_s *ctx)
 	ctx->env.status_bits.playing = 0;
 
 	if(ctx->gl != NULL)
-		gl_postrun(ctx->gl, &ctx->game_frame_res);
+		gl_postrun(ctx->gl);
 }
 
 /**
