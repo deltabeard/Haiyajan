@@ -318,7 +318,7 @@ err:
 
 static void run(struct core_ctx_s *ctx)
 {
-	font_ctx *font;
+	font_ctx *font = NULL;
 	SDL_Event ev;
 	Uint32 ticks_before, ticks_next, delta_ticks;
 	struct timer_ctx_s tim;

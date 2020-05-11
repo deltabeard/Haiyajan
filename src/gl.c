@@ -52,29 +52,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 struct gl_fn
 {
-	GLuint (*glCreateShader)(GLenum type);
-	void (*glCompileShader)(GLuint shader);
-	void (*glShaderSource)(GLuint shader, GLsizei count,
-			const GLchar *const *string, const GLint *length);
-	void (*glGetShaderiv)(GLuint shader, GLenum pname, GLint *params);
-	void (*glGetShaderInfoLog)(GLuint shader, GLsizei bufSize,
-				   GLsizei *length, GLchar *infoLog);
-	GLuint (*glCreateProgram)(void);
-	void (*glAttachShader)(GLuint program, GLuint shader);
-	void (*glLinkProgram)(GLuint program);
-	void (*glDeleteShader)(GLuint shader);
-	void (*glValidateProgram)(GLuint program);
-	void (*glGetProgramiv)(GLuint program, GLenum pname, GLint *params);
-	void (*glGetProgramInfoLog)(GLuint program, GLsizei bufSize,
-				    GLsizei *length, GLchar *infoLog);
-	GLint (*glGetAttribLocation)(GLuint program, const GLchar *name);
-	GLint (*glGetUniformLocation)(GLuint program, const GLchar *name);
-	void (*glGenVertexArrays)(GLsizei n, GLuint *arrays);
-	void (*glGenBuffers)(GLsizei n, GLuint *buffers);
-	void (*glUseProgram)(GLuint program);
-	void (*glUniform1i)(GLint location, GLint v0);
-	void (*glUniformMatrix4fv)(GLint location, GLsizei count,
-				   GLboolean transpose, const GLfloat *value);
 	void (*glGenRenderbuffers)(GLsizei n, GLuint *renderbuffers);
 	void (*glBindRenderbuffer)(GLenum target, GLuint renderbuffer);
 	void (*glRenderbufferStorage)(GLenum target, GLenum internalformat,
@@ -84,9 +61,6 @@ struct gl_fn
 	void (*glBindVertexArray)(GLuint array);
 	void (*glBindBuffer)(GLenum target, GLuint buffer);
 	void (*glBufferData)(GLenum target, GLsizeiptr size, const void *data, GLenum usage);
-	void (*glEnableVertexAttribArray)(GLuint index);
-	void (*glVertexAttribPointer)(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void *pointer);
-	void (*glDrawArrays)(GLenum mode, GLint first, GLsizei count);
 };
 
 struct gl_ctx_s
@@ -104,15 +78,16 @@ struct gl_ctx_s
 	struct gl_fn fn;
 };
 
+static void (*internal_glGetIntegerv)(GLenum pname, GLint *data);
 static unsigned framebuffer = 1;
 
 uintptr_t get_current_framebuffer(void)
 {
 	/* The texture will be bound before retro_run() is called. */
-	//int result;
-	//glGetIntegerv(GL_FRAMEBUFFER_BINDING, &result);
-	/* SDL_LogVerbose(SDL_LOG_CATEGORY_RENDER, "Using FBO %d", result); */
-	return framebuffer;
+	int result;
+	internal_glGetIntegerv(GL_FRAMEBUFFER_BINDING, &result);
+	SDL_LogVerbose(SDL_LOG_CATEGORY_RENDER, "Using FBO %d", result);
+	return result;
 }
 
 static int gl_init_fn(glctx *ctx)
@@ -121,25 +96,6 @@ static int gl_init_fn(glctx *ctx)
 		const char *fn_str;
 		void **fn;
 	} const fngen[] = {
-		{ "glCreateShader",	(void **)&ctx->fn.glCreateShader },
-		{ "glCompileShader",	(void **)&ctx->fn.glCompileShader },
-		{ "glShaderSource",	(void **)&ctx->fn.glShaderSource },
-		{ "glGetShaderiv",	(void **)&ctx->fn.glGetShaderiv },
-		{ "glGetShaderInfoLog",	(void **)&ctx->fn.glGetShaderInfoLog },
-		{ "glCreateProgram",	(void **)&ctx->fn.glCreateProgram },
-		{ "glAttachShader",	(void **)&ctx->fn.glAttachShader },
-		{ "glLinkProgram",	(void **)&ctx->fn.glLinkProgram },
-		{ "glDeleteShader",	(void **)&ctx->fn.glDeleteShader },
-		{ "glValidateProgram",	(void **)&ctx->fn.glValidateProgram },
-		{ "glGetProgramiv",	(void **)&ctx->fn.glGetProgramiv },
-		{ "glGetProgramInfoLog",(void **)&ctx->fn.glGetProgramInfoLog },
-		{ "glGetAttribLocation",(void **)&ctx->fn.glGetAttribLocation },
-		{ "glGetUniformLocation",(void **)&ctx->fn.glGetUniformLocation },
-		{ "glGenVertexArrays",	(void **)&ctx->fn.glGenVertexArrays },
-		{ "glGenBuffers",	(void **)&ctx->fn.glGenBuffers },
-		{ "glUseProgram",	(void **)&ctx->fn.glUseProgram },
-		{ "glUniform1i",	(void **)&ctx->fn.glUniform1i },
-		{ "glUniformMatrix4fv",	(void **)&ctx->fn.glUniformMatrix4fv },
 		{ "glGenRenderbuffers",	(void **)&ctx->fn.glGenRenderbuffers },
 		{ "glBindRenderbuffer",	(void **)&ctx->fn.glBindRenderbuffer },
 		{ "glRenderbufferStorage",(void **)&ctx->fn.glRenderbufferStorage },
@@ -147,9 +103,7 @@ static int gl_init_fn(glctx *ctx)
 		{ "glBindVertexArray",	(void **)&ctx->fn.glBindVertexArray },
 		{ "glBindBuffer",	(void **)&ctx->fn.glBindBuffer },
 		{ "glBufferData",	(void **)&ctx->fn.glBufferData },
-		{ "glEnableVertexAttribArray",(void **)&ctx->fn.glEnableVertexAttribArray },
-		{ "glVertexAttribPointer",(void **)&ctx->fn.glVertexAttribPointer },
-		{ "glDrawArrays",	(void **)&ctx->fn.glDrawArrays }
+		{ "glGetIntegerv",	(void **)&internal_glGetIntegerv }
 	};
 	int ret = 0;
 
@@ -275,7 +229,6 @@ void gl_reset_context(const glctx *const ctx)
 	}
 
 	ctx->context_reset();
- 	SDL_RenderClear(ctx->rend);
 	SDL_SetRenderTarget(ctx->rend, NULL);
 }
 
