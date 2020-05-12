@@ -19,6 +19,10 @@ else
 	LDLIBS := $(shell sdl2-config --libs)
 endif
 
+ifeq ($(OPENGL),1)
+	CFLAGS += -lGL
+endif
+
 GIT_VERSION := $(shell git rev-parse --short HEAD 2>/dev/null)
 REL_VERSION := $(shell git describe --tags 2>/dev/null)
 ifneq ($(GIT_VERSION),)

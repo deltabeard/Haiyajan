@@ -77,13 +77,9 @@ bool cb_retro_environment(unsigned cmd, void *data)
 	switch(cmd)
 	{
 	case RETRO_ENVIRONMENT_GET_CAN_DUPE:
-	{
 		/* Passing NULL to the video callback will not update the
 		 * texture. */
-		bool *dupe = data;
-		*dupe = true;
 		break;
-	}
 
 	case RETRO_ENVIRONMENT_SHUTDOWN:
 		ctx_retro->env.status_bits.shutdown = 1;
@@ -517,9 +513,6 @@ uint_fast8_t play_init_av(struct core_ctx_s *ctx)
 				   ctx->av_info.geometry.max_height,
 				   ctx->av_info.geometry.aspect_ratio);
 
-	if(ctx->env.pixel_fmt == 0)
-		ctx->env.pixel_fmt = SDL_PIXELFORMAT_RGB555;
-
 	if(play_reinit_texture(ctx, &ctx->env.pixel_fmt,
 		&ctx->av_info.geometry.max_width,
 		&ctx->av_info.geometry.max_height) != 0)
@@ -529,7 +522,10 @@ uint_fast8_t play_init_av(struct core_ctx_s *ctx)
 		return 1;
 	}
 
-	if(ctx->env.status_bits.opengl_required)
+	if(ctx->env.pixel_fmt == 0)
+		ctx->env.pixel_fmt = SDL_PIXELFORMAT_RGB888;
+
+	if(ctx->gl != NULL)
 		gl_reset_context(ctx->gl);
 
 	want.freq = ctx->av_info.timing.sample_rate;
@@ -590,6 +586,10 @@ void play_init_cb(struct core_ctx_s *ctx)
 			printed--;
 		}
 	}
+
+	/* Set default pixel format. */
+	if(ctx->env.pixel_fmt == 0)
+		ctx->env.pixel_fmt = SDL_PIXELFORMAT_RGB555;
 
 	ctx->fn.retro_set_environment(cb_retro_environment);
 	ctx->fn.retro_set_video_refresh(cb_retro_video_refresh);
