@@ -316,6 +316,37 @@ err:
 	exit(EXIT_FAILURE);
 }
 
+void take_screencapture(struct core_ctx_s *const ctx)
+{
+	int w, h;
+	SDL_Surface *cap = NULL;
+	const Uint32 format = SDL_GetWindowPixelFormat(ctx->win);
+
+	if(SDL_GetRendererOutputSize(ctx->disp_rend, &w, &h) != 0)
+		goto err;
+
+	cap = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, format);
+	if(cap == NULL)
+		goto err;
+
+	if(SDL_RenderReadPixels(ctx->disp_rend, NULL, format, cap->pixels, cap->pitch) != 0)
+		goto err;
+
+	if(SDL_SaveBMP(cap, "screenshot.bmp") != 0)
+		goto err;
+
+out:
+	SDL_FreeSurface(cap);
+	return;
+
+err:
+	SDL_LogInfo(SDL_LOG_CATEGORY_RENDER,
+				"Unable to take screen capture: %s",
+				SDL_GetError());
+	goto out;
+
+}
+
 static void run(struct core_ctx_s *ctx)
 {
 	font_ctx *font;
@@ -377,6 +408,11 @@ static void run(struct core_ctx_s *ctx)
 						SDL_SetWindowFullscreen(ctx->win, SDL_WINDOW_FULLSCREEN_DESKTOP);
 					else
 						SDL_SetWindowFullscreen(ctx->win, 0);
+					break;
+
+				case INPUT_EVENT_TAKE_SCREENCAPTURE:
+					take_screencapture(ctx);
+					break;
 				}
 			}
 		}

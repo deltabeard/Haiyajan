@@ -40,14 +40,15 @@ typedef enum input_type_e input_type;
 
 enum input_cmd_type_e {
 	INPUT_CMD_NONE = 0,
-	INPUT_CMD_RETRO_INPUT = 1,
-	INPUT_CMD_CALL_FUNC = 2
+	INPUT_CMD_RETRO_INPUT,
+	INPUT_CMD_CALL_FUNC
 };
 typedef enum input_cmd_type_e input_cmd_type;
 
 enum input_cmd_event_codes_e {
 	INPUT_EVENT_TOGGLE_INFO = 0,
-	INPUT_EVENT_TOGGLE_FULLSCREEN = 1
+	INPUT_EVENT_TOGGLE_FULLSCREEN,
+	INPUT_EVENT_TAKE_SCREENCAPTURE
 };
 typedef enum input_cmd_event_codes_e input_cmd_event;
 
