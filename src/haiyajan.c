@@ -332,7 +332,7 @@ static void run(struct core_ctx_s *ctx)
 	input_init(&ctx->inp);
 	ctx->fn.retro_set_controller_port_device(0, RETRO_DEVICE_JOYPAD);
 
-	//font = FontStartup(ctx->disp_rend);
+	font = FontStartup(ctx->disp_rend);
 	if(font == NULL)
 	{
 		SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
@@ -404,6 +404,7 @@ static void run(struct core_ctx_s *ctx)
 			SDL_Delay(tim_cmd);
 
 		SDL_RenderClear(ctx->disp_rend);
+
 		play_frame(ctx);
 
 		SDL_RenderCopyEx(ctx->disp_rend, ctx->core_tex,

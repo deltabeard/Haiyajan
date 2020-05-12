@@ -61,6 +61,9 @@ struct gl_fn
 	void (*glBindVertexArray)(GLuint array);
 	void (*glBindBuffer)(GLenum target, GLuint buffer);
 	void (*glBufferData)(GLenum target, GLsizeiptr size, const void *data, GLenum usage);
+	void (*glPixelStorei)(GLenum pname, GLint param);
+	void (*glBindTexture)(GLenum target, GLuint texture);
+	void (*glGetIntegerv)(GLenum pname, GLint *data);
 };
 
 struct gl_ctx_s
@@ -78,16 +81,11 @@ struct gl_ctx_s
 	struct gl_fn fn;
 };
 
-static void (*internal_glGetIntegerv)(GLenum pname, GLint *data);
 static unsigned framebuffer = 1;
 
 uintptr_t get_current_framebuffer(void)
 {
-	/* The texture will be bound before retro_run() is called. */
-	int result;
-	internal_glGetIntegerv(GL_FRAMEBUFFER_BINDING, &result);
-	SDL_LogVerbose(SDL_LOG_CATEGORY_RENDER, "Using FBO %d", result);
-	return result;
+	return framebuffer;
 }
 
 static int gl_init_fn(glctx *ctx)
@@ -103,7 +101,9 @@ static int gl_init_fn(glctx *ctx)
 		{ "glBindVertexArray",	(void **)&ctx->fn.glBindVertexArray },
 		{ "glBindBuffer",	(void **)&ctx->fn.glBindBuffer },
 		{ "glBufferData",	(void **)&ctx->fn.glBufferData },
-		{ "glGetIntegerv",	(void **)&internal_glGetIntegerv }
+		{ "glPixelStorei",	(void **)&ctx->fn.glPixelStorei },
+		{ "glBindTexture",	(void **)&ctx->fn.glBindTexture },
+		{ "glGetIntegerv",	(void **)&ctx->fn.glGetIntegerv }
 	};
 	int ret = 0;
 
@@ -192,6 +192,12 @@ glctx *gl_init(SDL_Renderer *rend, SDL_Texture **tex,
 	lrhw->get_current_framebuffer = get_current_framebuffer;
 	lrhw->get_proc_address = (retro_hw_get_proc_address_t)SDL_GL_GetProcAddress;
 
+	{
+		int result;
+		ctx->fn.glGetIntegerv(GL_FRAMEBUFFER_BINDING, &result);
+		framebuffer = result < 1 ? 1 : result;
+	}
+
 	SDL_LogInfo(SDL_LOG_CATEGORY_RENDER, "OpenGL initialisation successful");
 	return ctx;
 }
@@ -236,6 +242,10 @@ void gl_prerun(glctx *ctx)
 {
 	SDL_SetRenderTarget(ctx->rend, *ctx->tex);
 	SDL_GL_BindTexture(*ctx->tex, NULL, NULL);
+
+	ctx->fn.glBindTexture(GL_TEXTURE_2D, 0);
+	ctx->fn.glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+	ctx->fn.glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 }
 
 void gl_postrun(glctx *ctx)
