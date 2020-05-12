@@ -189,14 +189,16 @@ bool cb_retro_environment(unsigned cmd, void *data)
 			if(ctx_retro->gl == NULL)
 			{
 				SDL_LogWarn(SDL_LOG_CATEGORY_RENDER,
-					"The requested OpenGL context could "
+					"The requested %s context could "
 					"not be initialised: %s",
+					ctx_type[hw_cb->context_type],
 					SDL_GetError());
 				return false;
 			}
 
 			SDL_LogInfo(SDL_LOG_CATEGORY_RENDER,
-				    "The request for an %s (%u.%u) was accepted",
+				    "The request for an %s (%u.%u) context was "
+				    "accepted",
 				    ctx_type[hw_cb->context_type],
 				hw_cb->version_major, hw_cb->version_minor);
 			ctx_retro->env.status_bits.opengl_required = 1;
@@ -351,7 +353,7 @@ bool cb_retro_environment(unsigned cmd, void *data)
 	default:
 unsupported:
 	{
-#if 0
+#if 1
 		static char log_hist[64] = { 0 };
 		if(log_hist[cmd] == 0)
 		{

@@ -64,6 +64,7 @@ struct gl_fn
 	void (*glPixelStorei)(GLenum pname, GLint param);
 	void (*glBindTexture)(GLenum target, GLuint texture);
 	void (*glGetIntegerv)(GLenum pname, GLint *data);
+	const GLubyte *(*glGetString)(GLenum name);
 };
 
 struct gl_ctx_s
@@ -103,7 +104,8 @@ static int gl_init_fn(glctx *ctx)
 		{ "glBufferData",	(void **)&ctx->fn.glBufferData },
 		{ "glPixelStorei",	(void **)&ctx->fn.glPixelStorei },
 		{ "glBindTexture",	(void **)&ctx->fn.glBindTexture },
-		{ "glGetIntegerv",	(void **)&ctx->fn.glGetIntegerv }
+		{ "glGetIntegerv",	(void **)&ctx->fn.glGetIntegerv },
+		{ "glGetString",	(void **)&ctx->fn.glGetString }
 	};
 	int ret = 0;
 
@@ -141,21 +143,33 @@ glctx *gl_init(SDL_Renderer *rend, SDL_Texture **tex,
 		return NULL;
 	}
 
-#if 0
-	SDL_LogInfo(SDL_LOG_CATEGORY_RENDER, "OpenGL %s in use",
-		    glGetString(GL_VERSION));
-#endif
-
 	if((info.flags & SDL_RENDERER_TARGETTEXTURE) == 0)
 	{
 		SDL_SetError("Renderer does not support texture as a target");
 		return NULL;
 	}
 
-#if 0
+	if((ctx = SDL_calloc(1, sizeof(glctx))) == NULL)
+		return NULL;
+
+	if(gl_init_fn(ctx) != 0)
+	{
+		SDL_SetError("One or more required OpenGL functions are "
+				"unavailable on this platform");
+		return NULL;
+	}
+
+	SDL_LogVerbose(SDL_LOG_CATEGORY_RENDER, "OpenGL functions initialised");
+	SDL_LogInfo(SDL_LOG_CATEGORY_RENDER, "OpenGL %s in use",
+		    ctx->fn.glGetString(GL_VERSION));
+
+#if 1
 	if(SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &major) != 0 ||
 			SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &minor) != 0)
 		return NULL;
+
+	SDL_LogVerbose(SDL_LOG_CATEGORY_RENDER, "SDL detected OpenGL %d.%d",
+		       major, minor);
 
 	if(major < (int)lrhw->version_major ||
 			(major == (int)lrhw->version_major &&
@@ -170,17 +184,6 @@ glctx *gl_init(SDL_Renderer *rend, SDL_Texture **tex,
 #endif
 
 	/* The parameters have passed all checks by this point. */
-	if((ctx = SDL_calloc(1, sizeof(glctx))) == NULL)
-		return NULL;
-
-	if(gl_init_fn(ctx) != 0)
-	{
-		SDL_SetError("One or more required OpenGL functions are "
-				"unavailable on this platform");
-		return NULL;
-	}
-
-	SDL_LogVerbose(SDL_LOG_CATEGORY_RENDER, "OpenGL functions initialised");
 
 	ctx->depth = lrhw->depth != 0;
 	ctx->stencil = lrhw->stencil != 0;

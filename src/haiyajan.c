@@ -536,8 +536,10 @@ int main(int argc, char *argv[])
 	print_info();
 	prerun_checks();
 
-	//SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengles2");
-//	SDL_SetHint(SDL_HINT_AUDIO_DEVICE_APP_NAME, PROG_NAME);
+	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES , 4);
+#if SDL_VERSION_ATLEAST(2, 0, 13)
+	SDL_SetHint(SDL_HINT_AUDIO_DEVICE_APP_NAME, PROG_NAME);
+#endif
 
 	if(SDL_Init(SDL_INIT_AUDIO | SDL_INIT_EVENTS | SDL_INIT_GAMECONTROLLER) != 0)
 	{
@@ -567,12 +569,9 @@ int main(int argc, char *argv[])
 	if(ctx.disp_rend == NULL)
 		goto err;
 
-#if 1
-	/* Used to select created OpenGL context. */
-	SDL_RenderClear(ctx.disp_rend);
+	/* Allows for transparency on information display. */
 	if(ctx.stngs.vid_info)
 		SDL_SetRenderDrawBlendMode(ctx.disp_rend, SDL_BLENDMODE_BLEND);
-#endif
 
 	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 		"Created window and renderer");
@@ -586,7 +585,10 @@ int main(int argc, char *argv[])
 	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
 		"Libretro core \"%.32s\" loaded successfully.",
 		ctx.sys_info.library_name);
-//	SDL_SetHint(SDL_HINT_AUDIO_DEVICE_STREAM_NAME, ctx.sys_info.library_name);
+
+#if SDL_VERSION_ATLEAST(2, 0, 13)
+	SDL_SetHint(SDL_HINT_AUDIO_DEVICE_STREAM_NAME, ctx.sys_info.library_name);
+#endif
 
 	{
 		char title[MAX_TITLE_LEN];
@@ -608,8 +610,6 @@ int main(int argc, char *argv[])
 	SDL_SetWindowSize(ctx.win, ctx.game_max_res.w, ctx.game_max_res.h);
 	SDL_RenderSetLogicalSize(ctx.disp_rend, ctx.game_max_res.w,
 		ctx.game_max_res.h);
-
-	// SDL_RenderSetIntegerScale(ctx.disp_rend, SDL_ENABLE);
 	run(&ctx);
 
 	ret = EXIT_SUCCESS;
