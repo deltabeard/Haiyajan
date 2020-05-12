@@ -406,7 +406,7 @@ static void run(struct core_ctx_s *ctx)
 
 		play_frame(ctx);
 
-#if 0
+#if 1
 		if(1)
 		{
 			SDL_RenderCopyEx(ctx->disp_rend, ctx->core_tex,

@@ -39,7 +39,7 @@ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
 FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
 DAMAGES(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-		SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
@@ -121,13 +121,11 @@ struct gl_ctx_s
 	struct gl_fn fn;
 };
 
+static unsigned framebuffer = 1;
+
 uintptr_t get_current_framebuffer(void)
 {
-	/* The texture will be bound before retro_run() is called. */
-	int result;
-	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &result);
-	/* SDL_LogVerbose(SDL_LOG_CATEGORY_RENDER, "Using FBO %d", result); */
-	return result != 0 ? result : 1;
+	return framebuffer;
 }
 
 static int gl_init_fn(glctx *ctx)
@@ -165,7 +163,7 @@ static int gl_init_fn(glctx *ctx)
 		{ "glPixelStorei",	(void **)&ctx->fn.glPixelStorei },
 		{ "glBindTexture",	(void **)&ctx->fn.glBindTexture },
 		{ "glGetIntegerv",	(void **)&ctx->fn.glGetIntegerv },
-		{ "glGetString",	(void **)&ctx->fn.glGetString }
+		{ "glGetString",	(void **)&ctx->fn.glGetString },
 		{ "glEnableVertexAttribArray",(void **)&ctx->fn.glEnableVertexAttribArray },
 		{ "glVertexAttribPointer",(void **)&ctx->fn.glVertexAttribPointer },
 		{ "glDrawArrays",	(void **)&ctx->fn.glDrawArrays }
@@ -318,12 +316,14 @@ static void refresh_vertex_data(const glctx *ctx, int w, int h)
 	ctx->fn.glBindBuffer(GL_ARRAY_BUFFER, ctx->gl_sh.vbo);
 	ctx->fn.glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data, GL_STREAM_DRAW);
 
+#if 0
 	ctx->fn.glEnableVertexAttribArray(ctx->gl_sh.i_pos);
 	ctx->fn.glEnableVertexAttribArray(ctx->gl_sh.i_coord);
 	ctx->fn.glVertexAttribPointer(ctx->gl_sh.i_pos, 2, GL_FLOAT, GL_FALSE,
 				      sizeof(float) * 4, 0);
 	ctx->fn.glVertexAttribPointer(ctx->gl_sh.i_coord, 2, GL_FLOAT, GL_FALSE,
 				      sizeof(float) * 4, (void *)(2 * sizeof(float)));
+#endif
 
 	ctx->fn.glBindVertexArray(0);
 	ctx->fn.glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -462,17 +462,6 @@ void gl_prerun(glctx *ctx)
 
 void gl_postrun(glctx *ctx)
 {
-	if(screen_dim->w == 0 || screen_dim->h == 0)
-		return;
-
-	if(screen_dim->w != ctx->w || screen_dim->h != ctx->h)
-	{
-		ctx->w = screen_dim->w;
-		ctx->h = screen_dim->h;
-
-		refresh_vertex_data(ctx, screen_dim->w, screen_dim->h);
-	}
-
 	ctx->fn.glUseProgram(ctx->gl_sh.program);
 	ctx->fn.glBindVertexArray(ctx->gl_sh.vao);
 	ctx->fn.glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -481,7 +470,6 @@ void gl_postrun(glctx *ctx)
 	ctx->fn.glUseProgram(0);
 
 	SDL_GL_UnbindTexture(*ctx->tex);
-	SDL_RenderFlush(ctx->rend); /* TODO: Check if this is required. */
 	SDL_SetRenderTarget(ctx->rend, NULL);
 }
 
