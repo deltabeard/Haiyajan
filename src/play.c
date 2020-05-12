@@ -192,6 +192,9 @@ bool cb_retro_environment(unsigned cmd, void *data)
 				return false;
 			}
 
+			if(hw_cb->bottom_left_origin)
+				ctx_retro->env.flip = SDL_FLIP_VERTICAL;
+
 			SDL_LogInfo(SDL_LOG_CATEGORY_RENDER,
 				    "The request for an %s (%u.%u) context was "
 				    "accepted",

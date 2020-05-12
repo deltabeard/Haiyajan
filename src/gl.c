@@ -206,25 +206,9 @@ static GLuint compile_shader(glctx *ctx, GLenum type, GLsizei count,
     return shader;
 }
 
-static void ortho2d(float m[4][4], float left, float right, float bottom,
-		    float top)
-{
-    m[0][0] = 1; m[0][1] = 0; m[0][2] = 0; m[0][3] = 0;
-    m[1][0] = 0; m[1][1] = 1; m[1][2] = 0; m[1][3] = 0;
-    m[2][0] = 0; m[2][1] = 0; m[2][2] = 1; m[2][3] = 0;
-    m[3][0] = 0; m[3][1] = 0; m[3][2] = 0; m[3][3] = 1;
-
-    m[0][0] = 2.0f / (right - left);
-    m[1][1] = 2.0f / (top - bottom);
-    m[2][2] = -1.0f;
-    m[3][0] = -(right + left) / (right - left);
-    m[3][1] = -(top + bottom) / (top - bottom);
-}
-
-
 static void init_shaders(glctx *ctx)
 {
-	const char *g_vshader_src =
+	const char *const g_vshader_src =
 	"#version 150\n"
 	"in vec2 i_pos;\n"
 	"in vec2 i_coord;\n"
@@ -235,7 +219,7 @@ static void init_shaders(glctx *ctx)
 	"gl_Position = vec4(i_pos, 0.0, 1.0) * u_mvp;\n"
 	"}";
 
-	const char *g_fshader_src =
+	const char *const g_fshader_src =
 	"#version 150\n"
 	"in vec2 o_coord;\n"
 	"uniform sampler2D u_tex;\n"
@@ -277,19 +261,8 @@ static void init_shaders(glctx *ctx)
 
 	ctx->fn.glGenVertexArrays(1, &ctx->gl_sh.vao);
 	ctx->fn.glGenBuffers(1, &ctx->gl_sh.vbo);
-
 	ctx->fn.glUseProgram(ctx->gl_sh.program);
-
 	ctx->fn.glUniform1i(ctx->gl_sh.u_tex, 0);
-
-	float m[4][4];
-	if(ctx->bottom_left_origin)
-		ortho2d(m, -1, 1, 1, -1);
-	else
-		ortho2d(m, -1, 1, -1, 1);
-
-	ctx->fn.glUniformMatrix4fv(ctx->gl_sh.u_mvp, 1, GL_FALSE, (float *)m);
-
 	ctx->fn.glUseProgram(0);
 }
 
@@ -475,8 +448,11 @@ void gl_postrun(glctx *ctx)
 
 void gl_deinit(glctx *ctx)
 {
+#if 0
+	/* Causes segmentation fault currently. */
 	if(ctx != NULL && ctx->context_destroy != NULL)
 		ctx->context_destroy();
+#endif
 
 	if(ctx != NULL)
 	{

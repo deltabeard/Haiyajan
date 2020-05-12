@@ -135,6 +135,7 @@ struct core_ctx_s
 
 		unsigned perf_lvl;
 		Uint32 pixel_fmt;
+		SDL_RendererFlip flip;
 
 		struct retro_audio_callback audio_cb;
 		retro_frame_time_callback_t ftcb;
