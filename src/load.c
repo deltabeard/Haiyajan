@@ -313,4 +313,6 @@ void unload_libretro_core(struct core_ctx_s *restrict ctx)
 		SDL_UnloadObject(ctx->handle);
 		ctx->handle = NULL;
 	}
+
+	SDL_zero(ctx->fn);
 }

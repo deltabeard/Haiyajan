@@ -611,10 +611,10 @@ void play_init_cb(struct core_ctx_s *ctx)
 
 void play_deinit_cb(struct core_ctx_s *ctx)
 {
-	gl_deinit(ctx->gl);
-
 	if(ctx == NULL)
 		return;
+
+	gl_deinit(ctx->gl);
 
 	if(ctx->core_tex != NULL)
 	{
