@@ -204,7 +204,7 @@ static void apply_settings(char **argv, struct core_ctx_s *ctx)
 		{ "verbose",	'v', OPTPARSE_NONE },
 		{ "video",	'V', OPTPARSE_REQUIRED },
 		{ "version",	 1 , OPTPARSE_NONE },
-		{ "benchmark",	'b', OPTPARSE_NONE },
+		{ "benchmark",	'b', OPTPARSE_OPTIONAL },
 		{ "help",	'h', OPTPARSE_NONE },
 		{ 0 }
 	};
@@ -265,9 +265,16 @@ static void apply_settings(char **argv, struct core_ctx_s *ctx)
 
 		case 'b':
 			ctx->stngs.benchmark = 1;
+			if(options.optarg != 0)
+				ctx->stngs.benchmark_dur = SDL_atoi(options.optarg);
+
+			if(ctx->stngs.benchmark_dur == 0)
+				ctx->stngs.benchmark_dur = 20;
+
 			SDL_LogInfo(SDL_LOG_CATEGORY_VIDEO,
 					"Haiyajan will exit after performing a "
-					"benchmark");
+					"benchmark for %d seconds",
+					ctx->stngs.benchmark_dur);
 			break;
 
 		case 'h':
@@ -528,17 +535,18 @@ timing:
 		while(ctx->stngs.benchmark)
 		{
 			uint_fast32_t elapsed;
-			float fps;
+			float bench_fps;
 			static Uint32 bench_frames = 0;
 
 			bench_frames++;
 			elapsed = SDL_GetTicks() - benchmark_beg;
-			if(elapsed < 10 * 1000)
+			if(elapsed < ctx->stngs.benchmark_dur * 1000)
 				break;
 
-			fps = (float)bench_frames / ((float)elapsed / 1000.0);
+			bench_fps = (float)bench_frames /
+					((float)elapsed / 1000.0F);
 			SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-					"Benchmark: %.2f FPS", fps);
+					"Benchmark: %.2f FPS", bench_fps);
 			goto out;
 		}
 	}
@@ -569,7 +577,6 @@ int main(int argc, char *argv[])
 	print_info();
 	prerun_checks();
 
-	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES , 4);
 #if SDL_VERSION_ATLEAST(2, 0, 13)
 	SDL_SetHint(SDL_HINT_AUDIO_DEVICE_APP_NAME, PROG_NAME);
 #endif
@@ -601,6 +608,13 @@ int main(int argc, char *argv[])
 
 	if(ctx.disp_rend == NULL)
 		goto err;
+
+#if 0
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES , 4);
+#endif
 
 	/* Allows for transparency on information display. */
 	if(ctx.stngs.vid_info)

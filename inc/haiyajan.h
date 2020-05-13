@@ -25,6 +25,7 @@ struct settings_s
 	unsigned char vid_info : 1;
 	unsigned char fullscreen : 1;
 	unsigned char benchmark : 1;
+	Uint32 benchmark_dur;
 };
 
 /**
