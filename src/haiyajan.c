@@ -14,6 +14,7 @@
 
 #include <SDL2/SDL.h>
 #include <stdlib.h>
+#include <time.h>
 
 #ifdef _WIN32
 #include <stdio.h>
@@ -323,11 +324,45 @@ err:
 	exit(EXIT_FAILURE);
 }
 
+static SDL_atomic_t screencap_timeout;
+
+Uint32 enable_screencapture(Uint32 interval, void *param)
+{
+	SDL_AtomicSet(&screencap_timeout, 0);
+	(void)param;
+	return interval;
+}
+
 void take_screencapture(struct core_ctx_s *const ctx)
 {
+	const Uint32 interval_ms = 1000;
 	int w, h;
 	SDL_Surface *cap = NULL;
 	const Uint32 format = SDL_GetWindowPixelFormat(ctx->win);
+	char time_str[32];
+	time_t now;
+	struct tm *tmp;
+	char filename[64];
+
+	/* Screencaptures limited to 1 every second. Should not be used for
+	 * recording game play as a video, as this function is too slow for
+	 * that. */
+	if(SDL_AtomicGet(&screencap_timeout))
+		return;
+
+	SDL_AtomicSet(&screencap_timeout, 1);
+	SDL_AddTimer(interval_ms, enable_screencapture, NULL);
+
+	now = time(NULL);
+	 if(now == (time_t)-1 || (tmp = localtime(&now)) == NULL ||
+		 strftime(time_str, sizeof(time_str), "%Y-%m-%d-%k%M%S", tmp) == 0)
+	 {
+		 SDL_snprintf(time_str, sizeof(time_str), "%010u",
+			      SDL_GetTicks());
+	 }
+
+	 SDL_snprintf(filename, sizeof(filename), "%s-%s.bmp",
+		      time_str, ctx->core_log_name);
 
 	if(SDL_GetRendererOutputSize(ctx->disp_rend, &w, &h) != 0)
 		goto err;
@@ -339,7 +374,7 @@ void take_screencapture(struct core_ctx_s *const ctx)
 	if(SDL_RenderReadPixels(ctx->disp_rend, NULL, format, cap->pixels, cap->pitch) != 0)
 		goto err;
 
-	if(SDL_SaveBMP(cap, "screenshot.bmp") != 0)
+	if(SDL_SaveBMP(cap, filename) != 0)
 		goto err;
 
 out:
@@ -581,7 +616,7 @@ int main(int argc, char *argv[])
 	SDL_SetHint(SDL_HINT_AUDIO_DEVICE_APP_NAME, PROG_NAME);
 #endif
 
-	if(SDL_Init(SDL_INIT_AUDIO | SDL_INIT_EVENTS | SDL_INIT_GAMECONTROLLER) != 0)
+	if(SDL_Init(SDL_INIT_AUDIO | SDL_INIT_EVENTS | SDL_INIT_GAMECONTROLLER | SDL_INIT_TIMER) != 0)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
 			"SDL initialisation failed: %s",
