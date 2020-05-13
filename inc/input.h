@@ -19,7 +19,7 @@
 
 #define MAX_PLAYERS 4
 
-/* Input types used in libretro. */
+/* The input type connected to Haiyajan and to the Libretro core. */
 enum input_type_e {
 	/* Any unused device is set to NONE. */
 	RETRO_INPUT_NONE =	RETRO_DEVICE_NONE,
@@ -38,6 +38,7 @@ enum input_type_e {
 };
 typedef enum input_type_e input_type;
 
+/* The type of command executed by the input button press. */
 enum input_cmd_type_e {
 	INPUT_CMD_NONE = 0,
 	INPUT_CMD_RETRO_INPUT,
@@ -45,6 +46,7 @@ enum input_cmd_type_e {
 };
 typedef enum input_cmd_type_e input_cmd_type;
 
+/* The commands that may be mapped to input button press. */
 enum input_cmd_event_codes_e {
 	INPUT_EVENT_TOGGLE_INFO = 0,
 	INPUT_EVENT_TOGGLE_FULLSCREEN,
@@ -52,6 +54,7 @@ enum input_cmd_event_codes_e {
 };
 typedef enum input_cmd_event_codes_e input_cmd_event;
 
+/* Libretro joypad input as an enum for improved type tracking. */
 enum input_cmd_joypad_codes_e {
 	INPUT_JOYPAD_B = RETRO_DEVICE_ID_JOYPAD_B,
 	INPUT_JOYPAD_Y,
@@ -72,6 +75,8 @@ enum input_cmd_joypad_codes_e {
 };
 typedef enum input_cmd_joypad_codes_e input_cmd_joypad;
 
+/* The command to execute on button press. This depends on the input_cmd_type of
+ * the mapping. */
 union input_cmd_u {
 	input_cmd_event event;
 	input_cmd_joypad joypad;
@@ -86,22 +91,27 @@ union input_cmd_trigger_u {
 
 struct input_device_s {
 	/* Type of device connected to Haiyajan. */
-	input_type type;
+	input_type hai_type;
 
-	/* Player number. Undefined if lr_type is NONE. */
+	/* Type of device connected to Libretro core. */
+	input_type lr_type;
+
+#if 0
+	/* Player number. Undefined if lr_type is RETRO_INPUT_NONE. */
 	Uint8 player;
+#endif
 
 	/* State of all the retro_device buttons.
-	 *Where bit 0 is RETRO_DEVICE_ID_JOYPAD_B. */
+	 * Where bit 0 is RETRO_DEVICE_ID_JOYPAD_B. */
 	Uint16 retro_state;
 
 	/* Pointer to gamecontroller if type is INPUT_TYPE_CONTROLLER*. */
 	SDL_GameController *gc;
 	/* Game Controller mapping if type is INPUT_TYPE_CONTROLLER*. */
-	SDL_GameControllerButton gcbtn[SDL_CONTROLLER_BUTTON_MAX];
+	//Uint8 gcbtn[SDL_CONTROLLER_BUTTON_MAX];
 	/* Additional mappings if the controller has axis input, and hence is a
 	 * INPUT_TYPE_CONTROLLER_ANALOGUE only. */
-	SDL_GameControllerAxis gcax[SDL_CONTROLLER_AXIS_MAX];
+	//Sint16 gcax[SDL_CONTROLLER_AXIS_MAX];
 };
 
 struct input_ctx_s

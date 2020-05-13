@@ -123,6 +123,9 @@ void input_init(struct input_ctx_s *restrict in_ctx)
 				  &keymap_defaults[i].map);
 	}
 
+	in_ctx->player[0].hai_type = RETRO_INPUT_KEYBOARD;
+	in_ctx->player[0].lr_type = in_ctx->player[0].hai_type;
+
 	SDL_LogVerbose(SDL_LOG_CATEGORY_INPUT, "Initialised keyboard input");
 	return;
 }
@@ -131,6 +134,7 @@ static SDL_bool input_is_analogue(SDL_GameController *gc)
 {
 	SDL_GameControllerAxis axis;
 
+	/* FIXME: Have to wait for device remap? */
 	/* If there's a single analogue input, set to analogue controller. */
 	/* FIXME: Check if it matches an actual dualshock 2. */
 	for(axis = 0; axis < SDL_CONTROLLER_AXIS_MAX; axis++)
@@ -181,16 +185,51 @@ void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev)
 			return;
 		}
 
-		in_ctx->player[0].type = input_is_analogue(gc) ?
+		in_ctx->player[0].hai_type = input_is_analogue(gc) ?
 				RETRO_INPUT_ANALOG : RETRO_INPUT_JOYPAD;
-		in_ctx->player[0].player = 1;
+		in_ctx->player[0].lr_type = in_ctx->player[0].hai_type;
 		in_ctx->player[0].gc = gc;
+
+		SDL_GameControllerSetPlayerIndex(gc, 1);
 
 		/* FIXME: assign controller mapping to core. */
 
 		SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
-			    "Controller \"%s\" connected as an %s device",
-			    gc_name, input_type_str[in_ctx->player[0].type]);
+			    "Controller %s connected as a %s device",
+			    gc_name, input_type_str[in_ctx->player[0].hai_type]);
+	}
+	else if(ev->type == SDL_CONTROLLERDEVICEREMOVED)
+	{
+		SDL_GameController *gc;
+		const char *gc_name;
+		const char *const gc_no_name = "with no name";
+		gc = SDL_GameControllerFromInstanceID(ev->cdevice.which);
+		if(NULL)
+			return;
+
+		gc_name = SDL_GameControllerName(gc);
+		if(gc_name == NULL)
+			gc_name = gc_no_name;
+
+		if(gc == in_ctx->player[0].gc)
+		{
+			SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+				    "Player 1 disconnected");
+		}
+
+		SDL_GameControllerClose(gc);
+		SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+			    "Controller %s has been disconnected", gc_name);
+
+		/* TODO: Could just zero the struct? */
+		in_ctx->player[0].hai_type = RETRO_INPUT_NONE;
+		in_ctx->player[0].lr_type = RETRO_INPUT_NONE;
+		in_ctx->player[0].gc = NULL;
+
+		/* Change player 1 to keyboard if no other players/controllers
+		 * are connected. */
+		in_ctx->player[0].hai_type = RETRO_INPUT_KEYBOARD;
+		in_ctx->player[0].lr_type = RETRO_INPUT_JOYPAD;
 	}
 	else if(ev->type == SDL_CONTROLLERDEVICEREMAPPED)
 	{
@@ -232,20 +271,41 @@ static void input_set(struct input_ctx_s *const in_ctx, SDL_Scancode sc,
 }
 
 Sint16 input_get(const struct input_ctx_s *const in_ctx,
-				 unsigned port, unsigned device, unsigned index, unsigned id)
+				 unsigned port, unsigned device, unsigned index,
+				 unsigned id)
 {
-	if(index != 0 || device != RETRO_INPUT_JOYPAD || port >= MAX_PLAYERS)
+	static SDL_GameControllerButton lr_to_gcb[] =
+	{
+		SDL_CONTROLLER_BUTTON_B,
+		SDL_CONTROLLER_BUTTON_Y,
+		SDL_CONTROLLER_BUTTON_BACK,
+		SDL_CONTROLLER_BUTTON_START,
+		SDL_CONTROLLER_BUTTON_DPAD_UP,
+		SDL_CONTROLLER_BUTTON_DPAD_DOWN,
+		SDL_CONTROLLER_BUTTON_DPAD_LEFT,
+		SDL_CONTROLLER_BUTTON_DPAD_RIGHT,
+		SDL_CONTROLLER_BUTTON_A,
+		SDL_CONTROLLER_BUTTON_X,
+		SDL_CONTROLLER_BUTTON_LEFTSHOULDER,
+		SDL_CONTROLLER_BUTTON_RIGHTSHOULDER,
+		-1, /* L2 */
+		-1, /* R2 */
+		SDL_CONTROLLER_BUTTON_LEFTSTICK,
+		SDL_CONTROLLER_BUTTON_RIGHTSTICK
+	};
+
+	if(index != 0 || port >= MAX_PLAYERS)
 		return 0;
 
-	if(in_ctx->player[port].type == (input_type)device)
+	if(in_ctx->player[port].hai_type == (input_type)device)
 	{
 		static Uint8 log_lim = 0;
-		if(!(log_lim >> port))
+		if(((log_lim >> port) & 0b1) == 0)
 		{
 			SDL_LogVerbose(SDL_LOG_CATEGORY_INPUT,
 				"Core has misidentified device %s on player %u "
 				"as %s",
-				input_type_str[in_ctx->player[port].type], port,
+				input_type_str[in_ctx->player[port].hai_type], port,
 				input_type_str[device]);
 			SDL_LogVerbose(SDL_LOG_CATEGORY_INPUT,
 				"This error will no longer appear for player "
@@ -257,10 +317,40 @@ Sint16 input_get(const struct input_ctx_s *const in_ctx,
 
 	switch(device)
 	{
-	case RETRO_INPUT_JOYPAD:
-		return (in_ctx->player[port].retro_state >> id) & 0b1;
+	case RETRO_INPUT_ANALOG:
+		/* Only analogue input devices are supported by libretro analog
+		 * inputs. */
+		if(in_ctx->player[port].hai_type != RETRO_INPUT_ANALOG)
+			return 0;
 
-		//case RETRO_DEVICE_ANALOG:
+		if(index < RETRO_DEVICE_INDEX_ANALOG_BUTTON)
+		{
+			const SDL_GameControllerAxis lr_to_gcax[2][2] = {
+				{ SDL_CONTROLLER_AXIS_LEFTX, SDL_CONTROLLER_AXIS_LEFTY },
+				{ SDL_CONTROLLER_AXIS_RIGHTX, SDL_CONTROLLER_AXIS_RIGHTY }
+			};
+
+			return SDL_GameControllerGetAxis(in_ctx->player[port].gc,
+							 lr_to_gcax[index][id]);
+		}
+		/* Fall-through */
+	case RETRO_INPUT_JOYPAD:
+	{
+		if(in_ctx->player[port].hai_type == RETRO_INPUT_KEYBOARD)
+			return (in_ctx->player[port].retro_state >> id) & 0b1;
+		else if(in_ctx->player[port].hai_type != RETRO_INPUT_JOYPAD)
+			return 0;
+
+		SDL_GameControllerButton btn = lr_to_gcb[id];
+		if(btn != -1)
+			return SDL_GameControllerGetButton(in_ctx->player[port].gc, id) ? SDL_MAX_SINT16 : 0;
+		else if(id == RETRO_DEVICE_ID_JOYPAD_L2)
+			return SDL_GameControllerGetAxis(in_ctx->player[port].gc, SDL_CONTROLLER_AXIS_TRIGGERLEFT);
+		else if(id == RETRO_DEVICE_ID_JOYPAD_R2)
+			return SDL_GameControllerGetAxis(in_ctx->player[port].gc, SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
+
+		break;
+	}
 	}
 	return 0;
 }
