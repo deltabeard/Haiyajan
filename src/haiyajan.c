@@ -337,13 +337,45 @@ Uint32 enable_screencapture(Uint32 interval, void *param)
 	return interval;
 }
 
+#if USE_WEBP == 1
+struct enc_cap_s {
+	SDL_Surface *surf;
+	char *filename;
+};
+
+int thread_encode_screencap(void* data)
+{
+	struct enc_cap_s *ctx = data;
+	uint8_t *webp;
+	size_t outsz;
+
+	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_LOW);
+	outsz = WebPEncodeLosslessRGB(ctx->surf->pixels, ctx->surf->w,
+				      ctx->surf->h, ctx->surf->pitch, &webp);
+	if(outsz == 0)
+		goto out;
+
+	SDL_RWops *fout = SDL_RWFromFile(ctx->filename, "wb");
+	SDL_RWwrite(fout, webp, 1, outsz);
+	SDL_RWclose(fout);
+	WebPFree(webp);
+
+out:
+	SDL_FreeSurface(ctx->surf);
+	SDL_free(ctx->filename);
+	SDL_free(ctx);
+	return 0;
+}
+#endif
+
 void save_texture(SDL_Renderer *rend, SDL_Texture *tex,
-		  const SDL_Rect *const src, SDL_RendererFlip flip,
-		  const char *const filename)
+		  const SDL_Rect *src, SDL_RendererFlip flip,
+		  const char *filename)
 {
 	SDL_Texture *core_tex;
 	SDL_Surface *surf = NULL;
 	int format = SDL_PIXELFORMAT_RGB24;
+	/* TODO: Use native format of renderer. */
 
 	core_tex = SDL_CreateTexture(rend, format, SDL_TEXTUREACCESS_TARGET,
 				    src->w, src->h);
@@ -366,29 +398,33 @@ void save_texture(SDL_Renderer *rend, SDL_Texture *tex,
 		goto err;
 
 	if(SDL_RenderReadPixels(rend, src, format, surf->pixels, surf->pitch) != 0)
+	{
+		SDL_FreeSurface(surf);
 		goto err;
+	}
 
 #if USE_WEBP == 1
-	uint8_t *webp;
-	size_t outsz = WebPEncodeLosslessRGB(surf->pixels, surf->w, surf->h,
-				     surf->pitch, &webp);
-	if(outsz == 0)
-		goto err;
+	struct enc_cap_s *enc = SDL_malloc(sizeof(struct enc_cap_s));
+	enc->surf = surf;
+	enc->filename = SDL_strdup(filename);
+	SDL_Thread *thread = SDL_CreateThread(thread_encode_screencap,
+					      "WEBP Screencap", enc);
+	SDL_DetachThread(thread);
 
-	SDL_RWops *fout = SDL_RWFromFile(filename, "wb");
-	SDL_RWwrite(fout, webp, 1, outsz);
-	SDL_RWclose(fout);
-	WebPFree(webp);
 #else
 	if(SDL_SaveBMP(surf, filename) != 0)
+	{
+		SDL_FreeSurface(surf);
 		goto err;
+	}
+
+	SDL_FreeSurface(surf);
 #endif
 
 	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-		    "Screen capture saved to \"%s\"\n", filename);
+		    "Screencap saved to \"%s\"\n", filename);
 
 err:
-	SDL_FreeSurface(surf);
 	SDL_DestroyTexture(core_tex);
 }
 
