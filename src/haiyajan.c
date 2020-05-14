@@ -333,15 +333,49 @@ Uint32 enable_screencapture(Uint32 interval, void *param)
 	return interval;
 }
 
+void save_texture(SDL_Renderer *rend, SDL_Texture *tex,
+		  const SDL_Rect *const src,
+		  const char *const filename)
+{
+	SDL_Texture *core_tex;
+	SDL_Surface *surf = NULL;
+	int format = SDL_PIXELFORMAT_RGB888;
+
+	core_tex = SDL_CreateTexture(rend, format, SDL_TEXTUREACCESS_TARGET,
+				    src->w, src->h);
+	if(core_tex == NULL)
+		goto err;
+
+	if(SDL_SetRenderTarget(rend, core_tex) != 0)
+		goto err;
+
+	if(SDL_RenderCopy(rend, tex, src, src) != 0)
+		goto err;
+
+	surf = SDL_CreateRGBSurfaceWithFormat(0, src->w, src->h,
+					      SDL_BITSPERPIXEL(format), format);
+	if(!surf)
+		goto err;
+
+	if(SDL_RenderReadPixels(rend, src, format, surf->pixels, surf->pitch) != 0)
+		goto err;
+
+	if(SDL_SaveBMP(surf, filename) != 0)
+		goto err;
+
+	SDL_Log("Saved texture as BMP to \"%s\"\n", filename);
+
+err:
+	SDL_FreeSurface(surf);
+	SDL_DestroyTexture(core_tex);
+}
+
 void take_screencapture(struct core_ctx_s *const ctx)
 {
 	const Uint32 interval_ms = 1000;
-	int w, h;
-	SDL_Surface *cap = NULL;
-	const Uint32 format = SDL_GetWindowPixelFormat(ctx->win);
-	char time_str[32];
 	time_t now;
 	struct tm *tmp;
+	char time_str[32];
 	char filename[64];
 
 	/* Screencaptures limited to 1 every second. Should not be used for
@@ -354,39 +388,19 @@ void take_screencapture(struct core_ctx_s *const ctx)
 	SDL_AddTimer(interval_ms, enable_screencapture, NULL);
 
 	now = time(NULL);
-	 if(now == (time_t)-1 || (tmp = localtime(&now)) == NULL ||
-		 strftime(time_str, sizeof(time_str), "%Y-%m-%d-%k%M%S", tmp) == 0)
-	 {
-		 SDL_snprintf(time_str, sizeof(time_str), "%010u",
-			      SDL_GetTicks());
-	 }
+	if(now == (time_t) -1 || (tmp = localtime(&now)) == NULL ||
+		strftime(time_str, sizeof(time_str), "%Y-%m-%d-%k%M%S", tmp) == 0)
+	{
+		SDL_snprintf(time_str, sizeof(time_str), "%010u",
+					 SDL_GetTicks());
+	}
 
-	 SDL_snprintf(filename, sizeof(filename), "%s-%s.bmp",
-		      time_str, ctx->core_log_name);
+	SDL_snprintf(filename, sizeof(filename), "%s-%s.bmp",
+				 time_str, ctx->core_log_name);
 
-	if(SDL_GetRendererOutputSize(ctx->disp_rend, &w, &h) != 0)
-		goto err;
+	save_texture(ctx->disp_rend, ctx->core_tex, &ctx->game_frame_res, filename);
 
-	cap = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, format);
-	if(cap == NULL)
-		goto err;
-
-	if(SDL_RenderReadPixels(ctx->disp_rend, NULL, format, cap->pixels, cap->pitch) != 0)
-		goto err;
-
-	if(SDL_SaveBMP(cap, filename) != 0)
-		goto err;
-
-out:
-	SDL_FreeSurface(cap);
 	return;
-
-err:
-	SDL_LogInfo(SDL_LOG_CATEGORY_RENDER,
-				"Unable to take screen capture: %s",
-				SDL_GetError());
-	goto out;
-
 }
 
 static void run(struct core_ctx_s *ctx)
