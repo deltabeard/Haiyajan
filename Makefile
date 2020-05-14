@@ -13,10 +13,10 @@ endif
 CFLAGS += $(OPT)
 
 ifeq ($(STATIC),1)
-	LDLIBS := $(shell sdl2-config --static-libs)
+	LDLIBS += $(shell sdl2-config --static-libs)
 	CFLAGS += -static
 else
-	LDLIBS := $(shell sdl2-config --libs)
+	LDLIBS += $(shell sdl2-config --libs)
 endif
 
 GIT_VERSION := $(shell git rev-parse --short HEAD 2>/dev/null)
@@ -26,6 +26,19 @@ ifneq ($(GIT_VERSION),)
 endif
 ifneq ($(REL_VERSION),)
 	CFLAGS += -D REL_VERSION=\"$(REL_VERSION)\"
+endif
+
+# Check if WEBP is available. Otherwise use BMP for screencaps.
+TESTPROG := int main(void){}
+WEBPINFO := $(shell echo "$(TESTPROG)" | $(CC) -lwebp -x c - 2> /dev/null; echo $$?)
+ifeq ($(WEBPINFO),0)
+	USEWEBP ?= 1
+else
+	USEWEBP ?= 0
+endif
+ifeq ($(USEWEBP),1)
+	LDLIBS += -lwebp
+	CFLAGS += -D USE_WEBP=1
 endif
 
 .PHONY: test
@@ -61,6 +74,7 @@ help:
 	@echo "Options:"
 	@echo "  DEBUG=1    Enables all asserts and reduces optimisation"
 	@echo "  STATIC=1   Enables static build"
+	@echo "  USEWEBP=1  Uses libwebp to encode screencaps instead of BMP"
 	@echo "  OPT=\"\"     Set custom optimisation options"
 	@echo
 	@echo "  Example: make DEBUG=1 OPT=\"-Ofast -march=native\""

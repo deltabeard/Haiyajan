@@ -16,6 +16,10 @@
 #include <stdlib.h>
 #include <time.h>
 
+#if USE_WEBP == 1
+#include <webp/encode.h>
+#endif
+
 #ifdef _WIN32
 #include <stdio.h>
 #endif
@@ -339,7 +343,7 @@ void save_texture(SDL_Renderer *rend, SDL_Texture *tex,
 {
 	SDL_Texture *core_tex;
 	SDL_Surface *surf = NULL;
-	int format = SDL_PIXELFORMAT_RGB888;
+	int format = SDL_PIXELFORMAT_RGB24;
 
 	core_tex = SDL_CreateTexture(rend, format, SDL_TEXTUREACCESS_TARGET,
 				    src->w, src->h);
@@ -360,10 +364,23 @@ void save_texture(SDL_Renderer *rend, SDL_Texture *tex,
 	if(SDL_RenderReadPixels(rend, src, format, surf->pixels, surf->pitch) != 0)
 		goto err;
 
-	if(SDL_SaveBMP(surf, filename) != 0)
+#if USE_WEBP == 1
+	uint8_t *webp;
+	size_t outsz = WebPEncodeRGB(surf->pixels, surf->w, surf->h,
+				     surf->pitch, 60, &webp);
+	if(outsz == 0)
 		goto err;
 
-	SDL_Log("Saved texture as BMP to \"%s\"\n", filename);
+	SDL_RWops *fout = SDL_RWFromFile(filename, "wb");
+	SDL_RWwrite(fout, webp, 1, outsz);
+	SDL_RWclose(fout);
+	WebPFree(webp);
+#else
+	if(SDL_SaveBMP(surf, filename) != 0)
+		goto err;
+#endif
+
+	SDL_Log("Saved texture as WEBP to \"%s\"\n", filename);
 
 err:
 	SDL_FreeSurface(surf);
@@ -377,6 +394,11 @@ void take_screencapture(struct core_ctx_s *const ctx)
 	struct tm *tmp;
 	char time_str[32];
 	char filename[64];
+#if USE_WEBP == 1
+	const char fmt[] = "webp";
+#else
+	const char fmt[] = "bmp";
+#endif
 
 	/* Screencaptures limited to 1 every second. Should not be used for
 	 * recording game play as a video, as this function is too slow for
@@ -395,8 +417,8 @@ void take_screencapture(struct core_ctx_s *const ctx)
 					 SDL_GetTicks());
 	}
 
-	SDL_snprintf(filename, sizeof(filename), "%s-%s.bmp",
-				 time_str, ctx->core_log_name);
+	SDL_snprintf(filename, sizeof(filename), "%s-%s.%s",
+				 time_str, ctx->core_log_name, fmt);
 
 	save_texture(ctx->disp_rend, ctx->core_tex, &ctx->game_frame_res, filename);
 
