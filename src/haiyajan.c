@@ -338,7 +338,7 @@ Uint32 enable_screencapture(Uint32 interval, void *param)
 }
 
 void save_texture(SDL_Renderer *rend, SDL_Texture *tex,
-		  const SDL_Rect *const src,
+		  const SDL_Rect *const src, SDL_RendererFlip flip,
 		  const char *const filename)
 {
 	SDL_Texture *core_tex;
@@ -353,7 +353,11 @@ void save_texture(SDL_Renderer *rend, SDL_Texture *tex,
 	if(SDL_SetRenderTarget(rend, core_tex) != 0)
 		goto err;
 
-	if(SDL_RenderCopy(rend, tex, src, src) != 0)
+	/* This fixes a bug whereby OpenGL cores appear as a white screen in the
+	 * screencap. */
+	SDL_RenderDrawPoint(rend, 0, 0);
+
+	if(SDL_RenderCopyEx(rend, tex, src, src, 0.0, NULL, flip) != 0)
 		goto err;
 
 	surf = SDL_CreateRGBSurfaceWithFormat(0, src->w, src->h,
@@ -366,8 +370,8 @@ void save_texture(SDL_Renderer *rend, SDL_Texture *tex,
 
 #if USE_WEBP == 1
 	uint8_t *webp;
-	size_t outsz = WebPEncodeRGB(surf->pixels, surf->w, surf->h,
-				     surf->pitch, 60, &webp);
+	size_t outsz = WebPEncodeLosslessRGB(surf->pixels, surf->w, surf->h,
+				     surf->pitch, &webp);
 	if(outsz == 0)
 		goto err;
 
@@ -380,7 +384,8 @@ void save_texture(SDL_Renderer *rend, SDL_Texture *tex,
 		goto err;
 #endif
 
-	SDL_Log("Saved texture as WEBP to \"%s\"\n", filename);
+	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+		    "Screen capture saved to \"%s\"\n", filename);
 
 err:
 	SDL_FreeSurface(surf);
@@ -420,7 +425,8 @@ void take_screencapture(struct core_ctx_s *const ctx)
 	SDL_snprintf(filename, sizeof(filename), "%s-%s.%s",
 				 time_str, ctx->core_log_name, fmt);
 
-	save_texture(ctx->disp_rend, ctx->core_tex, &ctx->game_frame_res, filename);
+	save_texture(ctx->disp_rend, ctx->core_tex, &ctx->game_frame_res,
+		     ctx->env.flip, filename);
 
 	return;
 }
