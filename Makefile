@@ -32,13 +32,14 @@ endif
 
 all: $(TARGETS)
 haiyajan: ./src/haiyajan.o ./src/load.o ./src/play.o ./src/load.o \
-		./src/timer.o ./src/font.o ./src/input.o ./src/gl.o
+		./src/timer.o ./src/font.o ./src/input.o ./src/gl.o ./src/png.o
 	+$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 ./src/haiyajan.o: ./src/haiyajan.c ./inc/*.h
 ./src/gl.o: ./src/gl.c ./inc/gl.h ./inc/libretro.h
 ./src/load.o: ./src/load.c ./inc/load.h ./inc/haiyajan.h ./inc/libretro.h
 ./src/play.o: ./src/play.c ./inc/play.h ./inc/haiyajan.h ./inc/libretro.h
+./src/png.o: ./src/png.c ./inc/png.h
 ./src/timer.o: ./src/timer.c ./inc/timer.h
 ./src/input.o: ./src/input.c ./inc/input.h ./inc/gamecontrollerdb.h
 

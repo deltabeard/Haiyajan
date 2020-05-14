@@ -29,6 +29,7 @@
 #include <load.h>
 #include <play.h>
 #include <timer.h>
+#include <png.h>
 
 #define PROG_NAME	"Haiyajan"
 #define PROG_NAME_LEN	strlen(PROG_NAME)
@@ -339,7 +340,7 @@ void save_texture(SDL_Renderer *rend, SDL_Texture *tex,
 {
 	SDL_Texture *core_tex;
 	SDL_Surface *surf = NULL;
-	int format = SDL_PIXELFORMAT_RGB888;
+	int format = SDL_PIXELFORMAT_RGB24;
 
 	core_tex = SDL_CreateTexture(rend, format, SDL_TEXTUREACCESS_TARGET,
 				    src->w, src->h);
@@ -359,11 +360,31 @@ void save_texture(SDL_Renderer *rend, SDL_Texture *tex,
 
 	if(SDL_RenderReadPixels(rend, src, format, surf->pixels, surf->pitch) != 0)
 		goto err;
-
+#if 0
 	if(SDL_SaveBMP(surf, filename) != 0)
 		goto err;
 
 	SDL_Log("Saved texture as BMP to \"%s\"\n", filename);
+#else
+	FILE *fout = fopen(filename, "wb");
+	if(fout == NULL)
+		goto err;
+
+	struct TinyPngOut pngout;
+	enum TinyPngOut_Status status;
+	status = TinyPngOut_init(&pngout, surf->w, surf->h, fout);
+	if(status != TINYPNGOUT_OK)
+		goto err;
+
+	// Write image data
+	status = TinyPngOut_write(&pngout, surf->pixels, surf->w * surf->h);
+	if(status != TINYPNGOUT_OK)
+		goto err;
+
+	fclose(fout);
+
+	SDL_Log("Saved texture as PNG to \"%s\"\n", filename);
+#endif
 
 err:
 	SDL_FreeSurface(surf);
