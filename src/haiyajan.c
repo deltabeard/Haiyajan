@@ -350,8 +350,14 @@ int thread_encode_screencap(void* data)
 	size_t outsz;
 
 	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_LOW);
+#if 0
 	outsz = WebPEncodeLosslessRGB(ctx->surf->pixels, ctx->surf->w,
 				      ctx->surf->h, ctx->surf->pitch, &webp);
+#else
+	outsz = WebPEncodeRGB(ctx->surf->pixels, ctx->surf->w,ctx->surf->h,
+			      ctx->surf->pitch, 95, &webp);
+
+#endif
 	if(outsz == 0)
 		goto out;
 
