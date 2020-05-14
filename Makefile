@@ -1,6 +1,7 @@
 CFLAGS := -std=c99 -g3 -fPIE -Wall -Wextra -pipe -I./inc $(shell sdl2-config --cflags)
 TARGETS := haiyajan
 
+DEBUG ?= 0
 ifeq ($(DEBUG),1)
 	CFLAGS += -D DEBUG=1 -D SDL_ASSERT_LEVEL=3
 	OPT ?= -Og
@@ -12,6 +13,12 @@ else
 endif
 CFLAGS += $(OPT)
 
+# Enable static build by default on Windows.
+ifeq ($(OS),Windows_NT)
+	STATIC ?= 1
+else
+	STATIC ?= 0
+endif
 ifeq ($(STATIC),1)
 	LDLIBS += $(shell sdl2-config --static-libs)
 	CFLAGS += -static
@@ -29,13 +36,7 @@ ifneq ($(REL_VERSION),)
 endif
 
 # Check if WEBP is available. Otherwise use BMP for screencaps.
-TESTPROG := int main(void){}
-WEBPINFO := $(shell echo "$(TESTPROG)" | $(CC) -lwebp -x c - 2> /dev/null; echo $$?)
-ifeq ($(WEBPINFO),0)
-	USEWEBP ?= 1
-else
-	USEWEBP ?= 0
-endif
+USEWEBP ?= $(shell ! ldconfig -p | grep libwebp.so > /dev/null; echo $$?)
 ifeq ($(USEWEBP),1)
 	LDLIBS += -lwebp
 	CFLAGS += -D USE_WEBP=1
@@ -71,11 +72,12 @@ clean:
 	$(MAKE) -C ./test clean
 
 help:
-	@echo "Options:"
-	@echo "  DEBUG=1    Enables all asserts and reduces optimisation"
-	@echo "  STATIC=1   Enables static build"
-	@echo "  USEWEBP=1  Uses libwebp to encode screencaps instead of BMP"
-	@echo "  OPT=\"\"     Set custom optimisation options"
+	@echo "Available options and their descriptions when enabled:"
+	@echo "  DEBUG=$(DEBUG)    Enables all asserts and reduces optimisation."
+	@echo "  STATIC=$(STATIC)   Enables static build."
+	@echo "  USEWEBP=$(USEWEBP)  Uses libwebp to encode screencaps instead of BMP."
+	@echo "             If not set, the linker will check for its availability."
+	@echo "  OPT=\"$(OPT)\"  Set custom optimisation options."
 	@echo
 	@echo "  Example: make DEBUG=1 OPT=\"-Ofast -march=native\""
 	@echo
