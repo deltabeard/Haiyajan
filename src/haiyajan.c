@@ -28,6 +28,7 @@
 #define OPTPARSE_API static
 #include <optparse.h>
 
+#include <cap.h>
 #include <font.h>
 #include <input.h>
 #include <load.h>
@@ -403,6 +404,7 @@ void save_texture(SDL_Renderer *rend, SDL_Texture *tex,
 	if(!surf)
 		goto err;
 
+	/* TODO: Convert format (if required) in new thread. */
 	if(SDL_RenderReadPixels(rend, src, format, surf->pixels, surf->pitch) != 0)
 	{
 		SDL_FreeSurface(surf);
@@ -434,12 +436,27 @@ err:
 	SDL_DestroyTexture(core_tex);
 }
 
-void take_screencapture(struct core_ctx_s *const ctx)
+void gen_filename(char filename[static 64], const char *core_name,
+		  const char fmt[static 3])
 {
-	const Uint32 interval_ms = 1000;
 	time_t now;
 	struct tm *tmp;
 	char time_str[32];
+
+	now = time(NULL);
+	if(now == (time_t) -1 || (tmp = localtime(&now)) == NULL ||
+		strftime(time_str, sizeof(time_str), "%Y-%m-%d-%H%M%S", tmp) == 0)
+	{
+		SDL_snprintf(time_str, sizeof(time_str), "%010u",
+					 SDL_GetTicks());
+	}
+
+	SDL_snprintf(filename, 64, "%s-%s.%s", time_str, core_name, fmt);
+}
+
+void take_screencapture(struct core_ctx_s *const ctx)
+{
+	const Uint32 interval_ms = 1000;
 	char filename[64];
 #if USE_WEBP == 1
 	const char fmt[] = "webp";
@@ -456,21 +473,62 @@ void take_screencapture(struct core_ctx_s *const ctx)
 	SDL_AtomicSet(&screencap_timeout, 1);
 	SDL_AddTimer(interval_ms, enable_screencapture, NULL);
 
-	now = time(NULL);
-	if(now == (time_t) -1 || (tmp = localtime(&now)) == NULL ||
-		strftime(time_str, sizeof(time_str), "%Y-%m-%d-%H%M%S", tmp) == 0)
-	{
-		SDL_snprintf(time_str, sizeof(time_str), "%010u",
-					 SDL_GetTicks());
-	}
-
-	SDL_snprintf(filename, sizeof(filename), "%s-%s.%s",
-				 time_str, ctx->core_log_name, fmt);
+	gen_filename(filename, ctx->core_log_name, fmt);
 
 	save_texture(ctx->disp_rend, ctx->core_tex, &ctx->game_frame_res,
 		     ctx->env.flip, filename);
 
 	return;
+}
+
+void cap_frame(enc_vid *vid, SDL_Renderer *rend, SDL_Texture *tex,
+		  const SDL_Rect *src, SDL_RendererFlip flip)
+{
+	SDL_Texture *core_tex;
+	SDL_Surface *surf = NULL;
+	int format = SDL_PIXELFORMAT_RGB24;
+	/* TODO: Use native format of renderer. */
+
+	if(src->w <= 0 || src->h <= 0)
+		return;
+
+	core_tex = SDL_CreateTexture(rend, format, SDL_TEXTUREACCESS_TARGET,
+				    src->w, src->h);
+	if(core_tex == NULL)
+		return;
+
+	if(SDL_SetRenderTarget(rend, core_tex) != 0)
+		goto err;
+
+	/* This fixes a bug whereby OpenGL cores appear as a white screen in the
+	 * screencap. */
+	SDL_RenderDrawPoint(rend, 0, 0);
+
+	if(SDL_RenderCopyEx(rend, tex, src, src, 0.0, NULL, flip) != 0)
+		goto err;
+
+	surf = SDL_CreateRGBSurfaceWithFormat(0, src->w, src->h,
+					      SDL_BITSPERPIXEL(format), format);
+	if(!surf)
+		goto err;
+
+	/* TODO: Convert format (if required) in new thread. */
+	if(SDL_RenderReadPixels(rend, src, format, surf->pixels, surf->pitch) != 0)
+	{
+		SDL_FreeSurface(surf);
+		goto err;
+	}
+
+	if(vid_enc_frame(vid, surf) != 0)
+	{
+		SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO, "Unable to save frame: %s",
+			SDL_GetError());
+	}
+
+	SDL_FreeSurface(surf);
+
+err:
+	SDL_DestroyTexture(core_tex);
 }
 
 static void run(struct core_ctx_s *ctx)
@@ -485,7 +543,10 @@ static void run(struct core_ctx_s *ctx)
 	const uint_fast8_t fps_calc_frame_dur = 64;
 	uint_fast8_t fps_curr_frame_dur = fps_calc_frame_dur;
 	Uint32 benchmark_beg;
+	enc_vid *vid = NULL;
+	char vidfile[64] = "out.h264";
 
+	gen_filename(vidfile, ctx->core_log_name, "h264");
 	input_init(&ctx->inp);
 	ctx->fn.retro_set_controller_port_device(0, RETRO_DEVICE_JOYPAD);
 
@@ -541,6 +602,15 @@ static void run(struct core_ctx_s *ctx)
 					break;
 				}
 			}
+		}
+
+		if(vid == NULL && ctx->game_frame_res.h > 0 &&
+				ctx->game_frame_res.w > 0)
+		{
+			vid = vid_enc_init(vidfile, ctx->game_frame_res.w,
+					ctx->game_frame_res.h,
+					ctx->av_info.timing.fps);
+			SDL_assert(vid != NULL);
 		}
 
 		/* If in benchmark mode, run as fast as possible. */
@@ -629,6 +699,12 @@ static void run(struct core_ctx_s *ctx)
 				0x00, 0x00, 0x00, 0x00);
 		}
 
+		if(vid != NULL)
+		{
+			cap_frame(vid, ctx->disp_rend, ctx->core_tex,
+				&ctx->game_frame_res, ctx->env.flip);
+		}
+
 		/* Only draw to screen if we're not falling behind. */
 		SDL_RenderPresent(ctx->disp_rend);
 
@@ -671,6 +747,7 @@ timing:
 	}
 
 out:
+	vid_enc_end(vid);
 	FontExit(font);
 }
 

@@ -47,14 +47,22 @@ ifeq ($(USE_WEBP),1)
 	CFLAGS += -D USE_WEBP=1
 endif
 
+CHECK_LIB := x264
+USE_X264 ?= $(IS_LIB_AVAIL)
+ifeq ($(USE_X264),1)
+	LDLIBS += -lx264
+	CFLAGS += -D USE_X264=1
+endif
+
 .PHONY: test
 
 all: $(TARGETS)
 haiyajan: ./src/haiyajan.o ./src/load.o ./src/play.o ./src/load.o \
-		./src/timer.o ./src/font.o ./src/input.o ./src/gl.o
+		./src/timer.o ./src/font.o ./src/input.o ./src/gl.o ./src/cap.o
 	+$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 ./src/haiyajan.o: ./src/haiyajan.c ./inc/*.h
+./src/cap.o: ./src/cap.c ./inc/cap.h
 ./src/gl.o: ./src/gl.c ./inc/gl.h ./inc/libretro.h
 ./src/load.o: ./src/load.c ./inc/load.h ./inc/haiyajan.h ./inc/libretro.h
 ./src/play.o: ./src/play.c ./inc/play.h ./inc/haiyajan.h ./inc/libretro.h
