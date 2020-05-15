@@ -7,7 +7,7 @@ ifeq ($(DEBUG),1)
 	OPT ?= -Og
 else
 	# I don't want any warnings in release builds
-	CFLAGS += -Werror -D SDL_ASSERT_LEVEL=1 -flto=auto -fno-fat-lto-objects
+	CFLAGS += -Werror -D SDL_ASSERT_LEVEL=1 -flto
 	OPT ?= -O2
 	TARGETS += haiyajan.sym
 endif
