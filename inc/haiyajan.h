@@ -81,20 +81,20 @@ struct core_ctx_s
 		 * This is an allocated buffer of content for libretro cores. */
 		Uint8 *game_data;
 
+		/* The SDL2 Window context. */
 		SDL_Window *win;
 
 		/* The renderer that is shown on screen. */
 		SDL_Renderer *disp_rend;
 
 		/* The texture that the libretro core renders to. */
-		/* FIXME: Make texture max-width/height */
 		SDL_Texture *core_tex;
 
 		/* The maximum resolution of the libretro core video output.
-		 * The texture must be at least this size. x and y are unused.*/
+		 * The texture must be at least this size. x and y must be 0. */
 		SDL_Rect game_max_res;
 
-		/* The resolution of the drawn frame. x and y are unused. */
+		/* The resolution of the drawn frame. x and y must be 0. */
 		SDL_Rect game_frame_res;
 
 		/* The context of the audio device. */
