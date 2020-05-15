@@ -35,8 +35,13 @@ ifneq ($(REL_VERSION),)
 	CFLAGS += -D REL_VERSION=\"$(REL_VERSION)\"
 endif
 
+# Checks if the given library is available for linking. Works with GCC and
+# Clang.
+IS_LIB_AVAIL = $(shell $(CC) -l$(CHECK_LIB) 2>&1 >/dev/null | grep "cannot find" > /dev/null; echo $$?)
+
 # Check if WEBP is available. Otherwise use BMP for screencaps.
-USEWEBP ?= $(shell ! ldconfig -p | grep libwebp.so > /dev/null; echo $$?)
+CHECK_LIB := webp
+USEWEBP ?= $(IS_LIB_AVAIL)
 ifeq ($(USEWEBP),1)
 	LDLIBS += -lwebp
 	CFLAGS += -D USE_WEBP=1
