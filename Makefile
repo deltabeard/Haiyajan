@@ -41,8 +41,8 @@ IS_LIB_AVAIL = $(shell $(CC) -l$(CHECK_LIB) 2>&1 >/dev/null | grep "cannot find"
 
 # Check if WEBP is available. Otherwise use BMP for screencaps.
 CHECK_LIB := webp
-USEWEBP ?= $(IS_LIB_AVAIL)
-ifeq ($(USEWEBP),1)
+USE_WEBP ?= $(IS_LIB_AVAIL)
+ifeq ($(USE_WEBP),1)
 	LDLIBS += -lwebp
 	CFLAGS += -D USE_WEBP=1
 endif
@@ -78,11 +78,11 @@ clean:
 
 help:
 	@echo "Available options and their descriptions when enabled:"
-	@echo "  DEBUG=$(DEBUG)    Enables all asserts and reduces optimisation."
-	@echo "  STATIC=$(STATIC)   Enables static build."
-	@echo "  USEWEBP=$(USEWEBP)  Uses libwebp to encode screencaps instead of BMP."
-	@echo "             If not set, the linker will check for its availability."
-	@echo "  OPT=\"$(OPT)\"  Set custom optimisation options."
+	@echo "  DEBUG=$(DEBUG)     Enables all asserts and reduces optimisation."
+	@echo "  STATIC=$(STATIC)    Enables static build."
+	@echo "  USE_WEBP=$(USE_WEBP)  Uses libwebp to encode screencaps instead of BMP."
+	@echo "              If not set, the linker will check for its availability."
+	@echo "  OPT=\"$(OPT)\"   Set custom optimisation options."
 	@echo
 	@echo "  Example: make DEBUG=1 OPT=\"-Ofast -march=native\""
 	@echo
