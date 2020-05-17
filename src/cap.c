@@ -21,10 +21,8 @@ struct enc_vid_s
 {
 	SDL_RWops *f;
 	x264_t *h;
-	x264_nal_t *nal;
 	x264_param_t param;
-	x264_picture_t pic;
-	x264_picture_t pic_out;
+	unsigned frame;
 };
 
 static void x264_log(void *priv, int i_level, const char *fmt, va_list ap)
@@ -53,14 +51,14 @@ enc_vid *vid_enc_init(const char *fileout, int width, int height, double fps)
 
 	/* Get default params for preset/tuning.
 	 * Setting preset to veryfast in order to reduce strain during gameplay. */
-	if(x264_param_default_preset(&ctx->param, "veryfast", "zerolatency") < 0)
+	if(x264_param_default_preset(&ctx->param, "superfast", "zerolatency") < 0)
 		goto err;
 
 	/* Configure non-default params */
 	ctx->param.i_bitdepth = 8;
 	ctx->param.i_csp = X264_CSP_RGB;
-	ctx->param.i_width  = width;
-	ctx->param.i_height = height;
+	ctx->param.vui.i_sar_width = ctx->param.i_width  = width;
+	ctx->param.vui.i_sar_height = ctx->param.i_height = height;
 	ctx->param.b_vfr_input = 0;
 	ctx->param.b_repeat_headers = 1;
 	ctx->param.b_annexb = 1;
@@ -76,24 +74,40 @@ enc_vid *vid_enc_init(const char *fileout, int width, int height, double fps)
 	SDL_assert(fps < 256.0);
 	ctx->param.i_fps_num = (uint32_t)(fps * 16777216.0);
 	ctx->param.i_fps_den = 16777216;
+	ctx->param.i_timebase_den = ctx->param.i_fps_num;
+	ctx->param.i_timebase_num = ctx->param.i_fps_den;
+
+	ctx->param.vui.b_fullrange = 1;
 
 	/* Apply profile restrictions. */
 	if(x264_param_apply_profile(&ctx->param, "high444") < 0)
-		goto err;
-
-	if(x264_picture_alloc(&ctx->pic, ctx->param.i_csp, ctx->param.i_width,
-						  ctx->param.i_height) < 0)
 		goto err;
 
 	ctx->h = x264_encoder_open(&ctx->param);
 	if(ctx->h == NULL)
 		goto err;
 
+	x264_encoder_parameters( ctx->h, &ctx->param );
+
 	ctx->f = SDL_RWFromFile(fileout, "wb");
 	if(ctx->f == NULL)
 		goto err;
 
-	ctx->pic.i_pts = 0;
+#if 1
+	x264_nal_t *headers;
+	int i_nal;
+	int bytes;
+	if((bytes = x264_encoder_headers(ctx->h, &headers, &i_nal)) < 1)
+	{
+		SDL_SetError("Enable to obtain encoder headers");
+		goto err;
+	}
+
+	if(SDL_RWwrite(ctx->f, headers, bytes, 1) == 0)
+		goto err;
+#endif
+
+	ctx->frame = 0;
 out:
 	return ctx;
 
@@ -108,29 +122,43 @@ int vid_enc_frame(enc_vid *ctx, SDL_Surface *surf)
 	int ret = 1;
 	int i_nal;
 	int i_frame_size;
+	x264_picture_t pic;
+	x264_picture_t pic_out;
+	x264_nal_t *nal;
 
 	SDL_assert(surf->format->format == SDL_PIXELFORMAT_RGB24);
 
-	ctx->pic.img.i_csp = X264_CSP_RGB;
-	ctx->pic.img.i_plane = 1;
-	ctx->pic.img.i_stride[0] = surf->pitch;
-	ctx->pic.img.plane[0] = surf->pixels;
-	i_frame_size = x264_encoder_encode(ctx->h, &ctx->nal, &i_nal,
-					   &ctx->pic, &ctx->pic_out);
+	if(x264_picture_alloc(&pic, ctx->param.i_csp, ctx->param.i_width,
+			ctx->param.i_height) < 0)
+		goto err;
+
+	pic.img.i_csp = X264_CSP_RGB;
+	pic.i_type = X264_TYPE_AUTO;
+	pic.i_qpplus1 = X264_QP_AUTO;
+	pic.img.i_plane = 1;
+	pic.img.i_stride[0] = surf->pitch;
+	pic.img.plane[0] = surf->pixels;
+	i_frame_size = x264_encoder_encode(ctx->h, &nal, &i_nal, &pic,
+					   &pic_out);
 	if(i_frame_size < 0)
 	{
 		SDL_SetError("x264: unable to encode frame");
-		goto fail;
+		goto err;
 	}
 
 	/* Increment frame number. */
-	ctx->pic.i_pts++;
+	pic.i_pts = ctx->frame;
+	ctx->frame++;
 
-	if(SDL_RWwrite(ctx->f, &ctx->nal->p_payload, ctx->nal->i_payload, 1) == 0)
-		goto fail;
+	if(i_frame_size == 0)
+		goto ret;
 
+	if(SDL_RWwrite(ctx->f, &nal->p_payload, i_frame_size, 1) == 0)
+		goto err;
+
+ret:
 	ret = 0;
-fail:
+err:
 	return ret;
 }
 
@@ -140,16 +168,18 @@ void vid_enc_end(enc_vid *ctx)
 	while(x264_encoder_delayed_frames(ctx->h))
 	{
 		int i_nal;
-		int i_frame_size = x264_encoder_encode(ctx->h, &ctx->nal,
+		x264_nal_t *nal;
+		x264_picture_t pic_out;
+		int i_frame_size = x264_encoder_encode(ctx->h, &nal,
 						       &i_nal, NULL,
-							&ctx->pic_out);
+							&pic_out);
 		if(i_frame_size < 0)
 			goto out;
 
 		if(i_frame_size == 0)
 			continue;
 
-		if(SDL_RWwrite(ctx->f, &ctx->nal->p_payload, ctx->nal->i_payload, 1) == 0)
+		if(SDL_RWwrite(ctx->f, &nal->p_payload, i_frame_size, 1) == 0)
 			goto out;
 	}
 
