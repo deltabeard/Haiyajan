@@ -22,7 +22,7 @@ struct enc_vid_s
 	SDL_RWops *f;
 	x264_t *h;
 	x264_param_t param;
-	unsigned frame;
+	//unsigned frame;
 };
 
 static void x264_log(void *priv, int i_level, const char *fmt, va_list ap)
@@ -54,7 +54,7 @@ enc_vid *vid_enc_init(const char *fileout, int width, int height, double fps)
 
 	/* Get default params for preset/tuning.
 	 * Setting preset to veryfast in order to reduce strain during gameplay. */
-	if(x264_param_default_preset(&ctx->param, "superfast", "zerolatency") < 0)
+	if(x264_param_default_preset(&ctx->param, "ultrafast", "zerolatency") < 0)
 		goto err;
 
 	ctx->param.pf_log = x264_log;
@@ -63,23 +63,22 @@ enc_vid *vid_enc_init(const char *fileout, int width, int height, double fps)
 	ctx->param.b_vfr_input = 0;
 
 	ctx->param.rc.i_rc_method = X264_RC_CRF;
-	ctx->param.rc.f_rf_constant = 14;
-	ctx->param.rc.f_rf_constant_max = 35;
+	ctx->param.rc.f_rf_constant = 22;
+	//ctx->param.rc.f_rf_constant_max = 35;
+	ctx->param.b_opencl = 1;
 
 	/* Apply profile restrictions. */
 	if(x264_param_apply_profile(&ctx->param, "high444") < 0)
 		goto err;
 
-	ctx->param.vui.i_sar_width = ctx->param.i_width  = width;
-	ctx->param.vui.i_sar_height = ctx->param.i_height = height;
+	ctx->param.i_width  = width;
+	ctx->param.i_height = height;
 
 	SDL_assert(fps < 256.0);
 	ctx->param.i_fps_num = (uint32_t)(fps * 16777216.0);
 	ctx->param.i_fps_den = 16777216;
-	ctx->param.i_timebase_den = ctx->param.i_fps_num;
-	ctx->param.i_timebase_num = ctx->param.i_fps_den;
 
-	ctx->param.i_threads = 1;
+	ctx->param.i_threads = SDL_GetCPUCount();
 	ctx->param.b_repeat_headers = 0;
 
 	ctx->h = x264_encoder_open(&ctx->param);
@@ -90,17 +89,17 @@ enc_vid *vid_enc_init(const char *fileout, int width, int height, double fps)
 	if(ctx->f == NULL)
 		goto err;
 
-
 	x264_nal_t *nal;
-	int nnal, s;
-	s = x264_encoder_headers(ctx->h, &nal, &nnal);
-	if(s < 0)
+	int nnal;
+	if(x264_encoder_headers(ctx->h, &nal, &nnal) < 0)
 		goto err;
 
 	for(int i = 0; i < nnal; i++)
-		SDL_RWwrite(ctx->f, nal[i].p_payload, nal[i].i_payload, 1);
+	{
+		if(SDL_RWwrite(ctx->f, nal[i].p_payload, nal[i].i_payload, 1) == 0)
+			goto err;
+	}
 
-	ctx->frame = 0;
 out:
 	return ctx;
 
@@ -126,9 +125,10 @@ int vid_enc_frame(enc_vid *ctx, SDL_Surface *surf)
 	pic.img.i_plane = 1;
 	pic.img.i_stride[0] = surf->pitch;
 	pic.img.plane[0] = surf->pixels;
-
+#if 0
 	pic.i_pts = ctx->frame;
 	ctx->frame++;
+#endif
 
 	pic.i_type = X264_TYPE_AUTO;
 	i_frame_size = x264_encoder_encode(ctx->h, &nal, &i_nal, &pic,
@@ -139,15 +139,21 @@ int vid_enc_frame(enc_vid *ctx, SDL_Surface *surf)
 		goto err;
 	}
 
+#if 0
 	/* Increment frame number. */
 	pic.i_pts = ctx->frame;
 	ctx->frame++;
+#endif
 
 	if(i_frame_size == 0)
 		goto ret;
 
 	for(int i = 0; i < i_nal; i++)
-		SDL_RWwrite(ctx->f, nal[i].p_payload, nal[i].i_payload, 1);
+	{
+		if(SDL_RWwrite(ctx->f, nal[i].p_payload, nal[i].i_payload, 1) == 0)
+			goto err;
+	}
+
 
 ret:
 	ret = 0;

@@ -90,6 +90,10 @@ help:
 	@echo "  STATIC=$(STATIC)    Enables static build."
 	@echo "  USE_WEBP=$(USE_WEBP)  Uses libwebp to encode screencaps instead of BMP."
 	@echo "              If not set, the linker will check for its availability."
+	@echo "  USE_X264=$(USE_X264)  Enables h264 video recording using libx264."
+	@echo "              If not set, the linker will check for its availability."
+	@echo "              Note that video recordings will be encoded in h264 RGB24 format, which is not "
+	@echo "              compatible with many media players. Use ffplay if unsure."
 	@echo "  OPT=\"$(OPT)\"   Set custom optimisation options."
 	@echo
 	@echo "  Example: make DEBUG=1 OPT=\"-Ofast -march=native\""

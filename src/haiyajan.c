@@ -481,6 +481,7 @@ void take_screencapture(struct core_ctx_s *const ctx)
 	return;
 }
 
+#if USE_X264 == 1
 void cap_frame(enc_vid *vid, SDL_Renderer *rend, SDL_Texture *tex,
 		  const SDL_Rect *src, SDL_RendererFlip flip)
 {
@@ -530,6 +531,7 @@ void cap_frame(enc_vid *vid, SDL_Renderer *rend, SDL_Texture *tex,
 err:
 	SDL_DestroyTexture(core_tex);
 }
+#endif
 
 static void run(struct core_ctx_s *ctx)
 {
@@ -543,10 +545,15 @@ static void run(struct core_ctx_s *ctx)
 	const uint_fast8_t fps_calc_frame_dur = 64;
 	uint_fast8_t fps_curr_frame_dur = fps_calc_frame_dur;
 	Uint32 benchmark_beg;
+	Uint8 frame_skip = 4;
+
+#if USE_X264 == 1
 	enc_vid *vid = NULL;
 	char vidfile[64] = "out.h264";
 
 	gen_filename(vidfile, ctx->core_log_name, "h264");
+#endif
+
 	input_init(&ctx->inp);
 	ctx->fn.retro_set_controller_port_device(0, RETRO_DEVICE_JOYPAD);
 
@@ -604,14 +611,25 @@ static void run(struct core_ctx_s *ctx)
 			}
 		}
 
-		if(vid == NULL && ctx->game_frame_res.h > 0 &&
-				ctx->game_frame_res.w > 0)
+#if USE_X264 == 1
+		if(vid == NULL && ctx->env.status_bits.valid_frame)
 		{
 			vid = vid_enc_init(vidfile, ctx->game_frame_res.w,
 					ctx->game_frame_res.h,
 					ctx->av_info.timing.fps);
-			SDL_assert(vid != NULL);
+			if(vid == NULL)
+			{
+				SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO,
+				    "Unable to initialise libx264: %s",
+				    SDL_GetError());
+			}
+			else
+			{
+				SDL_LogInfo(SDL_LOG_CATEGORY_VIDEO,
+				    "Video recording started");
+			}
 		}
+#endif
 
 		/* If in benchmark mode, run as fast as possible. */
 		if(ctx->stngs.benchmark)
@@ -624,14 +642,9 @@ static void run(struct core_ctx_s *ctx)
 			/* Disable video for the skipped frame to improve
 			 * performance. */
 			ctx->env.status_bits.video_disabled = 1;
-			play_frame(ctx);
-			ctx->env.status_bits.video_disabled = 0;
 
-			/* Skip VSYNC. */
-			goto timing;
 		}
-
-		if(tim_cmd > 0)
+		else if(tim_cmd > 0)
 			SDL_Delay(tim_cmd);
 
 		SDL_RenderClear(ctx->disp_rend);
@@ -699,16 +712,26 @@ static void run(struct core_ctx_s *ctx)
 				0x00, 0x00, 0x00, 0x00);
 		}
 
+#if USE_X264 == 1
 		if(vid != NULL)
 		{
 			cap_frame(vid, ctx->disp_rend, ctx->core_tex,
 				&ctx->game_frame_res, ctx->env.flip);
 		}
+#endif
 
 		/* Only draw to screen if we're not falling behind. */
-		SDL_RenderPresent(ctx->disp_rend);
+		if(tim_cmd >= 0 || frame_skip == 0)
+		{
+			SDL_RenderPresent(ctx->disp_rend);
+			frame_skip = 4;
+		}
+		else
+			frame_skip--;
 
-timing:
+		/* Reset video_disabled for next frame. */
+		ctx->env.status_bits.video_disabled = 0;
+
 		ticks_next = SDL_GetTicks();
 		delta_ticks = ticks_next - ticks_before;
 		tim_cmd = timer_get_delay(&tim, delta_ticks);
@@ -747,7 +770,9 @@ timing:
 	}
 
 out:
+#if USE_X264 == 1
 	vid_enc_end(vid);
+#endif
 	FontExit(font);
 }
 

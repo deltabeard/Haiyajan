@@ -130,6 +130,7 @@ struct core_ctx_s
 				unsigned char opengl_required : 1;
 				unsigned char playing : 1;
 				unsigned char video_disabled : 1;
+				unsigned char valid_frame : 1;
 			} status_bits;
 			Uint8 status;
 		};

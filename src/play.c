@@ -377,8 +377,15 @@ void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 	ctx_retro->game_frame_res.h = height;
 	ctx_retro->game_frame_res.w = width;
 
-	if(data == NULL || ctx_retro->env.status_bits.video_disabled ||
-			data == RETRO_HW_FRAME_BUFFER_VALID)
+	if(data == NULL || ctx_retro->env.status_bits.video_disabled)
+	{
+		ctx_retro->env.status_bits.valid_frame = 0;
+		return;
+	}
+
+	ctx_retro->env.status_bits.valid_frame = 1;
+
+	if(data == RETRO_HW_FRAME_BUFFER_VALID)
 		return;
 
 	SDL_assert(width <= ctx_retro->av_info.geometry.max_width);
@@ -396,6 +403,7 @@ void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 	SDL_assert_paranoid(pitch <= tex_pitch);
 	SDL_assert_paranoid(format == ctx_retro->env.pixel_fmt);
 #endif
+
 	if(ctx_retro->env.status_bits.opengl_required)
 		return;
 
