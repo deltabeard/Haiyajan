@@ -520,7 +520,7 @@ void cap_frame(enc_vid *vid, SDL_Renderer *rend, SDL_Texture *tex,
 		goto err;
 	}
 
-	if(vid_enc_frame(vid, surf) != 0)
+	if(vid_enc_frame(vid, surf->pixels) != 0)
 	{
 		SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO, "Unable to save frame: %s",
 			SDL_GetError());

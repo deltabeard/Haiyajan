@@ -17,5 +17,5 @@
 typedef struct enc_vid_s enc_vid;
 
 enc_vid *vid_enc_init(const char *fileout, int width, int height, double fps);
-int vid_enc_frame(enc_vid *ctx, SDL_Surface *surf);
+int vid_enc_frame(enc_vid *ctx, void *pixels);
 void vid_enc_end(enc_vid *ctx);

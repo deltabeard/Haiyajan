@@ -22,7 +22,8 @@ struct enc_vid_s
 	SDL_RWops *f;
 	x264_t *h;
 	x264_param_t param;
-	//unsigned frame;
+	int pitch;
+	unsigned frame;
 };
 
 static void x264_log(void *priv, int i_level, const char *fmt, va_list ap)
@@ -54,13 +55,13 @@ enc_vid *vid_enc_init(const char *fileout, int width, int height, double fps)
 
 	/* Get default params for preset/tuning.
 	 * Setting preset to veryfast in order to reduce strain during gameplay. */
-	if(x264_param_default_preset(&ctx->param, "ultrafast", "zerolatency") < 0)
+	if(x264_param_default_preset(&ctx->param, "superfast", "zerolatency") < 0)
 		goto err;
 
 	ctx->param.pf_log = x264_log;
 	ctx->param.i_csp = X264_CSP_RGB;
 	ctx->param.i_bitdepth = 8;
-	ctx->param.b_vfr_input = 0;
+	ctx->param.b_vfr_input = 1;
 
 	ctx->param.rc.i_rc_method = X264_RC_CRF;
 	ctx->param.rc.f_rf_constant = 22;
@@ -78,8 +79,10 @@ enc_vid *vid_enc_init(const char *fileout, int width, int height, double fps)
 	ctx->param.i_fps_num = (uint32_t)(fps * 16777216.0);
 	ctx->param.i_fps_den = 16777216;
 
-	ctx->param.i_threads = SDL_GetCPUCount();
+	ctx->param.i_threads = 0;
 	ctx->param.b_repeat_headers = 0;
+
+	ctx->pitch = width * 3;
 
 	ctx->h = x264_encoder_open(&ctx->param);
 	if(ctx->h == NULL)
@@ -109,7 +112,7 @@ err:
 	goto out;
 }
 
-int vid_enc_frame(enc_vid *ctx, SDL_Surface *surf)
+int vid_enc_frame(enc_vid *ctx, void *pixels)
 {
 	int ret = 1;
 	int i_nal;
@@ -118,14 +121,13 @@ int vid_enc_frame(enc_vid *ctx, SDL_Surface *surf)
 	x264_picture_t pic_out;
 	x264_nal_t *nal;
 
-	SDL_assert(surf->format->format == SDL_PIXELFORMAT_RGB24);
 	x264_picture_init(&pic);
 
 	pic.img.i_csp = X264_CSP_RGB;
 	pic.img.i_plane = 1;
-	pic.img.i_stride[0] = surf->pitch;
-	pic.img.plane[0] = surf->pixels;
-#if 0
+	pic.img.i_stride[0] = ctx->pitch;
+	pic.img.plane[0] = pixels;
+#if 1
 	pic.i_pts = ctx->frame;
 	ctx->frame++;
 #endif
