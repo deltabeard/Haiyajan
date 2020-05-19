@@ -665,6 +665,7 @@ static void run(struct core_ctx_s *ctx)
 		else if(tim_cmd > 0)
 			SDL_Delay(tim_cmd);
 
+		SDL_SetRenderDrawColor(ctx->disp_rend, 0x00, 0x00, 0x00, 0x00);
 		SDL_RenderClear(ctx->disp_rend);
 		play_frame(ctx);
 		SDL_RenderCopyEx(ctx->disp_rend, ctx->core_tex,
@@ -733,8 +734,25 @@ static void run(struct core_ctx_s *ctx)
 #if USE_X264 == 1
 		if(vid != NULL)
 		{
+			SDL_Rect rec = {
+				.x = ctx->game_max_res.w - 100,
+				.y = 30,
+				.w = 20,
+				.h = 24
+			};
 			cap_frame(vid, ctx->disp_rend, ctx->core_tex,
 				&ctx->game_frame_res, ctx->env.flip);
+			SDL_SetRenderDrawColor(ctx->disp_rend, UINT8_MAX, 0, 0,
+					       SDL_ALPHA_OPAQUE);
+
+			SDL_RenderFillRect(ctx->disp_rend, &rec);
+			rec.x += rec.w + 4;
+			rec.h = 2;
+			rec.w = 1;
+			FontPrintToRenderer(font, "REC", &rec);
+
+			SDL_SetRenderDrawColor(ctx->disp_rend,
+				0x00, 0x00, 0x00, 0x00);
 		}
 #endif
 
