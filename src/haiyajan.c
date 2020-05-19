@@ -541,7 +541,6 @@ static void run(struct core_ctx_s *ctx)
 	Uint32 benchmark_beg;
 	const Uint8 frame_skip_max = 4;
 	Uint8 frame_skip_count = 4;
-	const Uint8 delay_limit_ms = (1.0/ctx->av_info.timing.fps) * 1000.0;
 
 #if USE_X264 == 1
 	enc_vid *vid = NULL;
@@ -616,6 +615,15 @@ static void run(struct core_ctx_s *ctx)
 
 				case INPUT_EVENT_TAKE_SCREENCAPTURE:
 					take_screencapture(ctx);
+					break;
+				}
+			}
+			else if(ev.type == tim.timer_event)
+			{
+				switch(ev.user.code)
+				{
+				case TIMER_SPEED_UP:
+					vid_enc_speedup(vid);
 					break;
 				}
 			}
@@ -725,19 +733,8 @@ static void run(struct core_ctx_s *ctx)
 #if USE_X264 == 1
 		if(vid != NULL)
 		{
-			Uint32 busy_diff;
 			cap_frame(vid, ctx->disp_rend, ctx->core_tex,
 				&ctx->game_frame_res, ctx->env.flip);
-
-#if 1
-			busy_diff = SDL_GetTicks() - ticks_before;
-
-			/* If running behind, aggresively attempt to catch up. */
-			if(busy_diff > delay_limit_ms)
-				vid_enc_speedup(vid);
-			else if(busy_diff < delay_limit_ms / 2)
-				vid_enc_speeddown(vid);
-#endif
 		}
 #endif
 

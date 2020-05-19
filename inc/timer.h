@@ -21,6 +21,13 @@ struct timer_ctx_s
 	double core_ms;
 	double timer_accumulator;
 	int delay_comp_ms;
+	Uint32 timer_event;
+};
+
+enum timer_status_e {
+	TIMER_OKAY,
+	TIMER_SPEED_UP,
+	TIMER_SPEED_UP_AGGRESSIVELY
 };
 
 /* TODO: update docs. */
