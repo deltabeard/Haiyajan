@@ -520,13 +520,7 @@ void cap_frame(enc_vid *vid, SDL_Renderer *rend, SDL_Texture *tex,
 		goto err;
 	}
 
-	if(vid_enc_frame(vid, surf->pixels) != 0)
-	{
-		SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO, "Unable to save frame: %s",
-			SDL_GetError());
-	}
-
-	SDL_FreeSurface(surf);
+	vid_enc_frame(vid, surf);
 
 err:
 	SDL_DestroyTexture(core_tex);
@@ -545,11 +539,13 @@ static void run(struct core_ctx_s *ctx)
 	const uint_fast8_t fps_calc_frame_dur = 64;
 	uint_fast8_t fps_curr_frame_dur = fps_calc_frame_dur;
 	Uint32 benchmark_beg;
-	Uint8 frame_skip = 4;
+	const Uint8 frame_skip_max = 4;
+	Uint8 frame_skip_count = 4;
+	const Uint8 delay_limit_ms = (1.0/ctx->av_info.timing.fps) * 1000.0;
 
 #if USE_X264 == 1
 	enc_vid *vid = NULL;
-	char vidfile[64] = "out.h264";
+	char vidfile[64];
 
 	gen_filename(vidfile, ctx->core_log_name, "h264");
 #endif
@@ -564,6 +560,20 @@ static void run(struct core_ctx_s *ctx)
 			"Unable to start font drawer: %s", SDL_GetError());
 		/* Disable font drawing on error. */
 		ctx->stngs.vid_info = 0;
+	}
+
+	{
+		Uint32 lim = SDL_GetTicks();
+		while(ctx->env.status_bits.valid_frame == 0)
+		{
+			play_frame(ctx);
+
+			/* If the first frame isn't drawn within two seconds,
+			 * break and begin showing screen anyway. */
+			if(SDL_GetTicks() - lim > 2000U)
+				break;
+
+		}
 	}
 
 	tim_cmd = timer_init(&tim, ctx->av_info.timing.fps);
@@ -715,19 +725,30 @@ static void run(struct core_ctx_s *ctx)
 #if USE_X264 == 1
 		if(vid != NULL)
 		{
+			Uint32 busy_diff;
 			cap_frame(vid, ctx->disp_rend, ctx->core_tex,
 				&ctx->game_frame_res, ctx->env.flip);
+
+#if 1
+			busy_diff = SDL_GetTicks() - ticks_before;
+
+			/* If running behind, aggresively attempt to catch up. */
+			if(busy_diff > delay_limit_ms)
+				vid_enc_speedup(vid);
+			else if(busy_diff < delay_limit_ms / 2)
+				vid_enc_speeddown(vid);
+#endif
 		}
 #endif
 
 		/* Only draw to screen if we're not falling behind. */
-		if(tim_cmd >= 0 || frame_skip == 0)
+		if(tim_cmd >= 0 || frame_skip_count == 0)
 		{
 			SDL_RenderPresent(ctx->disp_rend);
-			frame_skip = 4;
+			frame_skip_count = frame_skip_max;
 		}
 		else
-			frame_skip--;
+			frame_skip_count--;
 
 		/* Reset video_disabled for next frame. */
 		ctx->env.status_bits.video_disabled = 0;

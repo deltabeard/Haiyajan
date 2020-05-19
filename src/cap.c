@@ -22,9 +22,19 @@ struct enc_vid_s
 	SDL_RWops *f;
 	x264_t *h;
 	x264_param_t param;
-	int pitch;
 	unsigned frame;
+
+	/* Preset value pointing to x264_preset_names[] */
+	Uint8 preset;
+	Uint8 max_delay_ms;
+	Uint8 min_delay_ms;
+	Uint32 delay_ms;
+	SDL_SpinLock lock;
+	SDL_atomic_t speedmod_timeout;
 };
+
+/* Max preset is fast. */
+const Uint8 preset_max = 5;
 
 static void x264_log(void *priv, int i_level, const char *fmt, va_list ap)
 {
@@ -52,19 +62,21 @@ enc_vid *vid_enc_init(const char *fileout, int width, int height, double fps)
 		goto out;
 
 	x264_param_default(&ctx->param);
+	ctx->preset = preset_max;
 
 	/* Get default params for preset/tuning.
 	 * Setting preset to veryfast in order to reduce strain during gameplay. */
-	if(x264_param_default_preset(&ctx->param, "superfast", "zerolatency") < 0)
+	if(x264_param_default_preset(&ctx->param,
+			x264_preset_names[ctx->preset], "zerolatency") < 0)
 		goto err;
 
 	ctx->param.pf_log = x264_log;
 	ctx->param.i_csp = X264_CSP_RGB;
 	ctx->param.i_bitdepth = 8;
-	ctx->param.b_vfr_input = 1;
+	ctx->param.b_vfr_input = 0;
 
 	ctx->param.rc.i_rc_method = X264_RC_CRF;
-	ctx->param.rc.f_rf_constant = 22;
+	ctx->param.rc.f_rf_constant = 18;
 	//ctx->param.rc.f_rf_constant_max = 35;
 	ctx->param.b_opencl = 1;
 
@@ -79,10 +91,12 @@ enc_vid *vid_enc_init(const char *fileout, int width, int height, double fps)
 	ctx->param.i_fps_num = (uint32_t)(fps * 16777216.0);
 	ctx->param.i_fps_den = 16777216;
 
-	ctx->param.i_threads = 0;
+	ctx->param.i_threads = SDL_GetCPUCount();
 	ctx->param.b_repeat_headers = 0;
 
-	ctx->pitch = width * 3;
+	ctx->min_delay_ms = SDL_ceil((1.0/fps) * 1000.0 * 0.4);
+	ctx->max_delay_ms = SDL_floor((1.0/fps) * 1000.0);
+	ctx->delay_ms = SDL_GetTicks();
 
 	ctx->h = x264_encoder_open(&ctx->param);
 	if(ctx->h == NULL)
@@ -112,8 +126,19 @@ err:
 	goto out;
 }
 
-int vid_enc_frame(enc_vid *ctx, void *pixels)
+/**
+ * All variables required for frame to be encoded and saved.
+ */
+struct vid_enc_frame_s {
+	enc_vid *ctx;
+	SDL_Surface *surf;
+};
+
+static int vid_enc_frame_thread(void *data)
 {
+	struct vid_enc_frame_s *framedat = data;
+	enc_vid *ctx = framedat->ctx;
+
 	int ret = 1;
 	int i_nal;
 	int i_frame_size;
@@ -125,14 +150,38 @@ int vid_enc_frame(enc_vid *ctx, void *pixels)
 
 	pic.img.i_csp = X264_CSP_RGB;
 	pic.img.i_plane = 1;
-	pic.img.i_stride[0] = ctx->pitch;
-	pic.img.plane[0] = pixels;
-#if 1
+	pic.img.i_stride[0] = framedat->surf->pitch;
+	pic.img.plane[0] = framedat->surf->pixels;
+#if 0
 	pic.i_pts = ctx->frame;
 	ctx->frame++;
 #endif
 
 	pic.i_type = X264_TYPE_AUTO;
+
+#if 0
+	Uint32 now_ms = SDL_GetTicks();
+	if((now_ms - ctx->delay_ms) > ctx->max_delay_ms && ctx->preset > 0)
+	{
+		ctx->preset--;
+		x264_param_default_preset(&ctx->param,
+					  x264_preset_names[ctx->preset],
+					"zerolatency");
+		SDL_Log("Reduce preset to %s", x264_preset_names[ctx->preset]);
+	}
+	else if((now_ms - ctx->delay_ms) < ctx->min_delay_ms &&
+			ctx->preset < preset_max)
+	{
+		ctx->preset++;
+		x264_param_default_preset(&ctx->param,
+					  x264_preset_names[ctx->preset],
+					"zerolatency");
+		SDL_Log("Increased preset to %s", x264_preset_names[ctx->preset]);
+	}
+
+	ctx->delay_ms = now_ms;
+#endif
+
 	i_frame_size = x264_encoder_encode(ctx->h, &nal, &i_nal, &pic,
 	                                   &pic_out);
 	if(i_frame_size < 0)
@@ -141,30 +190,111 @@ int vid_enc_frame(enc_vid *ctx, void *pixels)
 		goto err;
 	}
 
-#if 0
-	/* Increment frame number. */
-	pic.i_pts = ctx->frame;
-	ctx->frame++;
-#endif
-
 	if(i_frame_size == 0)
 		goto ret;
 
 	for(int i = 0; i < i_nal; i++)
-	{
-		if(SDL_RWwrite(ctx->f, nal[i].p_payload, nal[i].i_payload, 1) == 0)
-			goto err;
-	}
-
+		SDL_RWwrite(ctx->f, nal[i].p_payload, nal[i].i_payload, 1);
 
 ret:
 	ret = 0;
 err:
+	SDL_AtomicUnlock(&ctx->lock);
+	SDL_FreeSurface(framedat->surf);
+	SDL_free(data);
 	return ret;
+}
+
+void vid_enc_frame(enc_vid *ctx, SDL_Surface *surf)
+{
+	SDL_Thread *thread;
+	struct vid_enc_frame_s *th = SDL_malloc(sizeof(struct vid_enc_frame_s));
+	th->ctx = ctx;
+	th->surf = surf;
+
+	SDL_AtomicLock(&ctx->lock);
+	thread = SDL_CreateThread(vid_enc_frame_thread, "x264 Encode", th);
+	SDL_DetachThread(thread);
+}
+
+static Uint32 allow_speedmod(Uint32 interval, void *param)
+{
+	enc_vid *ctx = param;
+	(void) interval;
+	SDL_AtomicSet(&ctx->speedmod_timeout, 0);
+	return 0;
+}
+
+void vid_enc_speedup(enc_vid *ctx)
+{
+	const float rfc_max = 30.0F;
+	float rfc;
+
+	if(ctx == NULL)
+		return;
+
+	if(ctx->preset == 0)
+		return;
+
+	SDL_AtomicLock(&ctx->lock);
+	rfc = ctx->param.rc.f_rf_constant;
+
+	ctx->preset--;
+	x264_param_default_preset(&ctx->param, x264_preset_names[ctx->preset],
+				  "zerolatency");
+
+#if 0
+	if(rfc < rfc_max)
+		ctx->param.rc.f_rf_constant = rfc + 1.0F;
+#endif
+
+	x264_encoder_reconfig(ctx->h, &ctx->param);
+	SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO, "Modified video preset to %s",
+				x264_preset_names[ctx->preset]);
+
+	SDL_AtomicUnlock(&ctx->lock);
+}
+
+void vid_enc_speeddown(enc_vid *ctx)
+{
+	const float rfc_min = 15.0F;
+	float rfc;
+
+	if(ctx == NULL)
+		return;
+
+	if(ctx->preset == preset_max)
+		return;
+
+	if(SDL_AtomicGet(&ctx->speedmod_timeout))
+		return;
+
+	SDL_AtomicSet(&ctx->speedmod_timeout, 1);
+	SDL_AddTimer(100, allow_speedmod, ctx);
+
+	SDL_AtomicLock(&ctx->lock);
+	rfc = ctx->param.rc.f_rf_constant;
+
+	ctx->preset++;
+	x264_param_default_preset(&ctx->param, x264_preset_names[ctx->preset],
+				  "zerolatency");
+
+#if 0
+	if(ctx->param.rc.f_rf_constant > rfc_min)
+		ctx->param.rc.f_rf_constant = rfc - 1.0F;
+#endif
+
+	x264_encoder_reconfig(ctx->h, &ctx->param);
+	SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO, "Modified video preset to %s",
+				x264_preset_names[ctx->preset]);
+	SDL_AtomicUnlock(&ctx->lock);
 }
 
 void vid_enc_end(enc_vid *ctx)
 {
+	/* Wait for previous frames to finish encoding. */
+	SDL_AtomicLock(&ctx->lock);
+
 	/* Flush delayed frames */
 	while(x264_encoder_delayed_frames(ctx->h))
 	{
@@ -183,11 +313,11 @@ void vid_enc_end(enc_vid *ctx)
 	}
 
 	x264_encoder_close(ctx->h);
-	//x264_picture_clean(&ctx->pic);
-	SDL_RWclose(ctx->f);
-	SDL_free(ctx);
 
 out:
+	SDL_RWclose(ctx->f);
+	SDL_AtomicUnlock(&ctx->lock);
+	SDL_free(ctx);
 	return;
 }
 
