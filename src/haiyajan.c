@@ -543,10 +543,7 @@ static void run(struct core_ctx_s *ctx)
 	Uint8 frame_skip_count = 4;
 
 #if USE_X264 == 1
-	enc_vid *vid = NULL;
-	char vidfile[64];
 
-	gen_filename(vidfile, ctx->core_log_name, "h264");
 #endif
 
 	input_init(&ctx->inp);
@@ -616,6 +613,40 @@ static void run(struct core_ctx_s *ctx)
 				case INPUT_EVENT_TAKE_SCREENCAPTURE:
 					take_screencapture(ctx);
 					break;
+
+#if USE_X264 == 1
+				case INPUT_EVENT_RECORD_VIDEO_TOGGLE:
+				{
+					if(ctx->vid == NULL &&
+					                ctx->env.status_bits.valid_frame)
+					{
+						char vidfile[64];
+						gen_filename(vidfile, ctx->core_log_name, "h264");
+
+						ctx->vid = vid_enc_init(vidfile, ctx->game_frame_res.w,
+						                   ctx->game_frame_res.h,
+						                   ctx->av_info.timing.fps);
+						if(ctx->vid == NULL)
+						{
+							SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO,
+							            "Unable to initialise libx264: %s",
+							            SDL_GetError());
+							break;
+						}
+
+						SDL_LogInfo(SDL_LOG_CATEGORY_VIDEO,
+							            "Video recording started");
+					}
+					else if(ctx->vid != NULL)
+					{
+#if USE_X264 == 1
+						vid_enc_end(ctx->vid);
+						ctx->vid = NULL;
+#endif
+					}
+					break;
+				}
+#endif
 				}
 			}
 			else if(ev.type == tim.timer_event)
@@ -623,31 +654,12 @@ static void run(struct core_ctx_s *ctx)
 				switch(ev.user.code)
 				{
 				case TIMER_SPEED_UP:
-					vid_enc_speedup(vid);
+					if(ctx->vid != NULL)
+						vid_enc_speedup(ctx->vid);
 					break;
 				}
 			}
 		}
-
-#if USE_X264 == 1
-		if(vid == NULL && ctx->env.status_bits.valid_frame)
-		{
-			vid = vid_enc_init(vidfile, ctx->game_frame_res.w,
-					ctx->game_frame_res.h,
-					ctx->av_info.timing.fps);
-			if(vid == NULL)
-			{
-				SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO,
-				    "Unable to initialise libx264: %s",
-				    SDL_GetError());
-			}
-			else
-			{
-				SDL_LogInfo(SDL_LOG_CATEGORY_VIDEO,
-				    "Video recording started");
-			}
-		}
-#endif
 
 		/* If in benchmark mode, run as fast as possible. */
 		if(ctx->stngs.benchmark)
@@ -732,27 +744,28 @@ static void run(struct core_ctx_s *ctx)
 		}
 
 #if USE_X264 == 1
-		if(vid != NULL)
+		while(ctx->vid != NULL)
 		{
 			SDL_Rect rec = {
-				.x = ctx->game_max_res.w - 100,
-				.y = 30,
-				.w = 20,
-				.h = 24
+				.x = 0,
+				.y = FONT_CHAR_WIDTH * 2,
+				.w = 2,
+				.h = 2
 			};
-			cap_frame(vid, ctx->disp_rend, ctx->core_tex,
+			SDL_RenderGetLogicalSize(ctx->disp_rend, &rec.x, NULL);
+			if(rec.x < 320)
+				break;
+
+			cap_frame(ctx->vid, ctx->disp_rend, ctx->core_tex,
 				&ctx->game_frame_res, ctx->env.flip);
 			SDL_SetRenderDrawColor(ctx->disp_rend, UINT8_MAX, 0, 0,
 					       SDL_ALPHA_OPAQUE);
-
-			SDL_RenderFillRect(ctx->disp_rend, &rec);
-			rec.x += rec.w + 4;
-			rec.h = 2;
-			rec.w = 1;
+			rec.x -= FONT_CHAR_WIDTH * 2 * 4;
 			FontPrintToRenderer(font, "REC", &rec);
 
 			SDL_SetRenderDrawColor(ctx->disp_rend,
 				0x00, 0x00, 0x00, 0x00);
+			break;
 		}
 #endif
 
@@ -806,9 +819,6 @@ static void run(struct core_ctx_s *ctx)
 	}
 
 out:
-#if USE_X264 == 1
-	vid_enc_end(vid);
-#endif
 	FontExit(font);
 }
 

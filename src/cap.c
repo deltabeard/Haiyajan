@@ -183,9 +183,6 @@ err:
 
 void vid_enc_speedup(enc_vid *ctx)
 {
-	if(ctx == NULL)
-		return;
-
 	if(ctx->preset <= 1)
 			return;
 
@@ -200,9 +197,6 @@ void vid_enc_speedup(enc_vid *ctx)
 
 void vid_enc_speeddown(enc_vid *ctx)
 {
-	if(ctx == NULL)
-		return;
-
 	if(ctx->preset == preset_max)
 		return;
 

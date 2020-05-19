@@ -19,6 +19,7 @@
 #include <libretro.h>
 #include <input.h>
 #include <gl.h>
+#include <cap.h>
 
 struct settings_s
 {
@@ -146,4 +147,5 @@ struct core_ctx_s
 
 	struct input_ctx_s inp;
 	struct settings_s stngs;
+	enc_vid *vid;
 };
