@@ -54,6 +54,13 @@ ifeq ($(USE_X264),1)
 	CFLAGS += -D USE_X264=1
 endif
 
+CHECK_LIB := wavpack
+USE_WAVPACK ?= $(IS_LIB_AVAIL)
+ifeq ($(USE_WAVPACK),1)
+	LDLIBS += -lwavpack
+	CFLAGS += -D USE_WAVPACK=1
+endif
+
 .PHONY: test
 
 all: $(TARGETS)

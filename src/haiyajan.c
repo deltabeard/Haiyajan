@@ -542,10 +542,6 @@ static void run(struct core_ctx_s *ctx)
 	const Uint8 frame_skip_max = 4;
 	Uint8 frame_skip_count = 4;
 
-#if USE_X264 == 1
-
-#endif
-
 	input_init(&ctx->inp);
 	ctx->fn.retro_set_controller_port_device(0, RETRO_DEVICE_JOYPAD);
 
@@ -623,9 +619,11 @@ static void run(struct core_ctx_s *ctx)
 						char vidfile[64];
 						gen_filename(vidfile, ctx->core_log_name, "h264");
 
+						/* FIXME: add double to Sint32 sample compensation should the sample rate not be an integer. */
 						ctx->vid = vid_enc_init(vidfile, ctx->game_frame_res.w,
 						                   ctx->game_frame_res.h,
-						                   ctx->av_info.timing.fps);
+						                   ctx->av_info.timing.fps,
+								   SDL_ceil(ctx->av_info.timing.sample_rate));
 						if(ctx->vid == NULL)
 						{
 							SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO,

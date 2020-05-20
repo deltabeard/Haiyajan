@@ -19,6 +19,7 @@
 #include <haiyajan.h>
 #include <play.h>
 #include <input.h>
+#include <cap.h>
 
 #define NUM_ELEMS(x) (sizeof(x) / sizeof(*x))
 
@@ -432,6 +433,11 @@ size_t cb_retro_audio_sample_batch(const int16_t *data, size_t frames)
 	/* If the audio driver is lagging too far behind, reset the queue. */
 	if(SDL_GetQueuedAudioSize(ctx_retro->audio_dev) >= 32768UL)
 		SDL_ClearQueuedAudio(ctx_retro->audio_dev);
+
+	if(ctx_retro->vid != NULL)
+	{
+		vid_enc_samples(ctx_retro->vid, data, frames);
+	}
 
 	SDL_QueueAudio(ctx_retro->audio_dev, data, frames * sizeof(Uint16) * 2);
 
