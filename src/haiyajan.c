@@ -761,6 +761,33 @@ static void run(struct core_ctx_s *ctx)
 			rec.x -= FONT_CHAR_WIDTH * 2 * 4;
 			FontPrintToRenderer(font, "REC", &rec);
 
+			/* Print output file sizes so far. */
+			rec.y += rec.y + FONT_CHAR_HEIGHT;
+			rec.w = 1;
+			rec.h = 1;
+			{
+				char aud_str[16];
+				char vid_str[16];
+				const char prefix[2][3] = { "MB", "GB" };
+				const float prefix_div[2] = { 1e6, 1e9 };
+				const char *p;
+				float aud_sz = cap_audio_size(ctx->vid);
+				float vid_sz = cap_video_size(ctx->vid);
+
+				p = prefix[aud_sz >= 1e9];
+				aud_sz /= prefix_div[aud_sz >= 1e9];
+				SDL_snprintf(aud_str, sizeof(aud_str),
+					"%4.1f %.2s", aud_sz, p);
+
+				p = prefix[vid_sz >= 1e9];
+				vid_sz /= prefix_div[vid_sz >= 1e9];
+				SDL_snprintf(vid_str, sizeof(vid_str),
+					"%4.1f %.2s", vid_sz, p);
+				FontPrintToRenderer(font, vid_str, &rec);
+				rec.y += FONT_CHAR_HEIGHT;
+				FontPrintToRenderer(font, aud_str, &rec);
+			}
+
 			SDL_SetRenderDrawColor(ctx->disp_rend,
 				0x00, 0x00, 0x00, 0x00);
 			break;

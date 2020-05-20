@@ -301,6 +301,16 @@ void vid_enc_samples(enc_vid *ctx, const void *samples, uint32_t frames)
 	SDL_assert_always(ret);
 }
 
+Sint64 cap_video_size(enc_vid *ctx)
+{
+	return SDL_RWtell(ctx->fv);
+}
+
+Sint64 cap_audio_size(enc_vid *ctx)
+{
+	return SDL_RWtell(ctx->fa);
+}
+
 void vid_enc_end(enc_vid *ctx)
 {
 	/* Wait for previous frames to finish encoding. */
