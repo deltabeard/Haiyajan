@@ -844,6 +844,7 @@ static void run(struct core_ctx_s *ctx)
 	}
 
 out:
+	vid_enc_end(ctx->vid);
 	FontExit(font);
 }
 

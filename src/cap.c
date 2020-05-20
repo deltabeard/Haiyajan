@@ -322,6 +322,9 @@ Sint64 cap_audio_size(enc_vid *ctx)
 
 void vid_enc_end(enc_vid *ctx)
 {
+	if(ctx == NULL)
+		return;
+
 	/* Wait for previous frames to finish encoding. */
 	SDL_AtomicLock(&ctx->lock);
 
