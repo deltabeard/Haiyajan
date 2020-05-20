@@ -772,8 +772,8 @@ static void run(struct core_ctx_s *ctx)
 			SDL_SetRenderDrawColor(ctx->disp_rend, UINT8_MAX, 0, 0,
 			                       SDL_ALPHA_OPAQUE);
 
-			loc.x -= FONT_CHAR_WIDTH * loc.h * 4;
-			FontPrintToRenderer(font, "REC", &loc);
+			loc.x -= FONT_CHAR_WIDTH * loc.h * 5;
+			FontPrintToRenderer(font, " REC", &loc);
 
 			/* Print output file sizes so far. */
 			loc.y += FONT_CHAR_HEIGHT * 2;
@@ -798,7 +798,7 @@ static void run(struct core_ctx_s *ctx)
 
 				SDL_snprintf(sz_map[i].str,
 				             SDL_arraysize(sz_map[0].str),
-				             "%3lu %.2s", sz, prefix[p]);
+				             "%5lu %.2s", sz, prefix[p]);
 			}
 
 			FontPrintToRenderer(font, sz_map[0].str, &loc);
@@ -810,6 +810,26 @@ static void run(struct core_ctx_s *ctx)
 			break;
 		}
 #endif
+
+		/* If the user took a screen capture within the last second,
+		 * respond in the interface. */
+		if(SDL_AtomicGet(&screencap_timeout))
+		{
+			SDL_Rect loc =
+			{
+				.x = 0,
+				.y = FONT_CHAR_WIDTH * 2,
+				.w = 2,
+				.h = 2
+			};
+			SDL_SetRenderDrawColor(ctx->disp_rend, UINT8_MAX,
+					       UINT8_MAX, 0, SDL_ALPHA_OPAQUE);
+			SDL_RenderGetLogicalSize(ctx->disp_rend, &loc.x, NULL);
+			loc.x -= FONT_CHAR_WIDTH * loc.h * 8;
+			FontPrintToRenderer(font, "CAP", &loc);
+			SDL_SetRenderDrawColor(ctx->disp_rend,
+			                       0x00, 0x00, 0x00, 0x00);
+		}
 
 		/* Only draw to screen if we're not falling behind. */
 		if(tim_cmd >= 0 || frame_skip_count == 0)
