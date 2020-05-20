@@ -69,7 +69,7 @@ haiyajan: ./src/haiyajan.o ./src/load.o ./src/play.o ./src/load.o \
 	+$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 ./src/haiyajan.o: ./src/haiyajan.c ./inc/*.h
-./src/cap.o: ./src/cap.c ./inc/cap.h
+./src/rec.o: ./src/rec.c ./inc/cap.h
 ./src/gl.o: ./src/gl.c ./inc/gl.h ./inc/libretro.h
 ./src/load.o: ./src/load.c ./inc/load.h ./inc/haiyajan.h ./inc/libretro.h
 ./src/play.o: ./src/play.c ./inc/play.h ./inc/haiyajan.h ./inc/libretro.h

@@ -16,9 +16,9 @@
 #include <x264.h>
 #include <wavpack/wavpack.h>
 
-#include <cap.h>
+#include <rec.h>
 
-struct enc_vid_s
+struct rec_s
 {
 	struct
 	{
@@ -66,7 +66,7 @@ static void x264_log(void *priv, int i_level, const char *fmt, va_list ap)
 
 static int wav_pack_write_file(void *priv, void *data, int32_t bcount)
 {
-	enc_vid *ctx = priv;
+	rec *ctx = priv;
 
 	/* If ctx == NULL, then Initialisation error or data is for lossless
 	 * wvc data. */
@@ -84,10 +84,10 @@ static int wav_pack_write_file(void *priv, void *data, int32_t bcount)
 	return SDL_RWwrite(ctx->fa, data, bcount, 1) > 0 ? SDL_TRUE : SDL_FALSE;
 }
 
-enc_vid *vid_enc_init(const char *fileout, int width, int height, double fps,
+rec *rec_init(const char *fileout, int width, int height, double fps,
 		      Sint32 sample_rate)
 {
-	enc_vid *ctx = SDL_calloc(1, sizeof(enc_vid));
+	rec *ctx = SDL_calloc(1, sizeof(rec));
 
 	if(ctx == NULL)
 		goto out;
@@ -202,14 +202,14 @@ err:
  * All variables required for frame to be encoded and saved.
  */
 struct vid_enc_frame_s {
-	enc_vid *ctx;
+	rec *ctx;
 	SDL_Surface *surf;
 };
 
 static int vid_enc_frame_thread(void *data)
 {
 	struct vid_enc_frame_s *framedat = data;
-	enc_vid *ctx = framedat->ctx;
+	rec *ctx = framedat->ctx;
 
 	int ret = 1;
 	int i_nal;
@@ -254,7 +254,7 @@ err:
 	return ret;
 }
 
-void vid_enc_speedup(enc_vid *ctx)
+void rec_speedup(rec *ctx)
 {
 	if(ctx->preset <= 1)
 			return;
@@ -268,7 +268,7 @@ void vid_enc_speedup(enc_vid *ctx)
 				x264_preset_names[ctx->preset]);
 }
 
-void vid_enc_speeddown(enc_vid *ctx)
+void rec_relax(rec *ctx)
 {
 	if(ctx->preset == preset_max)
 		return;
@@ -282,7 +282,7 @@ void vid_enc_speeddown(enc_vid *ctx)
 				x264_preset_names[ctx->preset]);
 }
 
-void vid_enc_frame(enc_vid *ctx, SDL_Surface *surf)
+void rec_enc_video(rec *ctx, SDL_Surface *surf)
 {
 	SDL_Thread *thread;
 	struct vid_enc_frame_s *th = SDL_malloc(sizeof(struct vid_enc_frame_s));
@@ -294,7 +294,7 @@ void vid_enc_frame(enc_vid *ctx, SDL_Surface *surf)
 	SDL_DetachThread(thread);
 }
 
-void vid_enc_samples(enc_vid *ctx, const Sint16 *data, uint32_t frames)
+void rec_enc_audio(rec *ctx, const Sint16 *data, uint32_t frames)
 {
 	int ret;
 	size_t samples = frames * 2;
@@ -310,17 +310,17 @@ void vid_enc_samples(enc_vid *ctx, const Sint16 *data, uint32_t frames)
 	SDL_assert_always(ret);
 }
 
-Sint64 cap_video_size(enc_vid *ctx)
+Sint64 rec_video_size(rec *ctx)
 {
 	return SDL_RWtell(ctx->fv);
 }
 
-Sint64 cap_audio_size(enc_vid *ctx)
+Sint64 rec_audio_size(rec *ctx)
 {
 	return SDL_RWtell(ctx->fa);
 }
 
-void vid_enc_end(enc_vid *ctx)
+void rec_end(rec *ctx)
 {
 	if(ctx == NULL)
 		return;

@@ -14,14 +14,16 @@
 
 #pragma once
 
-typedef struct enc_vid_s enc_vid;
+typedef struct rec_s rec;
 
-enc_vid *vid_enc_init(const char *fileout, int width, int height, double fps,
+rec *rec_init(const char *fileout, int width, int height, double fps,
 		      Sint32 sample_rate);
-void vid_enc_frame(enc_vid *ctx, SDL_Surface *surf);
-void vid_enc_samples(enc_vid *ctx, const Sint16 *data, uint32_t frames);
-Sint64 cap_video_size(enc_vid *ctx);
-Sint64 cap_audio_size(enc_vid *ctx);
-void vid_enc_speedup(enc_vid *ctx);
-void vid_enc_speeddown(enc_vid *ctx);
-void vid_enc_end(enc_vid *ctx);
+void rec_enc_video(rec *ctx, SDL_Surface *surf);
+void rec_enc_audio(rec *ctx, const Sint16 *data, uint32_t frames);
+void rec_end(rec *ctx);
+
+Sint64 rec_video_size(rec *ctx);
+Sint64 rec_audio_size(rec *ctx);
+void rec_speedup(rec *ctx);
+void rec_relax(rec *ctx);
+

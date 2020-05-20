@@ -28,11 +28,11 @@
 #define OPTPARSE_API static
 #include <optparse.h>
 
-#include <cap.h>
 #include <font.h>
 #include <input.h>
 #include <load.h>
 #include <play.h>
+#include <rec.h>
 #include <timer.h>
 
 #define PROG_NAME	"Haiyajan"
@@ -482,7 +482,7 @@ void take_screencapture(struct core_ctx_s *const ctx)
 }
 
 #if USE_X264 == 1
-void cap_frame(enc_vid *vid, SDL_Renderer *rend, SDL_Texture *tex,
+void cap_frame(rec *vid, SDL_Renderer *rend, SDL_Texture *tex,
 		  const SDL_Rect *src, SDL_RendererFlip flip)
 {
 	SDL_Texture *core_tex;
@@ -520,7 +520,7 @@ void cap_frame(enc_vid *vid, SDL_Renderer *rend, SDL_Texture *tex,
 		goto err;
 	}
 
-	vid_enc_frame(vid, surf);
+	rec_enc_video(vid, surf);
 
 err:
 	SDL_DestroyTexture(core_tex);
@@ -620,7 +620,7 @@ static void run(struct core_ctx_s *ctx)
 						gen_filename(vidfile, ctx->core_log_name, "h264");
 
 						/* FIXME: add double to Sint32 sample compensation should the sample rate not be an integer. */
-						ctx->vid = vid_enc_init(vidfile, ctx->game_frame_res.w,
+						ctx->vid = rec_init(vidfile, ctx->game_frame_res.w,
 						                   ctx->game_frame_res.h,
 						                   ctx->av_info.timing.fps,
 								   SDL_ceil(ctx->av_info.timing.sample_rate));
@@ -638,7 +638,7 @@ static void run(struct core_ctx_s *ctx)
 					else if(ctx->vid != NULL)
 					{
 #if USE_X264 == 1
-						vid_enc_end(ctx->vid);
+						rec_end(ctx->vid);
 						ctx->vid = NULL;
 #endif
 					}
@@ -653,7 +653,7 @@ static void run(struct core_ctx_s *ctx)
 				{
 				case TIMER_SPEED_UP:
 					if(ctx->vid != NULL)
-						vid_enc_speedup(ctx->vid);
+						rec_speedup(ctx->vid);
 					break;
 				}
 			}
@@ -762,7 +762,7 @@ static void run(struct core_ctx_s *ctx)
 			FontPrintToRenderer(font, "REC", &rec);
 
 			/* Print output file sizes so far. */
-			rec.y += rec.y + FONT_CHAR_HEIGHT;
+			rec.y += FONT_CHAR_HEIGHT * 2;
 			rec.w = 1;
 			rec.h = 1;
 			{
@@ -771,8 +771,8 @@ static void run(struct core_ctx_s *ctx)
 				const char prefix[2][3] = { "MB", "GB" };
 				const float prefix_div[2] = { 1e6, 1e9 };
 				const char *p;
-				float aud_sz = cap_audio_size(ctx->vid);
-				float vid_sz = cap_video_size(ctx->vid);
+				float aud_sz = rec_audio_size(ctx->vid);
+				float vid_sz = rec_video_size(ctx->vid);
 
 				p = prefix[aud_sz >= 1e9];
 				aud_sz /= prefix_div[aud_sz >= 1e9];
@@ -844,7 +844,7 @@ static void run(struct core_ctx_s *ctx)
 	}
 
 out:
-	vid_enc_end(ctx->vid);
+	rec_end(ctx->vid);
 	FontExit(font);
 }
 
