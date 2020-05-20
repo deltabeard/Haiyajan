@@ -744,52 +744,68 @@ static void run(struct core_ctx_s *ctx)
 #if USE_X264 == 1
 		while(ctx->vid != NULL)
 		{
-			SDL_Rect rec = {
+			SDL_Rect loc =
+			{
 				.x = 0,
 				.y = FONT_CHAR_WIDTH * 2,
 				.w = 2,
 				.h = 2
 			};
-			SDL_RenderGetLogicalSize(ctx->disp_rend, &rec.x, NULL);
-			if(rec.x < 320)
+			struct
+			{
+				Sint64(*get_size)(rec *);
+				char str[16];
+			} sz_map[2] =
+			{
+				{ rec_video_size, "" },
+				{ rec_audio_size, "" }
+			};
+
+			SDL_RenderGetLogicalSize(ctx->disp_rend, &loc.x, NULL);
+			if(loc.x < 320)
 				break;
 
 			cap_frame(ctx->vid, ctx->disp_rend, ctx->core_tex,
-				&ctx->game_frame_res, ctx->env.flip);
+			          &ctx->game_frame_res, ctx->env.flip);
+
 			SDL_SetRenderDrawColor(ctx->disp_rend, UINT8_MAX, 0, 0,
-					       SDL_ALPHA_OPAQUE);
-			rec.x -= FONT_CHAR_WIDTH * 2 * 4;
-			FontPrintToRenderer(font, "REC", &rec);
+			                       SDL_ALPHA_OPAQUE);
+
+			loc.x -= FONT_CHAR_WIDTH * loc.h * 4;
+			FontPrintToRenderer(font, "REC", &loc);
 
 			/* Print output file sizes so far. */
-			rec.y += FONT_CHAR_HEIGHT * 2;
-			rec.w = 1;
-			rec.h = 1;
+			loc.y += FONT_CHAR_HEIGHT * 2;
+			loc.w = 1;
+			loc.h = 1;
+
+			for(Uint8 i = 0; i < SDL_arraysize(sz_map); i++)
 			{
-				char aud_str[16];
-				char vid_str[16];
-				const char prefix[2][3] = { "MB", "GB" };
-				const float prefix_div[2] = { 1e6, 1e9 };
-				const char *p;
-				float aud_sz = rec_audio_size(ctx->vid);
-				float vid_sz = rec_video_size(ctx->vid);
+				/* Technically MiB and GiB. */
+				const char prefix[5][3] =
+				{
+					" B", "KB", "MB", "GB", "TB"
+				};
+				Uint64 sz = sz_map[i].get_size(ctx->vid);
+				Uint8 p = 0;
 
-				p = prefix[aud_sz >= 1e9];
-				aud_sz /= prefix_div[aud_sz >= 1e9];
-				SDL_snprintf(aud_str, sizeof(aud_str),
-					"%4.1f %.2s", aud_sz, p);
+				while(sz > 1 * 1024)
+				{
+					sz >>= 10;
+					p++;
+				}
 
-				p = prefix[vid_sz >= 1e9];
-				vid_sz /= prefix_div[vid_sz >= 1e9];
-				SDL_snprintf(vid_str, sizeof(vid_str),
-					"%4.1f %.2s", vid_sz, p);
-				FontPrintToRenderer(font, vid_str, &rec);
-				rec.y += FONT_CHAR_HEIGHT;
-				FontPrintToRenderer(font, aud_str, &rec);
+				SDL_snprintf(sz_map[i].str,
+				             SDL_arraysize(sz_map[0].str),
+				             "%3lu %.2s", sz, prefix[p]);
 			}
 
+			FontPrintToRenderer(font, sz_map[0].str, &loc);
+			loc.y += FONT_CHAR_HEIGHT;
+			FontPrintToRenderer(font, sz_map[1].str, &loc);
+
 			SDL_SetRenderDrawColor(ctx->disp_rend,
-				0x00, 0x00, 0x00, 0x00);
+			                       0x00, 0x00, 0x00, 0x00);
 			break;
 		}
 #endif

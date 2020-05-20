@@ -1,5 +1,5 @@
 /**
- * Capture video with x264 encoder.
+ * Capture video and audio with x264 and Wavpack encoders.
  * Copyright (C) 2020  Mahyar Koshkouei
  *
  * This is free software, and you are welcome to redistribute it under the terms
