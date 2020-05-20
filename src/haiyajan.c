@@ -665,10 +665,11 @@ static void run(struct core_ctx_s *ctx)
 
 		frames++;
 
-		if(tim_cmd < 0)
+		if(tim_cmd < 0 && ctx->vid == NULL)
 		{
 			/* Disable video for the skipped frame to improve
-			 * performance. */
+			 * performance. But only when we're not recording a
+			 * video. */
 			ctx->env.status_bits.video_disabled = 1;
 
 		}
