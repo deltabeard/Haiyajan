@@ -294,10 +294,19 @@ void vid_enc_frame(enc_vid *ctx, SDL_Surface *surf)
 	SDL_DetachThread(thread);
 }
 
-void vid_enc_samples(enc_vid *ctx, const void *samples, uint32_t frames)
+void vid_enc_samples(enc_vid *ctx, const Sint16 *data, uint32_t frames)
 {
 	int ret;
-	ret = WavpackPackSamples(ctx->wpc, samples, frames);
+	size_t samples = frames * 2;
+	Sint32 *s = SDL_malloc(samples * sizeof(Sint32));
+
+	for(size_t i = 0; i < samples; i++)
+	{
+		s[i] = data[i];
+	}
+
+	ret = WavpackPackSamples(ctx->wpc, s, frames);
+	SDL_free(s);
 	SDL_assert_always(ret);
 }
 
