@@ -24,6 +24,7 @@ void rec_end(rec *ctx);
 
 Sint64 rec_video_size(rec *ctx);
 Sint64 rec_audio_size(rec *ctx);
+void rec_set_crf(rec *ctx, Uint8 crf);
 void rec_speedup(rec *ctx);
 void rec_relax(rec *ctx);
 

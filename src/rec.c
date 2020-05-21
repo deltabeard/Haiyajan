@@ -18,6 +18,20 @@
 
 #include <rec.h>
 
+enum vid_thread_cmd {
+	VID_CMD_NO_CMD = 0,
+	VID_CMD_ENCODE_FRAME,
+	VID_CMD_ENCODE_FINISH
+};
+
+struct venc_stor_s {
+	enum vid_thread_cmd cmd;
+
+	union {
+		SDL_Surface *pixels;
+	} dat;
+};
+
 struct rec_s
 {
 	struct
@@ -36,13 +50,16 @@ struct rec_s
 
 		/* Preset value pointing to x264_preset_names[] */
 		Uint8 preset;
-		SDL_SpinLock lock;
+		SDL_Thread *venc_th;
+		SDL_mutex *venc_mtx;
+		SDL_cond *venc_cond;
+		SDL_SpinLock venc_slk;
+		struct venc_stor_s venc_stor;
 	};
 };
 
 /* Max preset is fast. */
 static const Uint8 preset_max = 5;
-static const Uint8 crf = 14;
 
 static void x264_log(void *priv, int i_level, const char *fmt, va_list ap)
 {
@@ -82,6 +99,77 @@ static int wav_pack_write_file(void *priv, void *data, int32_t bcount)
 	return SDL_RWwrite(ctx->fa, data, bcount, 1) > 0 ? SDL_TRUE : SDL_FALSE;
 }
 
+static int vid_thread_cmd(void *data)
+{
+	// Wait for condition.
+	// Obtain data from thread storage.
+	//
+
+	// Is data available or are we finishing?
+	// Get data
+	// Encode frame
+	// Wait for next signal
+
+	rec *ctx = data;
+
+	while(1)
+	{
+		SDL_LockMutex(ctx->venc_mtx);
+		SDL_CondWait(ctx->venc_cond, ctx->venc_mtx);
+		SDL_UnlockMutex(ctx->venc_mtx);
+
+		switch(ctx->venc_stor.cmd)
+		{
+		case VID_CMD_NO_CMD:
+			break;
+
+		case VID_CMD_ENCODE_FRAME:
+		{
+			int i_nal;
+			int i_frame_size;
+			x264_picture_t pic;
+			x264_picture_t pic_out;
+			x264_nal_t *nal;
+
+			x264_picture_init(&pic);
+
+			pic.img.i_csp = X264_CSP_RGB;
+			pic.img.i_plane = 1;
+			pic.img.i_stride[0] = ctx->venc_stor.dat.pixels->pitch;
+			pic.img.plane[0] = ctx->venc_stor.dat.pixels->pixels;
+
+			pic.i_type = X264_TYPE_AUTO;
+
+			i_frame_size = x264_encoder_encode(ctx->h, &nal, &i_nal,
+							   &pic, &pic_out);
+			if(i_frame_size < 0)
+				break;
+
+			if(i_frame_size == 0)
+				break;
+
+			for(int i = 0; i < i_nal; i++)
+			{
+				SDL_RWwrite(ctx->fv, nal[i].p_payload,
+					    nal[i].i_payload, 1);
+			}
+
+			SDL_FreeSurface(ctx->venc_stor.dat.pixels);
+
+			break;
+		}
+
+		case VID_CMD_ENCODE_FINISH:
+			goto end;
+		}
+
+		SDL_AtomicUnlock(&ctx->venc_slk);
+	}
+
+end:
+	return 0;
+}
+
 rec *rec_init(const char *fileout, int width, int height, double fps,
 		      Sint32 sample_rate)
 {
@@ -90,10 +178,12 @@ rec *rec_init(const char *fileout, int width, int height, double fps,
 	if(ctx == NULL)
 		goto out;
 
+	ctx->venc_mtx = SDL_CreateMutex();
+	ctx->venc_cond = SDL_CreateCond();
+
 	/* Initialise Wavpack */
-	const char *wp_ver = WavpackGetLibraryVersionString();
 	SDL_LogVerbose(SDL_LOG_CATEGORY_AUDIO, "Initialising Wavpack %s",
-		wp_ver);
+		WavpackGetLibraryVersionString());
 
 	/* TODO: Fix this workaround. */
 	{
@@ -143,7 +233,7 @@ rec *rec_init(const char *fileout, int width, int height, double fps,
 	ctx->param.i_bitdepth = 8;
 	ctx->param.b_vfr_input = 0;
 	ctx->param.rc.i_rc_method = X264_RC_CRF;
-	ctx->param.rc.f_rf_constant = crf;
+	ctx->param.rc.f_rf_constant = 18;
 	ctx->param.b_opencl = 1;
 
 	/* Apply profile restrictions. */
@@ -184,6 +274,8 @@ rec *rec_init(const char *fileout, int width, int height, double fps,
 			goto err;
 	}
 
+	ctx->venc_th = SDL_CreateThread(vid_thread_cmd, "Encode", ctx);
+
 out:
 	return ctx;
 
@@ -201,52 +293,20 @@ struct vid_enc_frame_s {
 	SDL_Surface *surf;
 };
 
-static int vid_enc_frame_thread(void *data)
+void rec_enc_video(rec *ctx, SDL_Surface *surf)
 {
-	struct vid_enc_frame_s *framedat = data;
-	rec *ctx = framedat->ctx;
+	SDL_AtomicLock(&ctx->venc_slk);
+	ctx->venc_stor.dat.pixels = surf;
+	ctx->venc_stor.cmd = VID_CMD_ENCODE_FRAME;
 
-	int ret = 1;
-	int i_nal;
-	int i_frame_size;
-	x264_picture_t pic;
-	x264_picture_t pic_out;
-	x264_nal_t *nal;
-
-	x264_picture_init(&pic);
-
-	pic.img.i_csp = X264_CSP_RGB;
-	pic.img.i_plane = 1;
-	pic.img.i_stride[0] = framedat->surf->pitch;
-	pic.img.plane[0] = framedat->surf->pixels;
-
-	pic.i_type = X264_TYPE_AUTO;
-
-	i_frame_size = x264_encoder_encode(ctx->h, &nal, &i_nal, &pic,
-	                                   &pic_out);
-	if(i_frame_size < 0)
-	{
-		SDL_SetError("x264: unable to encode frame");
-		goto err;
-	}
-
-	if(i_frame_size == 0)
-		goto ret;
-
-	for(int i = 0; i < i_nal; i++)
-		SDL_RWwrite(ctx->fv, nal[i].p_payload, nal[i].i_payload, 1);
-
-ret:
-	ret = 0;
-err:
-	SDL_AtomicUnlock(&ctx->lock);
-	SDL_FreeSurface(framedat->surf);
-	SDL_free(data);
-	return ret;
+	SDL_LockMutex(ctx->venc_mtx);
+	SDL_CondSignal(ctx->venc_cond);
+	SDL_UnlockMutex(ctx->venc_mtx);
 }
 
 static void apply_preset(rec *ctx)
 {
+	float crf = ctx->param.rc.f_rf_constant;
 	x264_param_default_preset(&ctx->param,
 				  x264_preset_names[ctx->preset], "");
 
@@ -254,6 +314,12 @@ static void apply_preset(rec *ctx)
 	x264_encoder_reconfig(ctx->h, &ctx->param);
 	SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO, "Modified video preset to %s",
 				x264_preset_names[ctx->preset]);
+}
+
+void rec_set_crf(rec *ctx, Uint8 crf)
+{
+	ctx->param.rc.f_rf_constant = crf;
+	x264_encoder_reconfig(ctx->h, &ctx->param);
 }
 
 void rec_speedup(rec *ctx)
@@ -272,18 +338,6 @@ void rec_relax(rec *ctx)
 
 	ctx->preset++;
 	apply_preset(ctx);
-}
-
-void rec_enc_video(rec *ctx, SDL_Surface *surf)
-{
-	SDL_Thread *thread;
-	struct vid_enc_frame_s *th = SDL_malloc(sizeof(struct vid_enc_frame_s));
-	th->ctx = ctx;
-	th->surf = surf;
-
-	SDL_AtomicLock(&ctx->lock);
-	thread = SDL_CreateThread(vid_enc_frame_thread, "x264 Encode", th);
-	SDL_DetachThread(thread);
 }
 
 void rec_enc_audio(rec *ctx, const Sint16 *data, uint32_t frames)
@@ -312,13 +366,9 @@ Sint64 rec_audio_size(rec *ctx)
 	return SDL_RWtell(ctx->fa);
 }
 
-void rec_end(rec *ctx)
+int rec_end_thread(void *param)
 {
-	if(ctx == NULL)
-		return;
-
-	/* Wait for previous frames to finish encoding. */
-	SDL_AtomicLock(&ctx->lock);
+	rec *ctx = param;
 
 	/* Flush delayed frames */
 	while(x264_encoder_delayed_frames(ctx->h))
@@ -328,7 +378,7 @@ void rec_end(rec *ctx)
 		x264_picture_t pic_out;
 		int i_frame_size = x264_encoder_encode(ctx->h, &nal, &i_nal, NULL, &pic_out);
 		if(i_frame_size < 0)
-			goto out;
+			break;
 
 		if(i_frame_size == 0)
 			continue;
@@ -345,11 +395,24 @@ void rec_end(rec *ctx)
 	SDL_RWwrite(ctx->fa, ctx->first_block, ctx->first_block_sz, 1);
 	WavpackCloseFile(ctx->wpc);
 
-out:
 	SDL_RWclose(ctx->fv);
 	SDL_RWclose(ctx->fa);
-	SDL_AtomicUnlock(&ctx->lock);
+	SDL_AtomicUnlock(&ctx->venc_slk);
 	SDL_free(ctx);
+	return 0;
+}
+
+void rec_end(rec *ctx)
+{
+	SDL_Thread *thread;
+
+	if(ctx == NULL)
+		return;
+
+	/* Wait for previous frames to finish encoding. */
+	SDL_AtomicLock(&ctx->venc_slk);
+	thread = SDL_CreateThread(rec_end_thread, "x264 End", ctx);
+	SDL_DetachThread(thread);
 	return;
 }
 
