@@ -34,6 +34,7 @@
 #include <play.h>
 #include <rec.h>
 #include <timer.h>
+#include <util.h>
 
 #define PROG_NAME	"Haiyajan"
 #define PROG_NAME_LEN	strlen(PROG_NAME)
@@ -331,13 +332,6 @@ err:
 
 static SDL_atomic_t screencap_timeout;
 
-Uint32 enable_screencapture(Uint32 interval, void *param)
-{
-	SDL_AtomicSet(&screencap_timeout, 0);
-	(void)param;
-	return interval;
-}
-
 #if USE_WEBP == 1
 struct enc_cap_s {
 	SDL_Surface *surf;
@@ -456,7 +450,6 @@ void gen_filename(char filename[static 64], const char *core_name,
 
 void take_screencapture(struct core_ctx_s *const ctx)
 {
-	const Uint32 interval_ms = 1000;
 	char filename[64];
 #if USE_WEBP == 1
 	const char fmt[] = "webp";
@@ -467,11 +460,11 @@ void take_screencapture(struct core_ctx_s *const ctx)
 	/* Screencaptures limited to 1 every second. Should not be used for
 	 * recording game play as a video, as this function is too slow for
 	 * that. */
-	if(SDL_AtomicGet(&screencap_timeout))
+	if(SDL_AtomicGet(&screencap_timeout) != 0)
 		return;
 
 	SDL_AtomicSet(&screencap_timeout, 1);
-	SDL_AddTimer(interval_ms, enable_screencapture, NULL);
+	set_atomic_timeout(1024, &screencap_timeout, 0, "Enable Screencap");
 
 	gen_filename(filename, ctx->core_log_name, fmt);
 
@@ -651,9 +644,26 @@ static void run(struct core_ctx_s *ctx)
 			{
 				switch(ev.user.code)
 				{
+				case TIMER_SPEED_UP_AGGRESSIVELY:
+					if(ctx->vid != NULL)
+					{
+						rec_speedup(ctx->vid);
+						rec_speedup(ctx->vid);
+						rec_speedup(ctx->vid);
+						rec_speedup(ctx->vid);
+					}
+
+					break;
+
 				case TIMER_SPEED_UP:
 					if(ctx->vid != NULL)
 						rec_speedup(ctx->vid);
+					break;
+
+				case TIMER_OKAY:
+				default:
+					if(ctx->vid != NULL)
+						rec_relax(ctx->vid);
 					break;
 				}
 			}
@@ -676,6 +686,7 @@ static void run(struct core_ctx_s *ctx)
 		else if(tim_cmd > 0)
 			SDL_Delay(tim_cmd);
 
+		timer_profile_start(&tim);
 		SDL_SetRenderDrawColor(ctx->disp_rend, 0x00, 0x00, 0x00, 0x00);
 		SDL_RenderClear(ctx->disp_rend);
 		play_frame(ctx);
@@ -813,7 +824,7 @@ static void run(struct core_ctx_s *ctx)
 
 		/* If the user took a screen capture within the last second,
 		 * respond in the interface. */
-		if(SDL_AtomicGet(&screencap_timeout))
+		if(SDL_AtomicGet(&screencap_timeout) != 0)
 		{
 			SDL_Rect loc =
 			{
@@ -830,6 +841,8 @@ static void run(struct core_ctx_s *ctx)
 			SDL_SetRenderDrawColor(ctx->disp_rend,
 			                       0x00, 0x00, 0x00, 0x00);
 		}
+
+		timer_profile_end(&tim);
 
 		/* Only draw to screen if we're not falling behind. */
 		if(tim_cmd >= 0 || frame_skip_count == 0)
@@ -881,6 +894,7 @@ static void run(struct core_ctx_s *ctx)
 	}
 
 out:
+	util_exit_all();
 	rec_end(ctx->vid);
 	FontExit(font);
 }

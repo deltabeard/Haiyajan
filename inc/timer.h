@@ -16,18 +16,24 @@
 
 #include <SDL2/SDL.h>
 
-struct timer_ctx_s
-{
-	double core_ms;
-	double timer_accumulator;
-	int delay_comp_ms;
-	Uint32 timer_event;
-};
-
 enum timer_status_e {
 	TIMER_OKAY,
 	TIMER_SPEED_UP,
 	TIMER_SPEED_UP_AGGRESSIVELY
+};
+
+struct timer_ctx_s
+{
+	double core_ms;
+	Uint32 core_us;
+	double timer_accumulator;
+	int delay_comp_ms;
+
+	Uint32 timer_event;
+	Uint32 profile_start_ms;
+	Uint64 busy_acu_ms;
+	Uint8 busy_samples;
+	SDL_atomic_t status_atomic;
 };
 
 /* TODO: update docs. */
@@ -47,3 +53,6 @@ int timer_init(struct timer_ctx_s *const tim, double emulated_rate);
  * \returns	Negative for skip frame, 0 for no delay, else time to delay for.
  */
 int timer_get_delay(struct timer_ctx_s *const tim, Uint32 elapsed_ms);
+
+void timer_profile_start(struct timer_ctx_s *const tim);
+void timer_profile_end(struct timer_ctx_s *const tim);

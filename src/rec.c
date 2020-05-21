@@ -33,18 +33,16 @@ struct rec_s
 		SDL_RWops *fv;
 		x264_t *h;
 		x264_param_t param;
-		unsigned frame;
 
 		/* Preset value pointing to x264_preset_names[] */
 		Uint8 preset;
-		Uint32 delay_limit_ms;
 		SDL_SpinLock lock;
-		SDL_atomic_t speedmod_timeout;
 	};
 };
 
 /* Max preset is fast. */
-const Uint8 preset_max = 5;
+static const Uint8 preset_max = 5;
+static const Uint8 crf = 14;
 
 static void x264_log(void *priv, int i_level, const char *fmt, va_list ap)
 {
@@ -145,8 +143,7 @@ rec *rec_init(const char *fileout, int width, int height, double fps,
 	ctx->param.i_bitdepth = 8;
 	ctx->param.b_vfr_input = 0;
 	ctx->param.rc.i_rc_method = X264_RC_CRF;
-	ctx->param.rc.f_rf_constant = 18;
-	ctx->param.rc.f_rf_constant_max = 35;
+	ctx->param.rc.f_rf_constant = crf;
 	ctx->param.b_opencl = 1;
 
 	/* Apply profile restrictions. */
@@ -167,8 +164,6 @@ rec *rec_init(const char *fileout, int width, int height, double fps,
 
 	ctx->param.i_threads = 0;
 	ctx->param.b_repeat_headers = 0;
-
-	ctx->delay_limit_ms = (1.0/fps) * 1000.0;
 
 	ctx->h = x264_encoder_open(&ctx->param);
 	if(ctx->h == NULL)
@@ -224,10 +219,6 @@ static int vid_enc_frame_thread(void *data)
 	pic.img.i_plane = 1;
 	pic.img.i_stride[0] = framedat->surf->pitch;
 	pic.img.plane[0] = framedat->surf->pixels;
-#if 0
-	pic.i_pts = ctx->frame;
-	ctx->frame++;
-#endif
 
 	pic.i_type = X264_TYPE_AUTO;
 
@@ -254,18 +245,24 @@ err:
 	return ret;
 }
 
-void rec_speedup(rec *ctx)
+static void apply_preset(rec *ctx)
 {
-	if(ctx->preset <= 1)
-			return;
+	x264_param_default_preset(&ctx->param,
+				  x264_preset_names[ctx->preset], "");
 
-	ctx->preset--;
-	x264_param_default_preset(&ctx->param, x264_preset_names[ctx->preset],
-				"");
-
+	ctx->param.rc.f_rf_constant = crf;
 	x264_encoder_reconfig(ctx->h, &ctx->param);
 	SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO, "Modified video preset to %s",
 				x264_preset_names[ctx->preset]);
+}
+
+void rec_speedup(rec *ctx)
+{
+	if(ctx->preset <= 2)
+			return;
+
+	ctx->preset--;
+	apply_preset(ctx);
 }
 
 void rec_relax(rec *ctx)
@@ -274,12 +271,7 @@ void rec_relax(rec *ctx)
 		return;
 
 	ctx->preset++;
-	x264_param_default_preset(&ctx->param, x264_preset_names[ctx->preset],
-				  "");
-
-	x264_encoder_reconfig(ctx->h, &ctx->param);
-	SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO, "Modified video preset to %s",
-				x264_preset_names[ctx->preset]);
+	apply_preset(ctx);
 }
 
 void rec_enc_video(rec *ctx, SDL_Surface *surf)

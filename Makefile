@@ -65,16 +65,18 @@ endif
 
 all: $(TARGETS)
 haiyajan: ./src/haiyajan.o ./src/load.o ./src/play.o ./src/load.o \
-		./src/timer.o ./src/font.o ./src/input.o ./src/gl.o ./src/cap.o
+		./src/timer.o ./src/font.o ./src/input.o ./src/gl.o \
+		./src/rec.o ./src/util.o
 	+$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 ./src/haiyajan.o: ./src/haiyajan.c ./inc/*.h
-./src/rec.o: ./src/rec.c ./inc/cap.h
+./src/rec.o: ./src/rec.c ./inc/rec.h
 ./src/gl.o: ./src/gl.c ./inc/gl.h ./inc/libretro.h
 ./src/load.o: ./src/load.c ./inc/load.h ./inc/haiyajan.h ./inc/libretro.h
 ./src/play.o: ./src/play.c ./inc/play.h ./inc/haiyajan.h ./inc/libretro.h
 ./src/timer.o: ./src/timer.c ./inc/timer.h
 ./src/input.o: ./src/input.c ./inc/input.h ./inc/gamecontrollerdb.h
+./src/util.o: ./src/util.c ./inc/util.h
 
 # Saves debug symbols in a separate file, and strips the main executable.
 # To get information from stack trace: `addr2line -e haiyajan.debug addr`
