@@ -25,6 +25,8 @@ int timer_init(struct timer_ctx_s *const tim, double emulated_rate)
 	tim->timer_accumulator = 0.0;
 	tim->delay_comp_ms = ((int)tim->core_ms + 1) * 2;
 	tim->timer_event = SDL_RegisterEvents(1);
+	tim->busy_acu_ms = 0;
+	tim->busy_samples = 0;
 
 	if(tim->timer_event == (Uint32) -1)
 		ret = -1;
