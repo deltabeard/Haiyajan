@@ -16,6 +16,9 @@
 
 #include <SDL2/SDL.h>
 
+void gen_filename(char filename[static 64], const char *core_name,
+		  const char fmt[static 3]);
+
 /**
  * Modify the atomic to a value after a given time.
  */

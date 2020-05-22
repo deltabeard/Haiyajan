@@ -28,3 +28,4 @@ void rec_set_crf(rec *ctx, Uint8 crf);
 void rec_speedup(rec *ctx);
 void rec_relax(rec *ctx);
 
+void rec_single_img(SDL_Surface *surf, const char *core_name);

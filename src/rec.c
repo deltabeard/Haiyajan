@@ -16,7 +16,12 @@
 #include <x264.h>
 #include <wavpack/wavpack.h>
 
+#if USE_WEBP == 1
+#include <webp/encode.h>
+#endif
+
 #include <rec.h>
+#include <util.h>
 
 enum vid_thread_cmd {
 	VID_CMD_NO_CMD = 0,
@@ -102,15 +107,6 @@ static int wav_pack_write_file(void *priv, void *data, int32_t bcount)
 
 static int vid_thread_cmd(void *data)
 {
-	// Wait for condition.
-	// Obtain data from thread storage.
-	//
-
-	// Is data available or are we finishing?
-	// Get data
-	// Encode frame
-	// Wait for next signal
-
 	rec *ctx = data;
 
 	ctx->h = x264_encoder_open(&ctx->param);
@@ -447,5 +443,71 @@ void rec_end(rec **ctxp)
 	*ctxp = NULL;
 
 	return;
+}
+
+struct img_stor_s {
+	SDL_Surface *surf;
+	char core_name[12];
+};
+
+/**
+ * Saves the SDL Surface to a WEBP or BMP image on the filesystem.
+ */
+static int rec_single_img_thread(void *param)
+{
+	struct img_stor_s *img = param;
+	SDL_Surface *surf;
+	char filename[64];
+#if USE_WEBP == 1
+	const char fmt[] = "webp";
+	uint8_t *webp;
+	size_t outsz;
+#else
+	const char fmt[] = "bmp";
+#endif
+
+	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_LOW);
+
+	if(param == NULL)
+		return -1;
+
+	surf = img->surf;
+	gen_filename(filename, img->core_name, fmt);
+
+#if USE_WEBP == 1
+	outsz = WebPEncodeRGB(surf->pixels, surf->w, surf->h, surf->pitch,
+			      95, &webp);
+	if(outsz == 0)
+		goto out;
+
+	{
+		SDL_RWops *fout = SDL_RWFromFile(filename, "wb");
+		SDL_RWwrite(fout, webp, 1, outsz);
+		SDL_RWclose(fout);
+	}
+	WebPFree(webp);
+#else
+	SDL_SaveBMP(surf, filename);
+#endif
+
+	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+		    "Screencap saved to \"%s\"\n", filename);
+
+out:
+	SDL_FreeSurface(surf);
+	SDL_free(param);
+	return 0;
+}
+
+void rec_single_img(SDL_Surface *surf, const char *core_name)
+{
+	SDL_Thread *thread;
+	struct img_stor_s *img;
+
+	img = SDL_malloc(sizeof(struct img_stor_s));
+	img->surf = surf;
+	SDL_strlcpy(img->core_name, core_name, SDL_arraysize(img->core_name));
+	thread = SDL_CreateThread(rec_single_img_thread, "Screencap", img);
+	SDL_DetachThread(thread);
 }
 

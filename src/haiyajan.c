@@ -16,10 +16,6 @@
 #include <stdlib.h>
 #include <time.h>
 
-#if USE_WEBP == 1
-#include <webp/encode.h>
-#endif
-
 #ifdef _WIN32
 #include <stdio.h>
 #endif
@@ -332,131 +328,8 @@ err:
 
 static SDL_atomic_t screencap_timeout;
 
-#if USE_WEBP == 1
-struct enc_cap_s {
-	SDL_Surface *surf;
-	char *filename;
-};
-
-int thread_encode_screencap(void* data)
-{
-	struct enc_cap_s *ctx = data;
-	uint8_t *webp;
-	size_t outsz;
-
-	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_LOW);
-#if 0
-	outsz = WebPEncodeLosslessRGB(ctx->surf->pixels, ctx->surf->w,
-				      ctx->surf->h, ctx->surf->pitch, &webp);
-#else
-	outsz = WebPEncodeRGB(ctx->surf->pixels, ctx->surf->w,ctx->surf->h,
-			      ctx->surf->pitch, 95, &webp);
-
-#endif
-	if(outsz == 0)
-		goto out;
-
-	SDL_RWops *fout = SDL_RWFromFile(ctx->filename, "wb");
-	SDL_RWwrite(fout, webp, 1, outsz);
-	SDL_RWclose(fout);
-	WebPFree(webp);
-
-out:
-	SDL_FreeSurface(ctx->surf);
-	SDL_free(ctx->filename);
-	SDL_free(ctx);
-	return 0;
-}
-#endif
-
-void save_texture(SDL_Renderer *rend, SDL_Texture *tex,
-		  const SDL_Rect *src, SDL_RendererFlip flip,
-		  const char *filename)
-{
-	SDL_Texture *core_tex;
-	SDL_Surface *surf = NULL;
-	int format = SDL_PIXELFORMAT_RGB24;
-	/* TODO: Use native format of renderer. */
-
-	core_tex = SDL_CreateTexture(rend, format, SDL_TEXTUREACCESS_TARGET,
-				    src->w, src->h);
-	if(core_tex == NULL)
-		goto err;
-
-	if(SDL_SetRenderTarget(rend, core_tex) != 0)
-		goto err;
-
-	/* This fixes a bug whereby OpenGL cores appear as a white screen in the
-	 * screencap. */
-	SDL_RenderDrawPoint(rend, 0, 0);
-
-	if(SDL_RenderCopyEx(rend, tex, src, src, 0.0, NULL, flip) != 0)
-		goto err;
-
-	surf = SDL_CreateRGBSurfaceWithFormat(0, src->w, src->h,
-					      SDL_BITSPERPIXEL(format), format);
-	if(!surf)
-		goto err;
-
-	/* TODO: Convert format (if required) in new thread. */
-	if(SDL_RenderReadPixels(rend, src, format, surf->pixels, surf->pitch) != 0)
-	{
-		SDL_FreeSurface(surf);
-		goto err;
-	}
-
-#if USE_WEBP == 1
-	struct enc_cap_s *enc = SDL_malloc(sizeof(struct enc_cap_s));
-	enc->surf = surf;
-	enc->filename = SDL_strdup(filename);
-	SDL_Thread *thread = SDL_CreateThread(thread_encode_screencap,
-					      "WEBP Screencap", enc);
-	SDL_DetachThread(thread);
-
-#else
-	if(SDL_SaveBMP(surf, filename) != 0)
-	{
-		SDL_FreeSurface(surf);
-		goto err;
-	}
-
-	SDL_FreeSurface(surf);
-#endif
-
-	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-		    "Screencap saved to \"%s\"\n", filename);
-
-err:
-	SDL_DestroyTexture(core_tex);
-}
-
-void gen_filename(char filename[static 64], const char *core_name,
-		  const char fmt[static 3])
-{
-	time_t now;
-	struct tm *tmp;
-	char time_str[32];
-
-	now = time(NULL);
-	if(now == (time_t) -1 || (tmp = localtime(&now)) == NULL ||
-		strftime(time_str, sizeof(time_str), "%Y-%m-%d-%H%M%S", tmp) == 0)
-	{
-		SDL_snprintf(time_str, sizeof(time_str), "%010u",
-					 SDL_GetTicks());
-	}
-
-	SDL_snprintf(filename, 64, "%s-%s.%s", time_str, core_name, fmt);
-}
-
 void take_screencapture(struct core_ctx_s *const ctx)
 {
-	char filename[64];
-#if USE_WEBP == 1
-	const char fmt[] = "webp";
-#else
-	const char fmt[] = "bmp";
-#endif
-
 	/* Screencaptures limited to 1 every second. Should not be used for
 	 * recording game play as a video, as this function is too slow for
 	 * that. */
@@ -466,12 +339,51 @@ void take_screencapture(struct core_ctx_s *const ctx)
 	SDL_AtomicSet(&screencap_timeout, 1);
 	set_atomic_timeout(1024, &screencap_timeout, 0, "Enable Screencap");
 
-	gen_filename(filename, ctx->core_log_name, fmt);
+	SDL_Texture *tex;
+	SDL_Surface *surf = NULL;
+	int format = SDL_PIXELFORMAT_RGB24;
+	/* TODO: Use native format of renderer. */
 
-	save_texture(ctx->disp_rend, ctx->core_tex, &ctx->game_frame_res,
-		     ctx->env.flip, filename);
+	tex = SDL_CreateTexture(ctx->disp_rend, format,
+				     SDL_TEXTUREACCESS_TARGET,
+				ctx->game_frame_res.w, ctx->game_frame_res.h);
+	if(tex == NULL)
+		goto err;
 
+	if(SDL_SetRenderTarget(ctx->disp_rend, tex) != 0)
+		goto err;
+
+	/* This fixes a bug whereby OpenGL cores appear as a white screen in the
+	 * screencap. */
+	SDL_RenderDrawPoint(ctx->disp_rend, 0, 0);
+
+	if(SDL_RenderCopyEx(ctx->disp_rend, ctx->core_tex, &ctx->game_frame_res,
+			&ctx->game_frame_res, 0.0, NULL, ctx->env.flip) != 0)
+		goto err;
+
+	surf = SDL_CreateRGBSurfaceWithFormat(0, ctx->game_frame_res.w,
+					      ctx->game_frame_res.h,
+					      SDL_BITSPERPIXEL(format), format);
+	if(!surf)
+		goto err;
+
+	/* TODO: Convert format (if required) in new thread. */
+	if(SDL_RenderReadPixels(ctx->disp_rend, &ctx->game_frame_res, format,
+			surf->pixels, surf->pitch) != 0)
+	{
+		SDL_FreeSurface(surf);
+		goto err;
+	}
+
+	rec_single_img(surf, ctx->core_log_name);
+
+out:
+	SDL_DestroyTexture(tex);
 	return;
+err:
+	SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+		    "Could not take screen capture: %s", SDL_GetError());
+	goto out;
 }
 
 #if USE_X264 == 1
