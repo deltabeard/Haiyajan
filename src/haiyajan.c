@@ -809,7 +809,8 @@ static void run(struct core_ctx_s *ctx)
 
 				SDL_snprintf(sz_map[i].str,
 				             SDL_arraysize(sz_map[0].str),
-				             "%5lu %.2s", sz, prefix[p]);
+				             "%5" PRIu64 " %.2s",
+					     sz, prefix[p]);
 			}
 
 			FontPrintToRenderer(font, sz_map[0].str, &loc);
