@@ -20,6 +20,7 @@
 
 enum vid_thread_cmd {
 	VID_CMD_NO_CMD = 0,
+	VID_CMD_ENCODE_INIT,
 	VID_CMD_ENCODE_FRAME,
 	VID_CMD_ENCODE_FINISH
 };
@@ -112,6 +113,10 @@ static int vid_thread_cmd(void *data)
 
 	rec *ctx = data;
 
+	ctx->h = x264_encoder_open(&ctx->param);
+	if(ctx->h == NULL)
+		goto end;
+
 	{
 		x264_nal_t *nal;
 		int nnal;
@@ -135,6 +140,7 @@ static int vid_thread_cmd(void *data)
 
 		switch(ctx->venc_stor.cmd)
 		{
+		case VID_CMD_ENCODE_INIT:
 		case VID_CMD_NO_CMD:
 			break;
 
@@ -199,6 +205,8 @@ static int vid_thread_cmd(void *data)
 
 			goto end;
 		}
+
+		ctx->venc_stor.cmd = VID_CMD_NO_CMD;
 		}
 
 		SDL_AtomicUnlock(&ctx->venc_slk);
@@ -309,10 +317,7 @@ rec *rec_init(const char *fileout, int width, int height, double fps,
 
 	ctx->param.i_threads = 0;
 	ctx->param.b_repeat_headers = 0;
-
-	ctx->h = x264_encoder_open(&ctx->param);
-	if(ctx->h == NULL)
-		goto err;
+	ctx->venc_stor.cmd = VID_CMD_ENCODE_INIT;
 
 	/* Block until Initialisation is complete. */
 	SDL_AtomicLock(&ctx->venc_slk);
@@ -329,6 +334,10 @@ err:
 
 void rec_enc_video(rec *ctx, SDL_Surface *surf)
 {
+	if(ctx == NULL || ctx->venc_stor.cmd == VID_CMD_ENCODE_INIT ||
+			surf == NULL)
+		return;
+
 	SDL_AtomicLock(&ctx->venc_slk);
 	ctx->venc_stor.dat.pixels = surf;
 	ctx->venc_stor.cmd = VID_CMD_ENCODE_FRAME;
@@ -352,6 +361,9 @@ static void apply_preset(rec *ctx)
 
 void rec_set_crf(rec *ctx, Uint8 crf)
 {
+	if(ctx == NULL)
+		return;
+
 	SDL_AtomicLock(&ctx->venc_slk);
 	ctx->param.rc.f_rf_constant = crf;
 	x264_encoder_reconfig(ctx->h, &ctx->param);
@@ -360,8 +372,9 @@ void rec_set_crf(rec *ctx, Uint8 crf)
 
 void rec_speedup(rec *ctx)
 {
-	if(ctx->preset <= 2)
-			return;
+	if(ctx == NULL || ctx->venc_stor.cmd == VID_CMD_ENCODE_INIT ||
+			ctx->preset <= 2)
+		return;
 
 	SDL_AtomicLock(&ctx->venc_slk);
 	ctx->preset--;
@@ -371,7 +384,8 @@ void rec_speedup(rec *ctx)
 
 void rec_relax(rec *ctx)
 {
-	if(ctx->preset == preset_max)
+	if(ctx == NULL || ctx->venc_stor.cmd == VID_CMD_ENCODE_INIT ||
+			ctx->preset == preset_max)
 		return;
 
 	SDL_AtomicLock(&ctx->venc_slk);
@@ -384,7 +398,13 @@ void rec_enc_audio(rec *ctx, const Sint16 *data, uint32_t frames)
 {
 	int ret;
 	size_t samples = frames * 2;
-	Sint32 *s = SDL_malloc(samples * sizeof(Sint32));
+	Sint32 *s;
+
+	if(ctx == NULL || ctx->venc_stor.cmd == VID_CMD_ENCODE_INIT)
+		return;
+
+	/* TODO: Optimise this. */
+	s = SDL_malloc(samples * sizeof(Sint32));
 
 	for(size_t i = 0; i < samples; i++)
 	{
@@ -398,11 +418,17 @@ void rec_enc_audio(rec *ctx, const Sint16 *data, uint32_t frames)
 
 Sint64 rec_video_size(rec *ctx)
 {
+	if(ctx == NULL)
+		return 0;
+
 	return SDL_RWtell(ctx->fv);
 }
 
 Sint64 rec_audio_size(rec *ctx)
 {
+	if(ctx == NULL)
+		return 0;
+
 	return SDL_RWtell(ctx->fa);
 }
 
