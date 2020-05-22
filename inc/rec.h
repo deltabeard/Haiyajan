@@ -20,7 +20,7 @@ rec *rec_init(const char *fileout, int width, int height, double fps,
 		      Sint32 sample_rate);
 void rec_enc_video(rec *ctx, SDL_Surface *surf);
 void rec_enc_audio(rec *ctx, const Sint16 *data, uint32_t frames);
-void rec_end(rec *ctx);
+void rec_end(rec **ctxp);
 
 Sint64 rec_video_size(rec *ctx);
 Sint64 rec_audio_size(rec *ctx);

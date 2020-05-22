@@ -630,10 +630,7 @@ static void run(struct core_ctx_s *ctx)
 					}
 					else if(ctx->vid != NULL)
 					{
-#if USE_X264 == 1
-						rec_end(ctx->vid);
-						ctx->vid = NULL;
-#endif
+						rec_end(&ctx->vid);
 					}
 					break;
 				}
@@ -896,7 +893,7 @@ static void run(struct core_ctx_s *ctx)
 
 out:
 	util_exit_all();
-	rec_end(ctx->vid);
+	rec_end(&ctx->vid);
 	FontExit(font);
 }
 
