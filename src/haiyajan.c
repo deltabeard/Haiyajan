@@ -357,7 +357,7 @@ err:
 	goto out;
 }
 
-#if USE_X264 == 1
+#if ENABLE_VIDEO_RECORDING == 1
 void cap_frame(rec *vid, SDL_Renderer *rend, SDL_Texture *tex,
 		  const SDL_Rect *src, SDL_RendererFlip flip)
 {
@@ -453,7 +453,7 @@ static void run(struct core_ctx_s *ctx)
 					take_screencapture(ctx);
 					break;
 
-#if USE_X264 == 1
+#if ENABLE_VIDEO_RECORDING == 1
 				case INPUT_EVENT_RECORD_VIDEO_TOGGLE:
 				{
 					if(ctx->vid == NULL &&
@@ -600,7 +600,7 @@ static void run(struct core_ctx_s *ctx)
 				0x00, 0x00, 0x00, 0x00);
 		}
 
-#if USE_X264 == 1
+#if ENABLE_VIDEO_RECORDING == 1
 		while(ctx->vid != NULL)
 		{
 			SDL_Rect loc =

@@ -16,7 +16,7 @@
 #include <x264.h>
 #include <wavpack/wavpack.h>
 
-#if USE_WEBP == 1
+#if ENABLE_WEBP_SCREENCAPS == 1
 #include <webp/encode.h>
 #endif
 
@@ -126,6 +126,8 @@ static int vid_thread_cmd(void *data)
 		}
 	}
 
+	ctx->venc_stor.cmd = VID_CMD_NO_CMD;
+
 	SDL_AtomicUnlock(&ctx->venc_slk);
 
 	while(1)
@@ -201,8 +203,6 @@ static int vid_thread_cmd(void *data)
 
 			goto end;
 		}
-
-		ctx->venc_stor.cmd = VID_CMD_NO_CMD;
 		}
 
 		SDL_AtomicUnlock(&ctx->venc_slk);
@@ -212,9 +212,14 @@ end:
 	x264_encoder_close(ctx->h);
 
 	WavpackFlushSamples(ctx->wpc);
-	WavpackUpdateNumSamples(ctx->wpc, ctx->first_block);
-	SDL_RWseek(ctx->fa, 0, RW_SEEK_SET);
-	SDL_RWwrite(ctx->fa, ctx->first_block, ctx->first_block_sz, 1);
+
+	if(ctx->first_block != NULL)
+	{
+		WavpackUpdateNumSamples(ctx->wpc, ctx->first_block);
+		SDL_RWseek(ctx->fa, 0, RW_SEEK_SET);
+		SDL_RWwrite(ctx->fa, ctx->first_block, ctx->first_block_sz, 1);
+	}
+
 	WavpackCloseFile(ctx->wpc);
 
 	SDL_RWclose(ctx->fv);
@@ -458,7 +463,7 @@ static int rec_single_img_thread(void *param)
 	struct img_stor_s *img = param;
 	SDL_Surface *surf;
 	char filename[64];
-#if USE_WEBP == 1
+#if ENABLE_WEBP_SCREENCAPS == 1
 	const char fmt[] = "webp";
 	uint8_t *webp;
 	size_t outsz;
@@ -474,7 +479,7 @@ static int rec_single_img_thread(void *param)
 	surf = img->surf;
 	gen_filename(filename, img->core_name, fmt);
 
-#if USE_WEBP == 1
+#if ENABLE_WEBP_SCREENCAPS == 1
 	outsz = WebPEncodeRGB(surf->pixels, surf->w, surf->h, surf->pitch,
 			      95, &webp);
 	if(outsz == 0)

@@ -41,24 +41,26 @@ IS_LIB_AVAIL = $(shell $(CC) -l$(CHECK_LIB) 2>&1 >/dev/null | grep "cannot find"
 
 # Check if WEBP is available. Otherwise use BMP for screencaps.
 CHECK_LIB := webp
-USE_WEBP ?= $(IS_LIB_AVAIL)
+USE_WEBP := $(IS_LIB_AVAIL)
 ifeq ($(USE_WEBP),1)
+	ENABLE_WEBP_SCREENCAPS ?= 1
+endif
+ifeq ($(ENABLE_WEBP_SCREENCAPS),1)
 	LDLIBS += -lwebp
-	CFLAGS += -D USE_WEBP=1
+	CFLAGS += -D ENABLE_WEBP_SCREENCAPS=1
 endif
 
 CHECK_LIB := x264
-USE_X264 ?= $(IS_LIB_AVAIL)
-ifeq ($(USE_X264),1)
-	LDLIBS += -lx264
-	CFLAGS += -D USE_X264=1
-endif
-
+USE_X264 := $(IS_LIB_AVAIL)
 CHECK_LIB := wavpack
-USE_WAVPACK ?= $(IS_LIB_AVAIL)
-ifeq ($(USE_WAVPACK),1)
-	LDLIBS += -lwavpack
-	CFLAGS += -D USE_WAVPACK=1
+USE_WAVPACK := $(IS_LIB_AVAIL)
+
+ifeq ($(USE_X264)$(USE_WAVPACK),11)
+	ENABLE_VIDEO_RECORDING ?= 1
+endif
+ifeq ($(ENABLE_VIDEO_RECORDING),1)
+	LDLIBS += -lx264 -lwavpack
+	CFLAGS += -D ENABLE_VIDEO_RECORDING=1
 endif
 
 .PHONY: test
@@ -93,21 +95,32 @@ clean:
 	$(RM) ./haiyajan ./haiyajan.exe ./haiyajan.sym
 	$(MAKE) -C ./test clean
 
+# 80char      |-------------------------------------------------------------------------------|
 help:
 	@echo "Available options and their descriptions when enabled:"
-	@echo "  DEBUG=$(DEBUG)     Enables all asserts and reduces optimisation."
-	@echo "  STATIC=$(STATIC)    Enables static build."
-	@echo "  USE_WEBP=$(USE_WEBP)  Uses libwebp to encode screencaps instead of BMP."
-	@echo "              If not set, the linker will check for its availability."
-	@echo "  USE_X264=$(USE_X264)  Enables h264 video recording using libx264."
-	@echo "              If not set, the linker will check for its availability."
-	@echo "              Note that video recordings will be encoded in h264 RGB24 format, which is not "
-	@echo "              compatible with many media players. Use ffplay if unsure."
+	@echo "  DEBUG=$(DEBUG)"
+	@echo "          Enables all asserts and reduces optimisation."
+	@echo
+	@echo "  STATIC=$(STATIC)"
+	@echo "          Enables static build."
+	@echo
+	@echo "  ENABLE_WEBP_SCREENCAPS=$(ENABLE_WEBP_SCREENCAPS)"
+	@echo "          Uses libwebp to encode screencaps instead of BMP."
+	@echo "          This option will be enabled automatically if the linker is able to"
+	@echo "          detect the availability of libwebp."
+	@echo "          If this option is disabled, screencaps will be saved as BMP files."
+	@echo
+	@echo "  ENABLE_VIDEO_RECORDING=$(ENABLE_VIDEO_RECORDING)"
+	@echo "          Enables video recording of gameplay using libx264 and libwebpack."
+	@echo "          This option will be enabled automatically if the linker is able to"
+	@echo "          detect the availability of libx264 and libwebpack."
+	@echo
 	@echo "  OPT=\"$(OPT)\"   Set custom optimisation options."
 	@echo
 	@echo "  Example: make DEBUG=1 OPT=\"-Ofast -march=native\""
 	@echo
+	@echo
 	@echo "Copyright (C) 2020 Mahyar Koshkouei"
-	@echo "Haiyajan is free software; see the LICENSE file for copying conditions. There is "
+	@echo "Haiyajan is free software; see the LICENSE file for copying conditions. There is"
 	@echo "NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
 	@echo ""
