@@ -330,6 +330,8 @@ static SDL_atomic_t screencap_timeout;
 
 void take_screencapture(struct core_ctx_s *const ctx)
 {
+	SDL_Surface *surf;
+
 	/* Screencaptures limited to 1 every second. Should not be used for
 	 * recording game play as a video, as this function is too slow for
 	 * that. */
@@ -339,47 +341,16 @@ void take_screencapture(struct core_ctx_s *const ctx)
 	SDL_AtomicSet(&screencap_timeout, 1);
 	set_atomic_timeout(1024, &screencap_timeout, 0, "Enable Screencap");
 
-	SDL_Texture *tex;
-	SDL_Surface *surf = NULL;
-	int format = SDL_PIXELFORMAT_RGB24;
-	/* TODO: Use native format of renderer. */
-
-	tex = SDL_CreateTexture(ctx->disp_rend, format,
-				     SDL_TEXTUREACCESS_TARGET,
-				ctx->game_frame_res.w, ctx->game_frame_res.h);
-	if(tex == NULL)
+	surf = util_tex_to_surf(ctx->disp_rend, ctx->core_tex,
+				&ctx->game_frame_res, ctx->env.flip);
+	if(surf == NULL)
 		goto err;
-
-	if(SDL_SetRenderTarget(ctx->disp_rend, tex) != 0)
-		goto err;
-
-	/* This fixes a bug whereby OpenGL cores appear as a white screen in the
-	 * screencap. */
-	SDL_RenderDrawPoint(ctx->disp_rend, 0, 0);
-
-	if(SDL_RenderCopyEx(ctx->disp_rend, ctx->core_tex, &ctx->game_frame_res,
-			&ctx->game_frame_res, 0.0, NULL, ctx->env.flip) != 0)
-		goto err;
-
-	surf = SDL_CreateRGBSurfaceWithFormat(0, ctx->game_frame_res.w,
-					      ctx->game_frame_res.h,
-					      SDL_BITSPERPIXEL(format), format);
-	if(!surf)
-		goto err;
-
-	/* TODO: Convert format (if required) in new thread. */
-	if(SDL_RenderReadPixels(ctx->disp_rend, &ctx->game_frame_res, format,
-			surf->pixels, surf->pitch) != 0)
-	{
-		SDL_FreeSurface(surf);
-		goto err;
-	}
 
 	rec_single_img(surf, ctx->core_log_name);
 
 out:
-	SDL_DestroyTexture(tex);
 	return;
+
 err:
 	SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
 		    "Could not take screen capture: %s", SDL_GetError());
@@ -390,45 +361,12 @@ err:
 void cap_frame(rec *vid, SDL_Renderer *rend, SDL_Texture *tex,
 		  const SDL_Rect *src, SDL_RendererFlip flip)
 {
-	SDL_Texture *core_tex;
-	SDL_Surface *surf = NULL;
-	int format = SDL_PIXELFORMAT_RGB24;
-	/* TODO: Use native format of renderer. */
+	SDL_Surface *surf = util_tex_to_surf(rend, tex, src, flip);
 
-	if(src->w <= 0 || src->h <= 0)
+	if(surf == NULL)
 		return;
-
-	core_tex = SDL_CreateTexture(rend, format, SDL_TEXTUREACCESS_TARGET,
-				    src->w, src->h);
-	if(core_tex == NULL)
-		return;
-
-	if(SDL_SetRenderTarget(rend, core_tex) != 0)
-		goto err;
-
-	/* This fixes a bug whereby OpenGL cores appear as a white screen in the
-	 * screencap. */
-	SDL_RenderDrawPoint(rend, 0, 0);
-
-	if(SDL_RenderCopyEx(rend, tex, src, src, 0.0, NULL, flip) != 0)
-		goto err;
-
-	surf = SDL_CreateRGBSurfaceWithFormat(0, src->w, src->h,
-					      SDL_BITSPERPIXEL(format), format);
-	if(!surf)
-		goto err;
-
-	/* TODO: Convert format (if required) in new thread. */
-	if(SDL_RenderReadPixels(rend, src, format, surf->pixels, surf->pitch) != 0)
-	{
-		SDL_FreeSurface(surf);
-		goto err;
-	}
 
 	rec_enc_video(vid, surf);
-
-err:
-	SDL_DestroyTexture(core_tex);
 }
 #endif
 

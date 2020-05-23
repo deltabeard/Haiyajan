@@ -31,4 +31,6 @@ void set_atomic_timeout(Uint32 timeout_ms, SDL_atomic_t *atomic, int setval,
  */
 void util_exit_all(void);
 
-typedef struct util_cond_s util_cond;
+SDL_Surface *util_tex_to_surf(SDL_Renderer *rend, SDL_Texture *tex,
+			      const SDL_Rect *const src,
+			      const SDL_RendererFlip flip);
