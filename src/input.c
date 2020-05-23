@@ -298,7 +298,7 @@ Sint16 input_get(const struct input_ctx_s *const in_ctx,
 	if(index != 0 || port >= MAX_PLAYERS)
 		return 0;
 
-	if(in_ctx->player[port].hai_type == (input_type)device)
+	if(in_ctx->player[port].hai_type != (input_type)device)
 	{
 		static Uint8 log_lim = 0;
 		if(((log_lim >> port) & 0b1) == 0)
@@ -313,7 +313,7 @@ Sint16 input_get(const struct input_ctx_s *const in_ctx,
 				"%d", port);
 		}
 		log_lim |= 0b1 << port;
-		return 0;
+		//return 0;
 	}
 
 	switch(device)
@@ -321,8 +321,6 @@ Sint16 input_get(const struct input_ctx_s *const in_ctx,
 	case RETRO_INPUT_ANALOG:
 		/* Only analogue input devices are supported by libretro analog
 		 * inputs. */
-		if(in_ctx->player[port].hai_type != RETRO_INPUT_ANALOG)
-			return 0;
 
 		if(index < RETRO_DEVICE_INDEX_ANALOG_BUTTON)
 		{
@@ -330,6 +328,8 @@ Sint16 input_get(const struct input_ctx_s *const in_ctx,
 				{ SDL_CONTROLLER_AXIS_LEFTX, SDL_CONTROLLER_AXIS_LEFTY },
 				{ SDL_CONTROLLER_AXIS_RIGHTX, SDL_CONTROLLER_AXIS_RIGHTY }
 			};
+
+			//SDL_Log("Axis %d: %d", index, SDL_GameControllerGetAxis(in_ctx->player[port].gc, lr_to_gcax[index][id]));
 
 			return SDL_GameControllerGetAxis(in_ctx->player[port].gc,
 							 lr_to_gcax[index][id]);
@@ -342,7 +342,7 @@ Sint16 input_get(const struct input_ctx_s *const in_ctx,
 
 		SDL_GameControllerButton btn = lr_to_gcb[id];
 		if(btn != -1)
-			return SDL_GameControllerGetButton(in_ctx->player[port].gc, btn) ? SDL_MAX_SINT16 : 0;
+			return SDL_GameControllerGetButton(in_ctx->player[port].gc, btn);
 		else if(id == RETRO_DEVICE_ID_JOYPAD_L2)
 			return SDL_GameControllerGetAxis(in_ctx->player[port].gc, SDL_CONTROLLER_AXIS_TRIGGERLEFT);
 		else if(id == RETRO_DEVICE_ID_JOYPAD_R2)
