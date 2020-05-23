@@ -147,5 +147,8 @@ struct core_ctx_s
 
 	struct input_ctx_s inp;
 	struct settings_s stngs;
+
+#if ENABLE_VIDEO_RECORDING == 1
 	rec *vid;
+#endif
 };

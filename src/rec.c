@@ -64,6 +64,7 @@ struct rec_s
 	};
 };
 
+#if ENABLE_VIDEO_RECORDING == 1
 /* Max preset is fast. */
 static const Uint8 preset_max = 5;
 
@@ -449,6 +450,7 @@ void rec_end(rec **ctxp)
 
 	return;
 }
+#endif /* ENABLE_VIDEO_RECORDING */
 
 struct img_stor_s {
 	SDL_Surface *surf;
@@ -492,7 +494,8 @@ static int rec_single_img_thread(void *param)
 	}
 	WebPFree(webp);
 #else
-	SDL_SaveBMP(surf, filename);
+	if(SDL_SaveBMP(surf, filename) != 0)
+		goto out;
 #endif
 
 	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,

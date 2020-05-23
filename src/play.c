@@ -434,10 +434,12 @@ size_t cb_retro_audio_sample_batch(const int16_t *data, size_t frames)
 	if(SDL_GetQueuedAudioSize(ctx_retro->audio_dev) >= 32768UL)
 		SDL_ClearQueuedAudio(ctx_retro->audio_dev);
 
+#if ENABLE_VIDEO_RECORDING == 1
 	if(ctx_retro->vid != NULL)
 	{
 		rec_enc_audio(ctx_retro->vid, data, frames);
 	}
+#endif
 
 	SDL_QueueAudio(ctx_retro->audio_dev, data, frames * sizeof(Uint16) * 2);
 

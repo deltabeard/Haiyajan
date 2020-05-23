@@ -492,6 +492,7 @@ static void run(struct core_ctx_s *ctx)
 				switch(ev.user.code)
 				{
 				case TIMER_SPEED_UP_AGGRESSIVELY:
+#if ENABLE_VIDEO_RECORDING == 1
 					if(ctx->vid != NULL)
 					{
 						rec_speedup(ctx->vid);
@@ -499,18 +500,23 @@ static void run(struct core_ctx_s *ctx)
 						rec_speedup(ctx->vid);
 						rec_speedup(ctx->vid);
 					}
+#endif
 
 					break;
 
 				case TIMER_SPEED_UP:
+#if ENABLE_VIDEO_RECORDING == 1
 					if(ctx->vid != NULL)
 						rec_speedup(ctx->vid);
+#endif
 					break;
 
 				case TIMER_OKAY:
 				default:
+#if ENABLE_VIDEO_RECORDING == 1
 					if(ctx->vid != NULL)
 						rec_relax(ctx->vid);
+#endif
 					break;
 				}
 			}
@@ -522,7 +528,11 @@ static void run(struct core_ctx_s *ctx)
 
 		frames++;
 
+#if ENABLE_VIDEO_RECORDING == 1
 		if(tim_cmd < 0 && ctx->vid == NULL)
+#else
+		if(tim_cmd < 0)
+#endif
 		{
 			/* Disable video for the skipped frame to improve
 			 * performance. But only when we're not recording a
@@ -743,7 +753,9 @@ static void run(struct core_ctx_s *ctx)
 
 out:
 	util_exit_all();
+#if ENABLE_VIDEO_RECORDING == 1
 	rec_end(&ctx->vid);
+#endif
 	FontExit(font);
 }
 
