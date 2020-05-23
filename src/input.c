@@ -339,12 +339,10 @@ Sint16 input_get(const struct input_ctx_s *const in_ctx,
 	{
 		if(in_ctx->player[port].hai_type == RETRO_INPUT_KEYBOARD)
 			return (in_ctx->player[port].retro_state >> id) & 0b1;
-		else if(in_ctx->player[port].hai_type != RETRO_INPUT_JOYPAD)
-			return 0;
 
 		SDL_GameControllerButton btn = lr_to_gcb[id];
 		if(btn != -1)
-			return SDL_GameControllerGetButton(in_ctx->player[port].gc, id) ? SDL_MAX_SINT16 : 0;
+			return SDL_GameControllerGetButton(in_ctx->player[port].gc, btn) ? SDL_MAX_SINT16 : 0;
 		else if(id == RETRO_DEVICE_ID_JOYPAD_L2)
 			return SDL_GameControllerGetAxis(in_ctx->player[port].gc, SDL_CONTROLLER_AXIS_TRIGGERLEFT);
 		else if(id == RETRO_DEVICE_ID_JOYPAD_R2)

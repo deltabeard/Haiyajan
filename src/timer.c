@@ -61,8 +61,10 @@ void timer_profile_end(struct timer_ctx_s *const tim)
 	else
 		status = TIMER_OKAY;
 
+#if 0
 	SDL_LogVerbose(SDL_LOG_CATEGORY_SYSTEM, "Average busy time %.2f",
 		       ((float)busy_acu_us / 1024));
+#endif
 
 	{
 		SDL_Event event;
