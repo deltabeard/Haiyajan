@@ -31,7 +31,10 @@ void gen_filename(char filename[static 64], const char *core_name,
 					 SDL_GetTicks());
 	}
 
-	SDL_snprintf(filename, 64, "%s-%s.%s", time_str, core_name, fmt);
+	SDL_snprintf(filename, 64, "%.32s%.1s%.20s.%s", time_str,
+			core_name == NULL ? "" : "-",
+			core_name == NULL ? "" : core_name,
+			fmt);
 }
 
 struct at_tim_s
@@ -91,8 +94,6 @@ SDL_Surface *util_tex_to_surf(SDL_Renderer *rend, SDL_Texture *tex,
 			      const SDL_Rect *const src,
 			      const SDL_RendererFlip flip)
 {
-	/* Get native texture format. */
-	/* Usual stuff. */
 	SDL_Texture *core_tex;
 	SDL_Surface *surf = NULL;
 	int fmt = SDL_PIXELFORMAT_RGB24;

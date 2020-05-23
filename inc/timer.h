@@ -36,7 +36,6 @@ struct timer_ctx_s
 	SDL_atomic_t status_atomic;
 };
 
-/* TODO: update docs. */
 /* TODO: use Uint64 instead of double. */
 
 /**
@@ -54,5 +53,10 @@ int timer_init(struct timer_ctx_s *const tim, double emulated_rate);
  */
 int timer_get_delay(struct timer_ctx_s *const tim, Uint32 elapsed_ms);
 
+/**
+ * Profiles the run loop and checks to make sure that VSYNC won't be missed. If
+ * the busy loop is taking too long, an event is triggered to speed up
+ * non-essential processes.
+ */
 void timer_profile_start(struct timer_ctx_s *const tim);
 void timer_profile_end(struct timer_ctx_s *const tim);

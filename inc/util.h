@@ -16,6 +16,14 @@
 
 #include <SDL2/SDL.h>
 
+/**
+ * Generates a filename based upon the current time, and the core name. Filename
+ * will be a maximum of 63 characters with a NULL terminator.
+ *
+ * \param filename	String array of at least 64 bytes.
+ * \param core_name	Name of the core. Can be NULL if not available.
+ * \param fmt		File format to use in filename.
+ */
 void gen_filename(char filename[static 64], const char *core_name,
 		  const char fmt[static 3]);
 
