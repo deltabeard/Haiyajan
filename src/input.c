@@ -15,6 +15,7 @@
 #include <SDL2/SDL.h>
 #include <libretro.h>
 #include <input.h>
+#include <tinf.h>
 
 struct keymap_info_s {
 	/* A value of type input_cmd_type. */
@@ -62,8 +63,17 @@ void input_map(struct input_ctx_s *const in_ctx, input_type input_type,
 
 void input_init(struct input_ctx_s *restrict in_ctx)
 {
-	#include <gamecontrollerdb.h>
+#if defined(__linux__)
+	#include <gcdb_bin_linux.h>
+#elif define(_WIN32)
+	#include <gcdb_bin_windows.h>
+#else
+	#include <gcdb_bin_all.h>
+#endif
 	SDL_RWops *gcdb_rw;
+	Uint8 *gcdb_txt;
+	size_t gcdb_txt_len_act = gcdb_txt_len;
+	tinf_error_code tinf;
 	const struct {
 		union input_cmd_trigger_u trig;
 		struct keymap_info_s map;
@@ -98,14 +108,20 @@ void input_init(struct input_ctx_s *restrict in_ctx)
 	};
 
 	SDL_zerop(in_ctx);
-	gcdb_rw = SDL_RWFromConstMem(gamecontrollerdb_txt,
-				     gamecontrollerdb_txt_len);
+
+	gcdb_txt = SDL_malloc(gcdb_txt_len);
+	if(gcdb_txt == NULL)
+		goto err;
+
+	tinf = tinf_uncompress(gcdb_txt, &gcdb_txt_len_act, gcdb_bin, gcdb_bin_len);
+	if(tinf != TINF_OK)
+		goto err;
+
+	gcdb_rw = SDL_RWFromConstMem(gcdb_txt, gcdb_txt_len_act);
 	if(SDL_GameControllerAddMappingsFromRW(gcdb_rw, SDL_TRUE) == -1)
-	{
-		SDL_LogWarn(SDL_LOG_CATEGORY_INPUT,
-			    "Unable to load internal controller mappings: %s",
-			    SDL_GetError());
-	}
+		goto err;
+
+	SDL_free(gcdb_txt);
 
 	if((in_ctx->input_cmd_event = SDL_RegisterEvents(1)) == (Uint32)-1)
 	{
@@ -128,6 +144,13 @@ void input_init(struct input_ctx_s *restrict in_ctx)
 	in_ctx->player[0].lr_type = in_ctx->player[0].hai_type;
 
 	SDL_LogVerbose(SDL_LOG_CATEGORY_INPUT, "Initialised keyboard input");
+	return;
+
+err:
+	SDL_free(gcdb_txt);
+	SDL_LogWarn(SDL_LOG_CATEGORY_INPUT,
+		    "Unable to initialise input system: %s",
+		    SDL_GetError());
 	return;
 }
 

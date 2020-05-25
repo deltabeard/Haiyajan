@@ -68,7 +68,7 @@ endif
 all: $(TARGETS)
 haiyajan: ./src/haiyajan.o ./src/load.o ./src/play.o ./src/load.o \
 		./src/timer.o ./src/font.o ./src/input.o ./src/gl.o \
-		./src/rec.o ./src/util.o
+		./src/rec.o ./src/util.o ./src/tinflate.c
 	+$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 ./src/haiyajan.o: ./src/haiyajan.c ./inc/*.h
@@ -77,7 +77,8 @@ haiyajan: ./src/haiyajan.o ./src/load.o ./src/play.o ./src/load.o \
 ./src/load.o: ./src/load.c ./inc/load.h ./inc/haiyajan.h ./inc/libretro.h
 ./src/play.o: ./src/play.c ./inc/play.h ./inc/haiyajan.h ./inc/libretro.h
 ./src/timer.o: ./src/timer.c ./inc/timer.h
-./src/input.o: ./src/input.c ./inc/input.h ./inc/gamecontrollerdb.h
+./src/input.o: ./src/input.c ./inc/input.h ./inc/gcdb_bin_all.h \
+		./inc/gcdb_bin_linux.h ./inc/gcdb_bin_windows.h
 ./src/util.o: ./src/util.c ./inc/util.h
 
 # Saves debug symbols in a separate file, and strips the main executable.
