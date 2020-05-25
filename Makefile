@@ -68,7 +68,7 @@ endif
 all: $(TARGETS)
 haiyajan: ./src/haiyajan.o ./src/load.o ./src/play.o ./src/load.o \
 		./src/timer.o ./src/font.o ./src/input.o ./src/gl.o \
-		./src/rec.o ./src/util.o ./src/tinflate.c
+		./src/rec.o ./src/util.o ./src/tinflate.o
 	+$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 ./src/haiyajan.o: ./src/haiyajan.c ./inc/*.h
