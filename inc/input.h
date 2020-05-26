@@ -121,9 +121,35 @@ struct input_ctx_s
 	struct input_device_s player[MAX_PLAYERS];
 };
 
+/**
+ * Range of events that can be handled by input_handle_event().
+ */
 #define INPUT_EVENT_CHK(x) (x >= 0x300 && x < 0x900)
 
+/**
+ * Initialise input system.
+ *
+ * \param in_ctx	Input structure context to initialise.
+ */
 void input_init(struct input_ctx_s *restrict in_ctx);
+
+/**
+ * Handle an input event.
+ *
+ * \param in_ctx	Input structure related to the event.
+ * \param ev		Event to handle.
+ */
 void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev);
+
+/**
+ * Obtain input.
+ *
+ * \param in_ctx	Input struct context.
+ * \param port		Port the controller is attached to.
+ * \param device	Type of device that is connect to the port.
+ * \param index		The series of buttons that is requested.
+ * \param id		The button requested.
+ * \return		Value of requested button. 0 is not pressed.
+ */
 Sint16 input_get(const struct input_ctx_s *const in_ctx,
 		 unsigned port, unsigned device, unsigned index, unsigned id);

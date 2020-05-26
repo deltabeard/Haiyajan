@@ -68,6 +68,10 @@ void set_atomic_timeout(Uint32 timeout_ms, SDL_atomic_t *atomic, int setval,
 {
 	SDL_Thread *t;
 	struct at_tim_s *at = SDL_malloc(sizeof(struct at_tim_s));
+	const char *const placeholder = "Timeout";
+
+	SDL_assert_paranoid(timeout_ms > 0);
+	SDL_assert_paranoid(atomic != NULL);
 
 	if(at == NULL)
 	{
@@ -79,6 +83,9 @@ void set_atomic_timeout(Uint32 timeout_ms, SDL_atomic_t *atomic, int setval,
 	at->timeout_ms = timeout_ms;
 	at->atomic = atomic;
 	at->setval = setval;
+
+	if(name == NULL)
+		name = placeholder;
 
 	t = SDL_CreateThread(util_timeout_thread, name, at);
 	SDL_DetachThread(t);
@@ -102,6 +109,7 @@ SDL_Surface *util_tex_to_surf(SDL_Renderer *rend, SDL_Texture *tex,
 	if(src->w <= 0 || src->h <= 0)
 		return NULL;
 
+	/* TODO: Can be optimised if no flipping is required. */
 	core_tex = SDL_CreateTexture(rend, fmt, SDL_TEXTUREACCESS_TARGET,
 				    src->w, src->h);
 	if(core_tex == NULL)

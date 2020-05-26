@@ -65,7 +65,7 @@ void input_init(struct input_ctx_s *restrict in_ctx)
 {
 #if defined(__linux__)
 	#include <gcdb_bin_linux.h>
-#elif define(_WIN32)
+#elif defined(_WIN32)
 	#include <gcdb_bin_windows.h>
 #else
 	#include <gcdb_bin_all.h>
