@@ -29,9 +29,7 @@
 #include <limits.h>
 #include <stddef.h>
 
-#if defined(ULONG_MAX) && (ULONG_MAX) < 0xFFFFFFFFUL
-#  error "tinf requires unsigned long to be at least 32-bit"
-#endif
+#include <SDL2/SDL_assert.h>
 
 /* -- Internal data structures -- */
 
@@ -55,57 +53,6 @@ struct tinf_data {
 	struct tinf_tree ltree; /* Literal/length tree */
 	struct tinf_tree dtree; /* Distance tree */
 };
-
-/* -- Utility functions -- */
-
-static unsigned long read_le16(const unsigned char *p)
-{
-	return ((unsigned long) p[0])
-	     | ((unsigned long) p[1] << 8);
-}
-
-/* Build fixed Huffman trees */
-static void tinf_build_fixed_trees(struct tinf_tree *lt, struct tinf_tree *dt)
-{
-	int i;
-
-	/* Build fixed literal/length tree */
-	for (i = 0; i < 16; ++i) {
-		lt->counts[i] = 0;
-	}
-
-	lt->counts[7] = 24;
-	lt->counts[8] = 152;
-	lt->counts[9] = 112;
-
-	for (i = 0; i < 24; ++i) {
-		lt->symbols[i] = 256 + i;
-	}
-	for (i = 0; i < 144; ++i) {
-		lt->symbols[24 + i] = i;
-	}
-	for (i = 0; i < 8; ++i) {
-		lt->symbols[24 + 144 + i] = 280 + i;
-	}
-	for (i = 0; i < 112; ++i) {
-		lt->symbols[24 + 144 + 8 + i] = 144 + i;
-	}
-
-	lt->max_sym = 285;
-
-	/* Build fixed distance tree */
-	for (i = 0; i < 16; ++i) {
-		dt->counts[i] = 0;
-	}
-
-	dt->counts[5] = 32;
-
-	for (i = 0; i < 32; ++i) {
-		dt->symbols[i] = i;
-	}
-
-	dt->max_sym = 29;
-}
 
 /* Given an array of code lengths, build a tree */
 static tinf_error_code tinf_build_tree(struct tinf_tree *t,
@@ -482,58 +429,6 @@ static tinf_error_code tinf_inflate_block_data(struct tinf_data *d,
 	}
 }
 
-/* Inflate an uncompressed block of data */
-static tinf_error_code tinf_inflate_uncompressed_block(struct tinf_data *d)
-{
-	unsigned long length, invlength;
-
-	if (d->source_end - d->source < 4) {
-		return TINF_DATA_ERROR;
-	}
-
-	/* Get length */
-	length = read_le16(d->source);
-
-	/* Get one's complement of length */
-	invlength = read_le16(d->source + 2);
-
-	/* Check length */
-	if (length != (~invlength & 0x0000FFFF)) {
-		return TINF_DATA_ERROR;
-	}
-
-	d->source += 4;
-
-	if ((unsigned long)(d->source_end - d->source) < length) {
-		return TINF_DATA_ERROR;
-	}
-
-	if ((unsigned long)(d->dest_end - d->dest) < length) {
-		return TINF_BUF_ERROR;
-	}
-
-	/* Copy block */
-	while (length--) {
-		*d->dest++ = *d->source++;
-	}
-
-	/* Make sure we start next block on a byte boundary */
-	d->tag = 0;
-	d->bitcount = 0;
-
-	return TINF_OK;
-}
-
-/* Inflate a block of data compressed with fixed Huffman trees */
-static tinf_error_code tinf_inflate_fixed_block(struct tinf_data *d)
-{
-	/* Build fixed Huffman trees */
-	tinf_build_fixed_trees(&d->ltree, &d->dtree);
-
-	/* Decode block using fixed trees */
-	return tinf_inflate_block_data(d, &d->ltree, &d->dtree);
-}
-
 /* Inflate a block of data compressed with dynamic Huffman trees */
 static tinf_error_code tinf_inflate_dynamic_block(struct tinf_data *d)
 {
@@ -578,23 +473,12 @@ tinf_error_code tinf_uncompress(void *dest, size_t *destLen,
 		/* Read block type (2 bits) */
 		btype = tinf_getbits(&d, 2);
 
-		/* Decompress block */
-		switch (btype) {
-		case 0:
-			/* Decompress uncompressed block */
-			res = tinf_inflate_uncompressed_block(&d);
-			break;
-		case 1:
-			/* Decompress block with fixed Huffman trees */
-			res = tinf_inflate_fixed_block(&d);
-			break;
-		case 2:
-			/* Decompress block with dynamic Huffman trees */
+		if(btype == 2) {
 			res = tinf_inflate_dynamic_block(&d);
-			break;
-		default:
+		}
+		else {
+			SDL_assert(0);
 			res = TINF_DATA_ERROR;
-			break;
 		}
 
 		if (res != TINF_OK) {
@@ -612,23 +496,3 @@ tinf_error_code tinf_uncompress(void *dest, size_t *destLen,
 out:
 	return res;
 }
-
-/* clang -g -O1 -fsanitize=fuzzer,address -DTINF_FUZZING tinflate.c */
-#if defined(TINF_FUZZING)
-#include <limits.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-
-unsigned char depacked[64 * 1024];
-
-extern int
-LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
-{
-	if (size > UINT_MAX / 2) { return 0; }
-	unsigned long destLen = sizeof(depacked);
-	tinf_uncompress(depacked, &destLen, data, size);
-	return 0;
-}
-#endif
