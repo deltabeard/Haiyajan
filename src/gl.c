@@ -50,6 +50,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <libretro.h>
 #include <gl.h>
 
+/**
+ * FIXME: Fix 2D texture display in Mini64 Pokemon Stadium.
+ * See: gfx_display_ctx_driver
+ *
+ * FIXME: Fix OpenGL ES2 in haiyajan.
+ */
+
 struct gl_shader
 {
 	GLuint vao;
