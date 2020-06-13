@@ -51,9 +51,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <gl.h>
 
 /**
- * FIXME: Fix 2D texture display in Mini64 Pokemon Stadium.
- * See: gfx_display_ctx_driver
- *
  * FIXME: Fix OpenGL ES2 in haiyajan.
  */
 
@@ -216,23 +213,17 @@ static GLuint compile_shader(glctx *ctx, GLenum type, GLsizei count,
 static void init_shaders(glctx *ctx)
 {
 	const char *const g_vshader_src =
-	"#version 150\n"
-	"in vec2 i_pos;\n"
-	"in vec2 i_coord;\n"
-	"out vec2 o_coord;\n"
-	"uniform mat4 u_mvp;\n"
-	"void main() {\n"
-	"o_coord = i_coord;\n"
-	"gl_Position = vec4(i_pos, 0.0, 1.0) * u_mvp;\n"
-	"}";
+		"attribute vec4 vPosition;"
+		"void main() {"
+		"  gl_Position = vPosition;"
+		"}";
 
 	const char *const g_fshader_src =
-	"#version 150\n"
-	"in vec2 o_coord;\n"
-	"uniform sampler2D u_tex;\n"
-	"void main() {\n"
-	"gl_FragColor = texture2D(u_tex, o_coord);\n"
-	"}";
+		"precision mediump float;"
+		"uniform vec4 vColor;"
+		"void main() {"
+		"  gl_FragColor = vColor;"
+		"}";
 
 	GLuint vshader = compile_shader(ctx, GL_VERTEX_SHADER, 1, &g_vshader_src);
 	GLuint fshader = compile_shader(ctx, GL_FRAGMENT_SHADER, 1, &g_fshader_src);
@@ -296,15 +287,6 @@ static void refresh_vertex_data(const glctx *ctx, int w, int h)
 	ctx->fn.glBindBuffer(GL_ARRAY_BUFFER, ctx->gl_sh.vbo);
 	ctx->fn.glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data, GL_STREAM_DRAW);
 
-#if 0
-	ctx->fn.glEnableVertexAttribArray(ctx->gl_sh.i_pos);
-	ctx->fn.glEnableVertexAttribArray(ctx->gl_sh.i_coord);
-	ctx->fn.glVertexAttribPointer(ctx->gl_sh.i_pos, 2, GL_FLOAT, GL_FALSE,
-				      sizeof(float) * 4, 0);
-	ctx->fn.glVertexAttribPointer(ctx->gl_sh.i_coord, 2, GL_FLOAT, GL_FALSE,
-				      sizeof(float) * 4, (void *)(2 * sizeof(float)));
-#endif
-
 	ctx->fn.glBindVertexArray(0);
 	ctx->fn.glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
@@ -345,7 +327,6 @@ glctx *gl_init(SDL_Renderer *rend, SDL_Texture **tex,
 		return NULL;
 	}
 
-	SDL_LogVerbose(SDL_LOG_CATEGORY_RENDER, "OpenGL functions initialised");
 	SDL_LogInfo(SDL_LOG_CATEGORY_RENDER, "OpenGL %s in use",
 		    ctx->fn.glGetString(GL_VERSION));
 
@@ -435,7 +416,6 @@ void gl_prerun(glctx *ctx)
 	SDL_SetRenderTarget(ctx->rend, *ctx->tex);
 	SDL_GL_BindTexture(*ctx->tex, NULL, NULL);
 
-	ctx->fn.glBindTexture(GL_TEXTURE_2D, 0);
 	ctx->fn.glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 	ctx->fn.glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 }
