@@ -42,9 +42,7 @@ IS_LIB_AVAIL = $(shell $(CC) -l$(CHECK_LIB) 2>&1 >/dev/null | grep "cannot find"
 # Check if WEBP is available. Otherwise use BMP for screencaps.
 CHECK_LIB := webp
 USE_WEBP := $(IS_LIB_AVAIL)
-ifeq ($(USE_WEBP),1)
-	ENABLE_WEBP_SCREENCAPS ?= 1
-endif
+ENABLE_WEBP_SCREENCAPS ?= $(USE_WEBP)
 ifeq ($(ENABLE_WEBP_SCREENCAPS),1)
 	LDLIBS += -lwebp
 	CFLAGS += -D ENABLE_WEBP_SCREENCAPS=1
@@ -57,6 +55,8 @@ USE_WAVPACK := $(IS_LIB_AVAIL)
 
 ifeq ($(USE_X264)$(USE_WAVPACK),11)
 	ENABLE_VIDEO_RECORDING ?= 1
+else
+	ENABLE_VIDEO_RECORDING ?= 0
 endif
 ifeq ($(ENABLE_VIDEO_RECORDING),1)
 	LDLIBS += -lx264 -lwavpack
