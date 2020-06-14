@@ -13,15 +13,16 @@
  */
 
 #include <SDL2/SDL.h>
-#include <x264.h>
-#include <wavpack/wavpack.h>
+#include <rec.h>
+#include <util.h>
 
 #if ENABLE_WEBP_SCREENCAPS == 1
 #include <webp/encode.h>
 #endif
 
-#include <rec.h>
-#include <util.h>
+#if ENABLE_VIDEO_RECORDING == 1
+#include <wavpack/wavpack.h>
+#include <x264.h>
 
 enum vid_thread_cmd {
 	VID_CMD_NO_CMD = 0,
@@ -64,7 +65,6 @@ struct rec_s
 	};
 };
 
-#if ENABLE_VIDEO_RECORDING == 1
 /* Max preset is fast. */
 static const Uint8 preset_max = 5;
 
