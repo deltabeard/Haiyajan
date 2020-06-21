@@ -46,7 +46,9 @@ struct rec_s
 		SDL_RWops *fa;
 		WavpackContext *wpc;
 		void *first_block;
-		int32_t first_block_sz;
+		Sint32 first_block_sz;
+		Sint32 *samples;
+		Uint64 samples_sz;
 	};
 
 	struct
@@ -131,6 +133,7 @@ static int vid_thread_cmd(void *data)
 
 	SDL_AtomicUnlock(&ctx->venc_slk);
 
+	/* Loop until a request is made to finish video recording. */
 	while(1)
 	{
 		SDL_LockMutex(ctx->venc_mtx);
@@ -202,6 +205,10 @@ static int vid_thread_cmd(void *data)
 				}
 			}
 
+			SDL_free(ctx->samples);
+			ctx->samples = NULL;
+			ctx->samples_sz = 0;
+
 			goto end;
 		}
 		}
@@ -211,7 +218,6 @@ static int vid_thread_cmd(void *data)
 
 end:
 	x264_encoder_close(ctx->h);
-
 	WavpackFlushSamples(ctx->wpc);
 
 	if(ctx->first_block != NULL)
@@ -400,22 +406,46 @@ void rec_enc_audio(rec *ctx, const Sint16 *data, uint32_t frames)
 {
 	int ret;
 	size_t samples = frames * 2;
-	Sint32 *s;
 
 	if(ctx == NULL || ctx->venc_stor.cmd == VID_CMD_ENCODE_INIT)
 		return;
 
-	/* TODO: Optimise this. */
-	s = SDL_malloc(samples * sizeof(Sint32));
-
-	for(size_t i = 0; i < samples; i++)
+	if(ctx->samples_sz < samples * sizeof(Sint32))
 	{
-		s[i] = data[i];
+		ctx->samples_sz = samples * sizeof(Sint32);
+		ctx->samples = SDL_realloc(ctx->samples, ctx->samples_sz);
 	}
 
-	ret = WavpackPackSamples(ctx->wpc, s, frames);
-	SDL_free(s);
-	SDL_assert_always(ret);
+	if(ctx->samples == NULL)
+	{
+		static Uint8 once = 1;
+		if(once == 0)
+			return;
+
+		once = 0;
+		SDL_LogWarn(SDL_LOG_CATEGORY_AUDIO, "Unable to allocate audio"
+						    " buffer; audio will not be recorded, "
+						    "and this message will no longer appear.");
+		return;
+	}
+
+	for(size_t i = 0; i < samples; i++)
+		ctx->samples[i] = data[i];
+
+	ret = WavpackPackSamples(ctx->wpc, ctx->samples, frames);
+	if(ret == 0)
+	{
+		static Uint8 once = 1;
+		if(once == 0)
+			return;
+
+		SDL_LogWarn(SDL_LOG_CATEGORY_AUDIO, "Wavpack was unable to "
+				      "encode audio; audio will not be "
+	  "recorded, and this message will no longer appear.");
+		return;
+	}
+
+	return;
 }
 
 Sint64 rec_video_size(rec *ctx)
