@@ -24,21 +24,20 @@ void gen_filename(char filename[static 64], const char *core_name,
 	char time_str[32];
 
 	now = time(NULL);
-	if(now == (time_t) -1 || (tmp = localtime(&now)) == NULL ||
-		strftime(time_str, sizeof(time_str), "%Y-%m-%d-%H%M%S", tmp) == 0)
+	if(now == (time_t)-1 || (tmp = localtime(&now)) == NULL ||
+	   strftime(time_str, sizeof(time_str), "%Y-%m-%d-%H%M%S", tmp) == 0)
 	{
 		SDL_snprintf(time_str, sizeof(time_str), "%010u",
-					 SDL_GetTicks());
+			     SDL_GetTicks());
 	}
 
 	SDL_snprintf(filename, 64, "%.32s%.1s%.20s.%s", time_str,
-			core_name == NULL ? "" : "-",
-			core_name == NULL ? "" : core_name,
-			fmt);
+		     core_name == NULL ? "" : "-",
+		     core_name == NULL ? "" : core_name,
+		     fmt);
 }
 
-struct at_tim_s
-{
+struct at_tim_s {
 	Uint32 timeout_ms;
 	SDL_atomic_t *atomic;
 	int setval;
@@ -64,7 +63,7 @@ out:
 }
 
 void set_atomic_timeout(Uint32 timeout_ms, SDL_atomic_t *atomic, int setval,
-	const char *name)
+			const char *name)
 {
 	SDL_Thread *t;
 	struct at_tim_s *at = SDL_malloc(sizeof(struct at_tim_s));
@@ -111,7 +110,7 @@ SDL_Surface *util_tex_to_surf(SDL_Renderer *rend, SDL_Texture *tex,
 
 	/* TODO: Can be optimised if no flipping is required. */
 	core_tex = SDL_CreateTexture(rend, fmt, SDL_TEXTUREACCESS_TARGET,
-				    src->w, src->h);
+				     src->w, src->h);
 	if(core_tex == NULL)
 		return NULL;
 
@@ -119,7 +118,7 @@ SDL_Surface *util_tex_to_surf(SDL_Renderer *rend, SDL_Texture *tex,
 		goto err;
 
 	/* This fixes a bug whereby OpenGL cores appear as a white screen in the
-	 * screencap. */
+	 * screenshot. */
 	SDL_RenderDrawPoint(rend, 0, 0);
 
 	if(SDL_RenderCopyEx(rend, tex, src, src, 0.0, NULL, flip) != 0)

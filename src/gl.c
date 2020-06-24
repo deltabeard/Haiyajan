@@ -54,8 +54,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * FIXME: Fix OpenGL ES2 in haiyajan.
  */
 
-struct gl_shader
-{
+struct gl_shader {
 	GLuint vao;
 	GLuint vbo;
 	GLuint program;
@@ -66,12 +65,12 @@ struct gl_shader
 	GLint u_mvp;
 };
 
-struct gl_fn
-{
+struct gl_fn {
 	GLuint (*glCreateShader)(GLenum type);
 	void (*glCompileShader)(GLuint shader);
 	void (*glShaderSource)(GLuint shader, GLsizei count,
-			const GLchar *const *string, const GLint *length);
+			       const GLchar *const *string,
+			       const GLint *length);
 	void (*glGetShaderiv)(GLuint shader, GLenum pname, GLint *params);
 	void (*glGetShaderInfoLog)(GLuint shader, GLsizei bufSize,
 				   GLsizei *length, GLchar *infoLog);
@@ -96,21 +95,24 @@ struct gl_fn
 	void (*glRenderbufferStorage)(GLenum target, GLenum internalformat,
 				      GLsizei width, GLsizei height);
 	void (*glFramebufferRenderbuffer)(GLenum target, GLenum attachment,
-					  GLenum renderbuffertarget, GLuint renderbuffer);
+					  GLenum renderbuffertarget,
+					  GLuint renderbuffer);
 	void (*glBindVertexArray)(GLuint array);
 	void (*glBindBuffer)(GLenum target, GLuint buffer);
-	void (*glBufferData)(GLenum target, GLsizeiptr size, const void *data, GLenum usage);
+	void (*glBufferData)(GLenum target, GLsizeiptr size, const void *data,
+			     GLenum usage);
 	void (*glPixelStorei)(GLenum pname, GLint param);
 	void (*glBindTexture)(GLenum target, GLuint texture);
 	void (*glGetIntegerv)(GLenum pname, GLint *data);
 	const GLubyte *(*glGetString)(GLenum name);
 	void (*glEnableVertexAttribArray)(GLuint index);
-	void (*glVertexAttribPointer)(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void *pointer);
+	void (*glVertexAttribPointer)(GLuint index, GLint size, GLenum type,
+				      GLboolean normalized, GLsizei stride,
+				      const void *pointer);
 	void (*glDrawArrays)(GLenum mode, GLint first, GLsizei count);
 };
 
-struct gl_ctx_s
-{
+struct gl_ctx_s {
 	/* Set by core. */
 	unsigned char depth : 1;
 	unsigned char stencil : 1;
@@ -138,39 +140,39 @@ static int gl_init_fn(glctx *ctx)
 		const char *fn_str;
 		void **fn;
 	} const fngen[] = {
-		{ "glCreateShader",	(void **)&ctx->fn.glCreateShader },
-		{ "glCompileShader",	(void **)&ctx->fn.glCompileShader },
-		{ "glShaderSource",	(void **)&ctx->fn.glShaderSource },
-		{ "glGetShaderiv",	(void **)&ctx->fn.glGetShaderiv },
-		{ "glGetShaderInfoLog",	(void **)&ctx->fn.glGetShaderInfoLog },
-		{ "glCreateProgram",	(void **)&ctx->fn.glCreateProgram },
-		{ "glAttachShader",	(void **)&ctx->fn.glAttachShader },
-		{ "glLinkProgram",	(void **)&ctx->fn.glLinkProgram },
-		{ "glDeleteShader",	(void **)&ctx->fn.glDeleteShader },
-		{ "glValidateProgram",	(void **)&ctx->fn.glValidateProgram },
-		{ "glGetProgramiv",	(void **)&ctx->fn.glGetProgramiv },
-		{ "glGetProgramInfoLog",(void **)&ctx->fn.glGetProgramInfoLog },
-		{ "glGetAttribLocation",(void **)&ctx->fn.glGetAttribLocation },
-		{ "glGetUniformLocation",(void **)&ctx->fn.glGetUniformLocation },
-		{ "glGenVertexArrays",	(void **)&ctx->fn.glGenVertexArrays },
-		{ "glGenBuffers",	(void **)&ctx->fn.glGenBuffers },
-		{ "glUseProgram",	(void **)&ctx->fn.glUseProgram },
-		{ "glUniform1i",	(void **)&ctx->fn.glUniform1i },
-		{ "glUniformMatrix4fv",	(void **)&ctx->fn.glUniformMatrix4fv },
-		{ "glGenRenderbuffers",	(void **)&ctx->fn.glGenRenderbuffers },
-		{ "glBindRenderbuffer",	(void **)&ctx->fn.glBindRenderbuffer },
-		{ "glRenderbufferStorage",(void **)&ctx->fn.glRenderbufferStorage },
-		{ "glFramebufferRenderbuffer",(void **)&ctx->fn.glFramebufferRenderbuffer },
-		{ "glBindVertexArray",	(void **)&ctx->fn.glBindVertexArray },
-		{ "glBindBuffer",	(void **)&ctx->fn.glBindBuffer },
-		{ "glBufferData",	(void **)&ctx->fn.glBufferData },
-		{ "glPixelStorei",	(void **)&ctx->fn.glPixelStorei },
-		{ "glBindTexture",	(void **)&ctx->fn.glBindTexture },
-		{ "glGetIntegerv",	(void **)&ctx->fn.glGetIntegerv },
-		{ "glGetString",	(void **)&ctx->fn.glGetString },
-		{ "glEnableVertexAttribArray",(void **)&ctx->fn.glEnableVertexAttribArray },
-		{ "glVertexAttribPointer",(void **)&ctx->fn.glVertexAttribPointer },
-		{ "glDrawArrays",	(void **)&ctx->fn.glDrawArrays }
+		{"glCreateShader",            (void **)&ctx->fn.glCreateShader},
+		{"glCompileShader",           (void **)&ctx->fn.glCompileShader},
+		{"glShaderSource",            (void **)&ctx->fn.glShaderSource},
+		{"glGetShaderiv",             (void **)&ctx->fn.glGetShaderiv},
+		{"glGetShaderInfoLog",        (void **)&ctx->fn.glGetShaderInfoLog},
+		{"glCreateProgram",           (void **)&ctx->fn.glCreateProgram},
+		{"glAttachShader",            (void **)&ctx->fn.glAttachShader},
+		{"glLinkProgram",             (void **)&ctx->fn.glLinkProgram},
+		{"glDeleteShader",            (void **)&ctx->fn.glDeleteShader},
+		{"glValidateProgram",         (void **)&ctx->fn.glValidateProgram},
+		{"glGetProgramiv",            (void **)&ctx->fn.glGetProgramiv},
+		{"glGetProgramInfoLog",       (void **)&ctx->fn.glGetProgramInfoLog},
+		{"glGetAttribLocation",       (void **)&ctx->fn.glGetAttribLocation},
+		{"glGetUniformLocation",      (void **)&ctx->fn.glGetUniformLocation},
+		{"glGenVertexArrays",         (void **)&ctx->fn.glGenVertexArrays},
+		{"glGenBuffers",              (void **)&ctx->fn.glGenBuffers},
+		{"glUseProgram",              (void **)&ctx->fn.glUseProgram},
+		{"glUniform1i",               (void **)&ctx->fn.glUniform1i},
+		{"glUniformMatrix4fv",        (void **)&ctx->fn.glUniformMatrix4fv},
+		{"glGenRenderbuffers",        (void **)&ctx->fn.glGenRenderbuffers},
+		{"glBindRenderbuffer",        (void **)&ctx->fn.glBindRenderbuffer},
+		{"glRenderbufferStorage",     (void **)&ctx->fn.glRenderbufferStorage},
+		{"glFramebufferRenderbuffer", (void **)&ctx->fn.glFramebufferRenderbuffer},
+		{"glBindVertexArray",         (void **)&ctx->fn.glBindVertexArray},
+		{"glBindBuffer",              (void **)&ctx->fn.glBindBuffer},
+		{"glBufferData",              (void **)&ctx->fn.glBufferData},
+		{"glPixelStorei",             (void **)&ctx->fn.glPixelStorei},
+		{"glBindTexture",             (void **)&ctx->fn.glBindTexture},
+		{"glGetIntegerv",             (void **)&ctx->fn.glGetIntegerv},
+		{"glGetString",               (void **)&ctx->fn.glGetString},
+		{"glEnableVertexAttribArray", (void **)&ctx->fn.glEnableVertexAttribArray},
+		{"glVertexAttribPointer",     (void **)&ctx->fn.glVertexAttribPointer},
+		{"glDrawArrays",              (void **)&ctx->fn.glDrawArrays}
 	};
 	int ret = 0;
 
@@ -181,7 +183,8 @@ static int gl_init_fn(glctx *ctx)
 		{
 			ret = -1;
 			SDL_LogVerbose(SDL_LOG_CATEGORY_RENDER,
-				"GL function %s not found", fngen[i].fn_str);
+				       "GL function %s not found",
+				       fngen[i].fn_str);
 		}
 	}
 
@@ -191,23 +194,24 @@ static int gl_init_fn(glctx *ctx)
 static GLuint compile_shader(glctx *ctx, GLenum type, GLsizei count,
 			     const char *const *strings)
 {
-    GLuint shader = ctx->fn.glCreateShader(type);
-    ctx->fn.glShaderSource(shader, count, strings, NULL);
-    ctx->fn.glCompileShader(shader);
+	GLuint shader = ctx->fn.glCreateShader(type);
+	ctx->fn.glShaderSource(shader, count, strings, NULL);
+	ctx->fn.glCompileShader(shader);
 
-    GLint status;
-    ctx->fn.glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+	GLint status;
+	ctx->fn.glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
 
-    if (status == GL_FALSE)
-    {
- 	char buffer[256];
-	ctx->fn.glGetShaderInfoLog(shader, sizeof(buffer), NULL, buffer);
-	SDL_SetError("Failed to compile %s shader: %s",
-			type == GL_VERTEX_SHADER ? "vertex" : "fragment",
-			buffer);
-    }
+	if(status == GL_FALSE)
+	{
+		char buffer[256];
+		ctx->fn.glGetShaderInfoLog(shader, sizeof(buffer), NULL,
+					   buffer);
+		SDL_SetError("Failed to compile %s shader: %s",
+			     type == GL_VERTEX_SHADER ? "vertex" : "fragment",
+			     buffer);
+	}
 
-    return shader;
+	return shader;
 }
 
 static void init_shaders(glctx *ctx)
@@ -225,8 +229,10 @@ static void init_shaders(glctx *ctx)
 		"  gl_FragColor = vColor;"
 		"}";
 
-	GLuint vshader = compile_shader(ctx, GL_VERTEX_SHADER, 1, &g_vshader_src);
-	GLuint fshader = compile_shader(ctx, GL_FRAGMENT_SHADER, 1, &g_fshader_src);
+	GLuint vshader = compile_shader(ctx, GL_VERTEX_SHADER, 1,
+					&g_vshader_src);
+	GLuint fshader = compile_shader(ctx, GL_FRAGMENT_SHADER, 1,
+					&g_fshader_src);
 	GLuint program = ctx->fn.glCreateProgram();
 
 	SDL_assert(program);
@@ -246,16 +252,17 @@ static void init_shaders(glctx *ctx)
 	if(status == GL_FALSE)
 	{
 		char buffer[256];
-		ctx->fn.glGetProgramInfoLog(program, sizeof(buffer), NULL, buffer);
+		ctx->fn.glGetProgramInfoLog(program, sizeof(buffer), NULL,
+					    buffer);
 		SDL_LogWarn(SDL_LOG_CATEGORY_RENDER,
 			    "Failed to link shader program: %s", buffer);
 	}
 
 	ctx->gl_sh.program = program;
-	ctx->gl_sh.i_pos   = ctx->fn.glGetAttribLocation(program,  "i_pos");
-	ctx->gl_sh.i_coord = ctx->fn.glGetAttribLocation(program,  "i_coord");
-	ctx->gl_sh.u_tex   = ctx->fn.glGetUniformLocation(program, "u_tex");
-	ctx->gl_sh.u_mvp   = ctx->fn.glGetUniformLocation(program, "u_mvp");
+	ctx->gl_sh.i_pos = ctx->fn.glGetAttribLocation(program, "i_pos");
+	ctx->gl_sh.i_coord = ctx->fn.glGetAttribLocation(program, "i_coord");
+	ctx->gl_sh.u_tex = ctx->fn.glGetUniformLocation(program, "u_tex");
+	ctx->gl_sh.u_mvp = ctx->fn.glGetUniformLocation(program, "u_mvp");
 
 	ctx->fn.glGenVertexArrays(1, &ctx->gl_sh.vao);
 	ctx->fn.glGenBuffers(1, &ctx->gl_sh.vbo);
@@ -272,20 +279,21 @@ static void refresh_vertex_data(const glctx *ctx, int w, int h)
 		return;
 
 	const float bottom = (float)h / tex_h;
-	const float right  = (float)w / tex_w;
+	const float right = (float)w / tex_w;
 
 	const float vertex_data[] = {
 		// pos, coord
-		-1.0f, -1.0f,  0.0f,  bottom, // left-bottom
-		-1.0f,  1.0f,  0.0f,  0.0f,   // left-top
-		 1.0f, -1.0f, right,  bottom,// right-bottom
-		 1.0f,  1.0f, right,  0.0f,  // right-top
+		-1.0f, -1.0f, 0.0f, bottom, // left-bottom
+		-1.0f, 1.0f, 0.0f, 0.0f,   // left-top
+		1.0f, -1.0f, right, bottom,// right-bottom
+		1.0f, 1.0f, right, 0.0f,  // right-top
 	};
 
 	ctx->fn.glBindVertexArray(ctx->gl_sh.vao);
 
 	ctx->fn.glBindBuffer(GL_ARRAY_BUFFER, ctx->gl_sh.vbo);
-	ctx->fn.glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data, GL_STREAM_DRAW);
+	ctx->fn.glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data,
+			     GL_STREAM_DRAW);
 
 	ctx->fn.glBindVertexArray(0);
 	ctx->fn.glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -295,7 +303,7 @@ static void refresh_vertex_data(const glctx *ctx, int w, int h)
  * FIXME: Do checks, but initialise context in reset function.
  */
 glctx *gl_init(SDL_Renderer *rend, SDL_Texture **tex,
-			   struct retro_hw_render_callback *lrhw)
+	       struct retro_hw_render_callback *lrhw)
 {
 	SDL_RendererInfo info;
 	glctx *ctx;
@@ -307,7 +315,7 @@ glctx *gl_init(SDL_Renderer *rend, SDL_Texture **tex,
 	if(SDL_strncmp(info.name, "opengl", 6) != 0)
 	{
 		SDL_SetError("Renderer %s is not compatible with OpenGL",
-					 info.name);
+			     info.name);
 		return NULL;
 	}
 
@@ -323,7 +331,7 @@ glctx *gl_init(SDL_Renderer *rend, SDL_Texture **tex,
 	if(gl_init_fn(ctx) != 0)
 	{
 		SDL_SetError("One or more required OpenGL functions are "
-				"unavailable on this platform");
+			     "unavailable on this platform");
 		return NULL;
 	}
 
@@ -332,20 +340,20 @@ glctx *gl_init(SDL_Renderer *rend, SDL_Texture **tex,
 
 #if 1
 	if(SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &major) != 0 ||
-			SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &minor) != 0)
+	   SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &minor) != 0)
 		return NULL;
 
 	SDL_LogVerbose(SDL_LOG_CATEGORY_RENDER, "SDL detected OpenGL %d.%d",
 		       major, minor);
 
 	if(major < (int)lrhw->version_major ||
-			(major == (int)lrhw->version_major &&
-			minor < (int)lrhw->version_minor))
+	   (major == (int)lrhw->version_major &&
+	    minor < (int)lrhw->version_minor))
 	{
 		SDL_SetError("The initialised version of OpenGL (%d.%d) does "
-					 "not meet the minimum requested (%u.%u)",
-					 major, minor,
-					 lrhw->version_major, lrhw->version_minor);
+			     "not meet the minimum requested (%u.%u)",
+			     major, minor,
+			     lrhw->version_major, lrhw->version_minor);
 		return NULL;
 	}
 #endif
@@ -369,7 +377,8 @@ glctx *gl_init(SDL_Renderer *rend, SDL_Texture **tex,
 	}
 
 	init_shaders(ctx);
-	SDL_LogInfo(SDL_LOG_CATEGORY_RENDER, "OpenGL initialisation successful");
+	SDL_LogInfo(SDL_LOG_CATEGORY_RENDER,
+		    "OpenGL initialisation successful");
 	return ctx;
 }
 
@@ -390,7 +399,7 @@ void gl_reset_context(const glctx *const ctx)
 
 		ctx->fn.glFramebufferRenderbuffer(GL_FRAMEBUFFER,
 						  GL_DEPTH_STENCIL_ATTACHMENT,
-				    GL_RENDERBUFFER, rbo_id);
+						  GL_RENDERBUFFER, rbo_id);
 	}
 	else if(ctx->depth)
 	{
@@ -402,7 +411,7 @@ void gl_reset_context(const glctx *const ctx)
 
 		ctx->fn.glFramebufferRenderbuffer(GL_FRAMEBUFFER,
 						  GL_DEPTH_ATTACHMENT,
-				    GL_RENDERBUFFER, rbo_id);
+						  GL_RENDERBUFFER, rbo_id);
 	}
 
 	SDL_RenderClear(ctx->rend);

@@ -5,7 +5,7 @@
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
  * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
@@ -19,20 +19,18 @@
 
 #include <font.h>
 
-struct font_ctx_s
-{
+struct font_ctx_s {
 	SDL_Texture *tex;
 	SDL_Renderer *rend;
 };
 
-#define FONT_BITMAP_WIDTH	144
-#define FONT_BITMAP_HEIGHT 	90
-#define FONT_BITMAP_SIZE	((FONT_BITMAP_HEIGHT * FONT_BITMAP_WIDTH) / 8)
-#define FONT_COLUMNS		16
-#define FONT_PITCH		(FONT_BITMAP_WIDTH / 8)
+#define FONT_BITMAP_WIDTH 144
+#define FONT_BITMAP_HEIGHT 90
+#define FONT_BITMAP_SIZE ((FONT_BITMAP_HEIGHT * FONT_BITMAP_WIDTH) / 8)
+#define FONT_COLUMNS 16
+#define FONT_PITCH (FONT_BITMAP_WIDTH / 8)
 
-static const unsigned char bitmap_font[FONT_BITMAP_SIZE] =
-{
+static const unsigned char bitmap_font[FONT_BITMAP_SIZE] = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x18, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, 0x0d, 0x80, 0x00, 0x82,
 	0x18, 0xe0, 0x30, 0x0c, 0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06,
@@ -172,10 +170,9 @@ static const unsigned char bitmap_font[FONT_BITMAP_SIZE] =
 
 font_ctx *FontStartup(SDL_Renderer *renderer)
 {
-	const SDL_Colour colours[2] =
-	{
-		{ .r = 0x00, .g = 0x00, .b = 0x00, .a = 0x00 }, // BG
-		{ .r = 0xFF, .g = 0xFF, .b = 0xFF, .a = 0xFF }  // FG
+	const SDL_Colour colours[2] = {
+		{.r = 0x00, .g = 0x00, .b = 0x00, .a = 0x00}, // BG
+		{.r = 0xFF, .g = 0xFF, .b = 0xFF, .a = 0xFF}  // FG
 	};
 	SDL_Surface *bmp_surf;
 	font_ctx *ctx = SDL_malloc(sizeof(font_ctx));
@@ -191,9 +188,9 @@ font_ctx *FontStartup(SDL_Renderer *renderer)
 
 	SDL_memcpy(pixels, bitmap_font, FONT_BITMAP_SIZE);
 	bmp_surf = SDL_CreateRGBSurfaceFrom(pixels,
-			FONT_BITMAP_WIDTH,
-			FONT_BITMAP_HEIGHT,
-			1, FONT_PITCH, 0, 0, 0, 0);
+					    FONT_BITMAP_WIDTH,
+					    FONT_BITMAP_HEIGHT,
+					    1, FONT_PITCH, 0, 0, 0, 0);
 
 	if(bmp_surf == NULL)
 		goto err;
@@ -238,7 +235,7 @@ void FontDrawSize(const size_t text_len, int *w, int *h)
 }
 
 int FontPrintToRenderer(font_ctx *const ctx, const char *text,
-	const SDL_Rect *dstscale)
+			const SDL_Rect *dstscale)
 {
 	SDL_Rect font_rect, screen_rect;
 	SDL_Rect dst;
@@ -285,7 +282,7 @@ int FontPrintToRenderer(font_ctx *const ctx, const char *text,
 		font_rect.y = (pos / FONT_COLUMNS) * FONT_CHAR_HEIGHT;
 
 		ret = SDL_RenderCopy(ctx->rend, ctx->tex,
-				&font_rect, &screen_rect);
+				     &font_rect, &screen_rect);
 
 		if(ret < 0)
 			return ret;

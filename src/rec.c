@@ -16,7 +16,7 @@
 #include <rec.h>
 #include <util.h>
 
-#if ENABLE_WEBP_SCREENCAPS == 1
+#if ENABLE_WEBP_SCREENSHOTS == 1
 #include <webp/encode.h>
 #endif
 
@@ -39,10 +39,8 @@ struct venc_stor_s {
 	} dat;
 };
 
-struct rec_s
-{
-	struct
-	{
+struct rec_s {
+	struct {
 		SDL_RWops *fa;
 		WavpackContext *wpc;
 		void *first_block;
@@ -51,8 +49,7 @@ struct rec_s
 		Uint64 samples_sz;
 	};
 
-	struct
-	{
+	struct {
 		SDL_RWops *fv;
 		x264_t *h;
 		x264_param_t param;
@@ -72,8 +69,7 @@ static const Uint8 preset_max = 5;
 
 static void x264_log(void *priv, int i_level, const char *fmt, va_list ap)
 {
-	const SDL_LogPriority lvlmap[] =
-	{
+	const SDL_LogPriority lvlmap[] = {
 		SDL_LOG_PRIORITY_ERROR, SDL_LOG_PRIORITY_WARN,
 		SDL_LOG_PRIORITY_INFO, SDL_LOG_PRIORITY_DEBUG
 	};
@@ -124,7 +120,8 @@ static int vid_thread_cmd(void *data)
 
 		for(int i = 0; i < nnal; i++)
 		{
-			if(SDL_RWwrite(ctx->fv, nal[i].p_payload, nal[i].i_payload, 1) == 0)
+			if(SDL_RWwrite(ctx->fv, nal[i].p_payload,
+				       nal[i].i_payload, 1) == 0)
 				goto end;
 		}
 	}
@@ -190,8 +187,9 @@ static int vid_thread_cmd(void *data)
 				int i_nal;
 				x264_nal_t *nal;
 				x264_picture_t pic_out;
-				int i_frame_size = x264_encoder_encode(ctx->h,
-						&nal, &i_nal, NULL, &pic_out);
+				int i_frame_size = x264_encoder_encode(
+					ctx->h,
+					&nal, &i_nal, NULL, &pic_out);
 				if(i_frame_size < 0)
 					break;
 
@@ -238,7 +236,7 @@ end:
 }
 
 rec *rec_init(const char *fileout, int width, int height, double fps,
-		      Sint32 sample_rate)
+	      Sint32 sample_rate)
 {
 	rec *ctx = SDL_calloc(1, sizeof(rec));
 
@@ -250,7 +248,7 @@ rec *rec_init(const char *fileout, int width, int height, double fps,
 
 	/* Initialise Wavpack */
 	SDL_LogVerbose(SDL_LOG_CATEGORY_AUDIO, "Initialising Wavpack %s",
-		WavpackGetLibraryVersionString());
+		       WavpackGetLibraryVersionString());
 
 	/* TODO: Fix this workaround. */
 	{
@@ -296,7 +294,7 @@ rec *rec_init(const char *fileout, int width, int height, double fps,
 	/* Get default params for preset/tuning.
 	 * Setting preset to veryfast in order to reduce strain during gameplay. */
 	if(x264_param_default_preset(&ctx->param,
-			x264_preset_names[ctx->preset], "") < 0)
+				     x264_preset_names[ctx->preset], "") < 0)
 		goto err;
 
 	ctx->param.pf_log = x264_log;
@@ -311,7 +309,7 @@ rec *rec_init(const char *fileout, int width, int height, double fps,
 	if(x264_param_apply_profile(&ctx->param, "high444") < 0)
 		goto err;
 
-	ctx->param.i_width  = width;
+	ctx->param.i_width = width;
 	ctx->param.i_height = height;
 
 	if(fps < 1.0)
@@ -321,7 +319,7 @@ rec *rec_init(const char *fileout, int width, int height, double fps,
 	ctx->param.i_fps_num = (uint32_t)(fps * 16777216.0);
 	ctx->param.i_fps_den = 16777216;
 	SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO, "Requested video FPS: %.1f",
-		((float)ctx->param.i_fps_num/ctx->param.i_fps_den));
+		       ((float)ctx->param.i_fps_num / ctx->param.i_fps_den));
 
 	ctx->param.i_threads = 0;
 	ctx->param.b_repeat_headers = 0;
@@ -343,7 +341,7 @@ err:
 void rec_enc_video(rec *ctx, SDL_Surface *surf)
 {
 	if(ctx == NULL || ctx->venc_stor.cmd == VID_CMD_ENCODE_INIT ||
-			surf == NULL)
+	   surf == NULL)
 		return;
 
 	SDL_AtomicLock(&ctx->venc_slk);
@@ -364,7 +362,7 @@ static void apply_preset(rec *ctx)
 	ctx->param.rc.f_rf_constant = crf;
 	x264_encoder_reconfig(ctx->h, &ctx->param);
 	SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO, "Modified video preset to %s",
-				x264_preset_names[ctx->preset]);
+		       x264_preset_names[ctx->preset]);
 }
 
 void rec_set_crf(rec *ctx, Uint8 crf)
@@ -381,7 +379,7 @@ void rec_set_crf(rec *ctx, Uint8 crf)
 void rec_speedup(rec *ctx)
 {
 	if(ctx == NULL || ctx->venc_stor.cmd == VID_CMD_ENCODE_INIT ||
-			ctx->preset <= 2)
+	   ctx->preset <= 2)
 		return;
 
 	SDL_AtomicLock(&ctx->venc_slk);
@@ -393,7 +391,7 @@ void rec_speedup(rec *ctx)
 void rec_relax(rec *ctx)
 {
 	if(ctx == NULL || ctx->venc_stor.cmd == VID_CMD_ENCODE_INIT ||
-			ctx->preset == preset_max)
+	   ctx->preset == preset_max)
 		return;
 
 	SDL_AtomicLock(&ctx->venc_slk);
@@ -440,8 +438,8 @@ void rec_enc_audio(rec *ctx, const Sint16 *data, uint32_t frames)
 			return;
 
 		SDL_LogWarn(SDL_LOG_CATEGORY_AUDIO, "Wavpack was unable to "
-				      "encode audio; audio will not be "
-	  "recorded, and this message will no longer appear.");
+						    "encode audio; audio will not be "
+						    "recorded, and this message will no longer appear.");
 		return;
 	}
 
@@ -480,6 +478,7 @@ void rec_end(rec **ctxp)
 
 	return;
 }
+
 #endif /* ENABLE_VIDEO_RECORDING */
 
 struct img_stor_s {
@@ -495,7 +494,7 @@ static int rec_single_img_thread(void *param)
 	struct img_stor_s *img = param;
 	SDL_Surface *surf;
 	char filename[64];
-#if ENABLE_WEBP_SCREENCAPS == 1
+#if ENABLE_WEBP_SCREENSHOTS == 1
 	const char fmt[] = "webp";
 	uint8_t *webp;
 	size_t outsz;
@@ -511,7 +510,7 @@ static int rec_single_img_thread(void *param)
 	surf = img->surf;
 	gen_filename(filename, img->core_name, fmt);
 
-#if ENABLE_WEBP_SCREENCAPS == 1
+#if ENABLE_WEBP_SCREENSHOTS == 1
 	outsz = WebPEncodeRGB(surf->pixels, surf->w, surf->h, surf->pitch,
 			      95, &webp);
 	if(outsz == 0)
@@ -529,7 +528,7 @@ static int rec_single_img_thread(void *param)
 #endif
 
 	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-		    "Screencap saved to \"%s\"\n", filename);
+		    "Screenshot saved to \"%s\"\n", filename);
 
 out:
 	SDL_FreeSurface(surf);
@@ -545,7 +544,6 @@ void rec_single_img(SDL_Surface *surf, const char *core_name)
 	img = SDL_malloc(sizeof(struct img_stor_s));
 	img->surf = surf;
 	SDL_strlcpy(img->core_name, core_name, SDL_arraysize(img->core_name));
-	thread = SDL_CreateThread(rec_single_img_thread, "Screencap", img);
+	thread = SDL_CreateThread(rec_single_img_thread, "Screenshot", img);
 	SDL_DetachThread(thread);
 }
-

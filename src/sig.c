@@ -60,7 +60,7 @@
 // }
 
 
-static char const * icky_global_program_name;
+static char const *icky_global_program_name;
 
 #ifdef _WIN32
 void windows_print_stacktrace(CONTEXT* context)
@@ -184,6 +184,7 @@ void set_signal_handler()
 
 #define MAX_STACK_FRAMES 64
 static void *stack_traces[MAX_STACK_FRAMES];
+
 void posix_print_stack_trace()
 {
 	int trace_size = backtrace(stack_traces, MAX_STACK_FRAMES);
@@ -207,89 +208,102 @@ void posix_signal_handler(int sig, siginfo_t *siginfo, void *context)
 	(void)context;
 	switch(sig)
 	{
-		case SIGSEGV:
-			fputs("Caught SIGSEGV: Segmentation Fault\n", stderr);
+	case SIGSEGV:
+		fputs("Caught SIGSEGV: Segmentation Fault\n", stderr);
+		break;
+	case SIGINT:
+		fputs("Caught SIGINT: Interactive attention signal, (usually ctrl+c)\n",
+		      stderr);
+		break;
+	case SIGFPE:
+		switch(siginfo->si_code)
+		{
+		case FPE_INTDIV:
+			fputs("Caught SIGFPE: (integer divide by zero)\n",
+			      stderr);
 			break;
-		case SIGINT:
-			fputs("Caught SIGINT: Interactive attention signal, (usually ctrl+c)\n", stderr);
+		case FPE_INTOVF:
+			fputs("Caught SIGFPE: (integer overflow)\n", stderr);
 			break;
-		case SIGFPE:
-			switch(siginfo->si_code)
-			{
-				case FPE_INTDIV:
-					fputs("Caught SIGFPE: (integer divide by zero)\n", stderr);
-					break;
-				case FPE_INTOVF:
-					fputs("Caught SIGFPE: (integer overflow)\n", stderr);
-					break;
-				case FPE_FLTDIV:
-					fputs("Caught SIGFPE: (floating-point divide by zero)\n", stderr);
-					break;
-				case FPE_FLTOVF:
-					fputs("Caught SIGFPE: (floating-point overflow)\n", stderr);
-					break;
-				case FPE_FLTUND:
-					fputs("Caught SIGFPE: (floating-point underflow)\n", stderr);
-					break;
-				case FPE_FLTRES:
-					fputs("Caught SIGFPE: (floating-point inexact result)\n", stderr);
-					break;
-				case FPE_FLTINV:
-					fputs("Caught SIGFPE: (floating-point invalid operation)\n", stderr);
-					break;
-				case FPE_FLTSUB:
-					fputs("Caught SIGFPE: (subscript out of range)\n", stderr);
-					break;
-				default:
-					fputs("Caught SIGFPE: Arithmetic Exception\n", stderr);
-					break;
-			}
-		case SIGILL:
-			switch(siginfo->si_code)
-			{
-				case ILL_ILLOPC:
-					fputs("Caught SIGILL: (illegal opcode)\n", stderr);
-					break;
-				case ILL_ILLOPN:
-					fputs("Caught SIGILL: (illegal operand)\n", stderr);
-					break;
-				case ILL_ILLADR:
-					fputs("Caught SIGILL: (illegal addressing mode)\n", stderr);
-					break;
-				case ILL_ILLTRP:
-					fputs("Caught SIGILL: (illegal trap)\n", stderr);
-					break;
-				case ILL_PRVOPC:
-					fputs("Caught SIGILL: (privileged opcode)\n", stderr);
-					break;
-				case ILL_PRVREG:
-					fputs("Caught SIGILL: (privileged register)\n", stderr);
-					break;
-				case ILL_COPROC:
-					fputs("Caught SIGILL: (coprocessor error)\n", stderr);
-					break;
-				case ILL_BADSTK:
-					fputs("Caught SIGILL: (internal stack error)\n", stderr);
-					break;
-				default:
-					fputs("Caught SIGILL: Illegal Instruction\n", stderr);
-					break;
-			}
+		case FPE_FLTDIV:
+			fputs("Caught SIGFPE: (floating-point divide by zero)\n",
+			      stderr);
 			break;
-		case SIGTERM:
-			fputs("Caught SIGTERM: a termination request was sent to the program\n", stderr);
+		case FPE_FLTOVF:
+			fputs("Caught SIGFPE: (floating-point overflow)\n",
+			      stderr);
 			break;
-		case SIGABRT:
-			fputs("Caught SIGABRT: usually caused by an abort() or assert()\n", stderr);
+		case FPE_FLTUND:
+			fputs("Caught SIGFPE: (floating-point underflow)\n",
+			      stderr);
+			break;
+		case FPE_FLTRES:
+			fputs("Caught SIGFPE: (floating-point inexact result)\n",
+			      stderr);
+			break;
+		case FPE_FLTINV:
+			fputs("Caught SIGFPE: (floating-point invalid operation)\n",
+			      stderr);
+			break;
+		case FPE_FLTSUB:
+			fputs("Caught SIGFPE: (subscript out of range)\n",
+			      stderr);
 			break;
 		default:
+			fputs("Caught SIGFPE: Arithmetic Exception\n", stderr);
 			break;
+		}
+	case SIGILL:
+		switch(siginfo->si_code)
+		{
+		case ILL_ILLOPC:
+			fputs("Caught SIGILL: (illegal opcode)\n", stderr);
+			break;
+		case ILL_ILLOPN:
+			fputs("Caught SIGILL: (illegal operand)\n", stderr);
+			break;
+		case ILL_ILLADR:
+			fputs("Caught SIGILL: (illegal addressing mode)\n",
+			      stderr);
+			break;
+		case ILL_ILLTRP:
+			fputs("Caught SIGILL: (illegal trap)\n", stderr);
+			break;
+		case ILL_PRVOPC:
+			fputs("Caught SIGILL: (privileged opcode)\n", stderr);
+			break;
+		case ILL_PRVREG:
+			fputs("Caught SIGILL: (privileged register)\n", stderr);
+			break;
+		case ILL_COPROC:
+			fputs("Caught SIGILL: (coprocessor error)\n", stderr);
+			break;
+		case ILL_BADSTK:
+			fputs("Caught SIGILL: (internal stack error)\n",
+			      stderr);
+			break;
+		default:
+			fputs("Caught SIGILL: Illegal Instruction\n", stderr);
+			break;
+		}
+		break;
+	case SIGTERM:
+		fputs("Caught SIGTERM: a termination request was sent to the program\n",
+		      stderr);
+		break;
+	case SIGABRT:
+		fputs("Caught SIGABRT: usually caused by an abort() or assert()\n",
+		      stderr);
+		break;
+	default:
+		break;
 	}
 	posix_print_stack_trace();
 	_Exit(1);
 }
 
 static uint8_t alternate_stack[SIGSTKSZ];
+
 void set_signal_handler()
 {
 	/* setup alternate stack */
@@ -297,11 +311,12 @@ void set_signal_handler()
 		stack_t ss = {};
 		/* malloc is usually used here, I'm not 100% sure my static allocation
 		   is valid but it seems to work just fine. */
-		ss.ss_sp = (void*)alternate_stack;
+		ss.ss_sp = (void *)alternate_stack;
 		ss.ss_size = SIGSTKSZ;
 		ss.ss_flags = 0;
 
-		if (sigaltstack(&ss, NULL) != 0) { err(1, "sigaltstack"); }
+		if(sigaltstack(&ss, NULL) != 0)
+		{ err(1, "sigaltstack"); }
 	}
 
 	/* register our signal handlers */
@@ -318,26 +333,38 @@ void set_signal_handler()
 		sig_action.sa_flags = SA_SIGINFO | SA_ONSTACK;
 #endif
 
-		if (sigaction(SIGSEGV, &sig_action, NULL) != 0) { err(1, "sigaction"); }
-		if (sigaction(SIGFPE,  &sig_action, NULL) != 0) { err(1, "sigaction"); }
-		if (sigaction(SIGINT,  &sig_action, NULL) != 0) { err(1, "sigaction"); }
-		if (sigaction(SIGILL,  &sig_action, NULL) != 0) { err(1, "sigaction"); }
-		if (sigaction(SIGTERM, &sig_action, NULL) != 0) { err(1, "sigaction"); }
-		if (sigaction(SIGABRT, &sig_action, NULL) != 0) { err(1, "sigaction"); }
+		if(sigaction(SIGSEGV, &sig_action, NULL) != 0)
+		{ err(1, "sigaction"); }
+		if(sigaction(SIGFPE, &sig_action, NULL) != 0)
+		{ err(1, "sigaction"); }
+		if(sigaction(SIGINT, &sig_action, NULL) != 0)
+		{ err(1, "sigaction"); }
+		if(sigaction(SIGILL, &sig_action, NULL) != 0)
+		{ err(1, "sigaction"); }
+		if(sigaction(SIGTERM, &sig_action, NULL) != 0)
+		{ err(1, "sigaction"); }
+		if(sigaction(SIGABRT, &sig_action, NULL) != 0)
+		{ err(1, "sigaction"); }
 	}
 }
+
 #endif
 
-int  divide_by_zero();
+int divide_by_zero();
+
 void cause_segfault();
+
 void stack_overflow();
+
 void infinite_loop();
+
 void illegal_instruction();
+
 void cause_calamity();
 
-static char const * icky_global_program_name;
+static char const *icky_global_program_name;
 
-int main(int argc, char * argv[])
+int main(int argc, char *argv[])
 {
 	(void)argc;
 
@@ -375,11 +402,12 @@ int divide_by_zero()
 
 void cause_segfault()
 {
-	int * p = (int*)0x12345678;
+	int *p = (int *)0x12345678;
 	*p = 0;
 }
 
 void stack_overflow();
+
 void stack_overflow()
 {
 	int foo[1000];
@@ -390,7 +418,8 @@ void stack_overflow()
 /* break out with ctrl+c to test SIGINT handling */
 void infinite_loop()
 {
-	while(1) {};
+	while(1)
+	{ };
 }
 
 void illegal_instruction()

@@ -14,7 +14,6 @@
 
 #include <SDL2/SDL.h>
 
-#include <util.h>
 #include <timer.h>
 
 int timer_init(struct timer_ctx_s *const tim, double emulated_rate)
@@ -28,7 +27,7 @@ int timer_init(struct timer_ctx_s *const tim, double emulated_rate)
 	tim->busy_acu_ms = 0;
 	tim->busy_samples = 0;
 
-	if(tim->timer_event == (Uint32) -1)
+	if(tim->timer_event == (Uint32)-1)
 		ret = -1;
 
 	return ret;
@@ -83,7 +82,7 @@ int timer_get_delay(struct timer_ctx_s *const tim, Uint32 elapsed_ms)
 	/* Render the next frame immediately without waiting for VSYNC. */
 	if(tim->timer_accumulator < -tim->core_ms)
 		return -1;
-	/* Do not render a new frame for the next VSYNC call. */
+		/* Do not render a new frame for the next VSYNC call. */
 	else if(tim->timer_accumulator > tim->core_ms)
 		return tim->delay_comp_ms;
 

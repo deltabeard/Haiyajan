@@ -52,16 +52,16 @@ static void prerun_checks(void)
 	if(compiled.major != linked.major)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_SYSTEM,
-			"The major version of SDL2 loaded (%d) does "
-			"not match the version from which Haiyajan was "
-			"compiled with (%d). "
-			"Please recompile Haiyajan and try again.",
-			linked.major, compiled.major);
+				"The major version of SDL2 loaded (%d) does "
+				"not match the version from which Haiyajan was "
+				"compiled with (%d). "
+				"Please recompile Haiyajan and try again.",
+				linked.major, compiled.major);
 		exit(EXIT_FAILURE);
 	}
 
 	if(SDL_VERSIONNUM(compiled.major, compiled.minor, compiled.patch) !=
-		SDL_VERSIONNUM(linked.major, linked.minor, linked.patch))
+	   SDL_VERSIONNUM(linked.major, linked.minor, linked.patch))
 	{
 		SDL_LogWarn(
 			SDL_LOG_CATEGORY_SYSTEM,
@@ -75,25 +75,23 @@ static void prerun_checks(void)
 
 static void print_info(void)
 {
-	struct features_s
-	{
+	struct features_s {
 		SDL_bool (*get_cpu_feat)(void);
 		const char *const feat_name;
 	};
-	const struct features_s cpu_features[] =
-		{
-			{ SDL_Has3DNow, "3DNow" },
-			{ SDL_HasAVX, "AVX" },
-			{ SDL_HasAVX2, "AVX2" },
-			{ SDL_HasAltiVec, "VMX" },
-			{ SDL_HasMMX, "MMX" },
-			{ SDL_HasRDTSC, "RDTSC" },
-			{ SDL_HasSSE, "SSE" },
-			{ SDL_HasSSE2, "SSE2" },
-			{ SDL_HasSSE3, "SSE3" },
-			{ SDL_HasSSE41, "SSE41" },
-			{ SDL_HasSSE42, "SSE42" }
-		};
+	const struct features_s cpu_features[] = {
+		{SDL_Has3DNow,   "3DNow"},
+		{SDL_HasAVX,     "AVX"},
+		{SDL_HasAVX2,    "AVX2"},
+		{SDL_HasAltiVec, "VMX"},
+		{SDL_HasMMX,     "MMX"},
+		{SDL_HasRDTSC,   "RDTSC"},
+		{SDL_HasSSE,     "SSE"},
+		{SDL_HasSSE2,    "SSE2"},
+		{SDL_HasSSE3,    "SSE3"},
+		{SDL_HasSSE41,   "SSE41"},
+		{SDL_HasSSE42,   "SSE42"}
+	};
 	char str_feat[128] = "\0";
 
 	for(size_t i = 0; i < SDL_arraysize(cpu_features); i++)
@@ -102,14 +100,15 @@ static void print_info(void)
 			continue;
 
 		SDL_strlcat(str_feat, cpu_features[i].feat_name,
-			SDL_arraysize(str_feat));
+			    SDL_arraysize(str_feat));
 		SDL_strlcat(str_feat, " ", SDL_arraysize(str_feat));
 	}
 
 	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-		"%s platform, %d core CPU, featuring %s\n",
-		SDL_GetPlatform(), SDL_GetCPUCount(),
-		str_feat[0] == '\0' ? "no additional instructions" : str_feat);
+		    "%s platform, %d core CPU, featuring %s\n",
+		    SDL_GetPlatform(), SDL_GetCPUCount(),
+		    str_feat[0] == '\0' ? "no additional instructions"
+					: str_feat);
 }
 
 static void print_help(void)
@@ -119,20 +118,20 @@ static void print_help(void)
 	const int num_audio = SDL_GetNumAudioDrivers();
 
 	fprintf(stderr, "\n"
-	                "Usage: haiyajan [OPTIONS] -L CORE FILE\n"
-	                "  -h, --help      Show this help message.\n"
-	                "      --version   Print version information.\n"
-	                "  -L, --libretro  Path to libretro core.\n"
-	                "  -I, --info      Print statistics onscreen.\n"
-	                "  -b, --benchmark Benchmark and print average frames"
-	                " per second.\n"
-	                "  -v, --verbose   Print verbose log messages.\n"
-	                "  -V, --video     Video driver to use\n");
+			"Usage: haiyajan [OPTIONS] -L CORE FILE\n"
+			"  -h, --help      Show this help message.\n"
+			"      --version   Print version information.\n"
+			"  -L, --libretro  Path to libretro core.\n"
+			"  -I, --info      Print statistics onscreen.\n"
+			"  -b, --benchmark Benchmark and print average frames"
+			" per second.\n"
+			"  -v, --verbose   Print verbose log messages.\n"
+			"  -V, --video     Video driver to use\n");
 
 	for(int index = 0; index < num_drivers; index++)
 	{
 		fprintf(stderr, "%s%s", index != 0 ?
-			", " : "\nAvailable video drivers: ",
+					", " : "\nAvailable video drivers: ",
 			SDL_GetVideoDriver(index));
 	}
 
@@ -141,22 +140,22 @@ static void print_help(void)
 		SDL_RendererInfo info;
 		SDL_GetRenderDriverInfo(index, &info);
 		fprintf(stderr, "%s%s", index != 0 ?
-		                         ", " : "\nAvailable render drivers: ",
+					", " : "\nAvailable render drivers: ",
 			info.name);
 	}
 
 	for(int index = 0; index < num_audio; index++)
 	{
 		fprintf(stderr, "%s%s", index != 0 ?
-		                         ", " : "\nAvailable audio drivers: ",
+					", " : "\nAvailable audio drivers: ",
 			SDL_GetAudioDriver(index));
 	}
 
 	fprintf(stderr, "\nThe following environment variables may be used to "
-	                "select a specific driver:\n"
-	                "  SDL_VIDEODRIVER\n"
-	                "  SDL_RENDER_DRIVER\n"
-	                "  SDL_AUDIODRIVER\n");
+			"select a specific driver:\n"
+			"  SDL_VIDEODRIVER\n"
+			"  SDL_RENDER_DRIVER\n"
+			"  SDL_AUDIODRIVER\n");
 }
 
 static void free_settings(struct core_ctx_s *ctx)
@@ -176,16 +175,15 @@ static void free_settings(struct core_ctx_s *ctx)
 
 static void apply_settings(char **argv, struct core_ctx_s *ctx)
 {
-	const struct optparse_long longopts[] =
-		{
-			{ "libretro", 'L', OPTPARSE_REQUIRED },
-			{ "info", 'I', OPTPARSE_NONE },
-			{ "verbose", 'v', OPTPARSE_NONE },
-			{ "video", 'V', OPTPARSE_REQUIRED },
-			{ "version", 1, OPTPARSE_NONE },
-			{ "benchmark", 'b', OPTPARSE_OPTIONAL },
-			{ "help", 'h', OPTPARSE_NONE },
-			{ 0 }
+	const struct optparse_long longopts[] = {
+			{"libretro",  'L', OPTPARSE_REQUIRED},
+			{"info",      'I', OPTPARSE_NONE},
+			{"verbose",   'v', OPTPARSE_NONE},
+			{"video",     'V', OPTPARSE_REQUIRED},
+			{"version",   1,   OPTPARSE_NONE},
+			{"benchmark", 'b', OPTPARSE_OPTIONAL},
+			{"help",      'h', OPTPARSE_NONE},
+			{0}
 		};
 	int option;
 	struct optparse options;
@@ -214,10 +212,10 @@ static void apply_settings(char **argv, struct core_ctx_s *ctx)
 			if(video_init)
 			{
 				SDL_LogInfo(SDL_LOG_CATEGORY_VIDEO,
-					"Previously initialised video driver "
-					"%s will be replaced with %s",
-					SDL_GetCurrentVideoDriver(),
-					options.optarg);
+					    "Previously initialised video driver "
+					    "%s will be replaced with %s",
+					    SDL_GetCurrentVideoDriver(),
+					    options.optarg);
 				SDL_VideoQuit();
 				video_init = 0;
 			}
@@ -225,14 +223,14 @@ static void apply_settings(char **argv, struct core_ctx_s *ctx)
 			if(SDL_VideoInit(options.optarg) != 0)
 			{
 				SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO,
-					"Unable to initialise specified "
-					"video driver: %s", SDL_GetError());
+					    "Unable to initialise specified "
+					    "video driver: %s", SDL_GetError());
 			}
 			else
 			{
 				SDL_LogInfo(SDL_LOG_CATEGORY_VIDEO,
-					"%s was successfully initialised",
-					options.optarg);
+					    "%s was successfully initialised",
+					    options.optarg);
 				video_init = 1;
 			}
 
@@ -252,9 +250,9 @@ static void apply_settings(char **argv, struct core_ctx_s *ctx)
 				ctx->stngs.benchmark_dur = 20;
 
 			SDL_LogInfo(SDL_LOG_CATEGORY_VIDEO,
-				"Haiyajan will exit after performing a "
-				"benchmark for %d seconds",
-				ctx->stngs.benchmark_dur);
+				    "Haiyajan will exit after performing a "
+				    "benchmark for %d seconds",
+				    ctx->stngs.benchmark_dur);
 			break;
 
 		case 'h':
@@ -263,7 +261,7 @@ static void apply_settings(char **argv, struct core_ctx_s *ctx)
 
 		case '?':
 			SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "%s",
-				options.errmsg);
+					options.errmsg);
 			goto err;
 
 		default:
@@ -279,14 +277,14 @@ static void apply_settings(char **argv, struct core_ctx_s *ctx)
 	else
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-			"The path to the content file was not given");
+				"The path to the content file was not given");
 		goto err;
 	}
 
 	if(ctx->file_core == NULL)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-			"The path to a libretro core was not given");
+				"The path to a libretro core was not given");
 		goto err;
 	}
 
@@ -294,8 +292,8 @@ static void apply_settings(char **argv, struct core_ctx_s *ctx)
 	if(video_init == 0 && SDL_VideoInit(NULL) != 0)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-			"Unable to initialise a video driver: %s",
-			SDL_GetError());
+				"Unable to initialise a video driver: %s",
+				SDL_GetError());
 		goto err;
 	}
 
@@ -306,23 +304,23 @@ err:
 	exit(EXIT_FAILURE);
 }
 
-static SDL_atomic_t screencap_timeout;
+static SDL_atomic_t screenshot_timeout;
 
-void take_screencapture(struct core_ctx_s *const ctx)
+void take_screenshot(struct core_ctx_s *const ctx)
 {
 	SDL_Surface *surf;
 
-	/* Screencaptures limited to 1 every second. Should not be used for
+	/* Screenshots limited to 1 every second. Should not be used for
 	 * recording game play as a video, as this function is too slow for
 	 * that. */
-	if(SDL_AtomicGet(&screencap_timeout) != 0)
+	if(SDL_AtomicGet(&screenshot_timeout) != 0)
 		return;
 
-	SDL_AtomicSet(&screencap_timeout, 1);
-	set_atomic_timeout(1024, &screencap_timeout, 0, "Enable Screencap");
+	SDL_AtomicSet(&screenshot_timeout, 1);
+	set_atomic_timeout(1024, &screenshot_timeout, 0, "Enable Screenshot");
 
 	surf = util_tex_to_surf(ctx->disp_rend, ctx->core_tex,
-		&ctx->game_frame_res, ctx->env.flip);
+				&ctx->game_frame_res, ctx->env.flip);
 	if(surf == NULL)
 		goto err;
 
@@ -333,13 +331,14 @@ out:
 
 err:
 	SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-		"Could not take screen capture: %s", SDL_GetError());
+		    "Could not take screen capture: %s", SDL_GetError());
 	goto out;
 }
 
 #if ENABLE_VIDEO_RECORDING == 1
+
 void cap_frame(rec *vid, SDL_Renderer *rend, SDL_Texture *tex,
-	const SDL_Rect *src, SDL_RendererFlip flip)
+	       const SDL_Rect *src, SDL_RendererFlip flip)
 {
 	SDL_Surface *surf = util_tex_to_surf(rend, tex, src, flip);
 
@@ -348,6 +347,7 @@ void cap_frame(rec *vid, SDL_Renderer *rend, SDL_Texture *tex,
 
 	rec_enc_video(vid, surf);
 }
+
 #endif
 
 static void run(struct core_ctx_s *ctx)
@@ -372,7 +372,7 @@ static void run(struct core_ctx_s *ctx)
 	if(font == NULL)
 	{
 		SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-			"Unable to start font drawer: %s", SDL_GetError());
+			    "Unable to start font drawer: %s", SDL_GetError());
 		/* Disable font drawing on error. */
 		ctx->stngs.vid_info = 0;
 	}
@@ -412,7 +412,8 @@ static void run(struct core_ctx_s *ctx)
 				case INPUT_EVENT_TOGGLE_INFO:
 					ctx->stngs.vid_info =
 						!ctx->stngs.vid_info;
-					SDL_SetRenderDrawBlendMode(ctx->disp_rend,
+					SDL_SetRenderDrawBlendMode(
+						ctx->disp_rend,
 						ctx->stngs.vid_info
 						? SDL_BLENDMODE_BLEND
 						: SDL_BLENDMODE_NONE);
@@ -428,34 +429,37 @@ static void run(struct core_ctx_s *ctx)
 					ctx->stngs.fullscreen =
 						!ctx->stngs.fullscreen;
 					if(ctx->stngs.fullscreen)
-						SDL_SetWindowFullscreen(ctx->win,
+						SDL_SetWindowFullscreen(
+							ctx->win,
 							SDL_WINDOW_FULLSCREEN_DESKTOP);
 					else
-						SDL_SetWindowFullscreen(ctx->win,
+						SDL_SetWindowFullscreen(
+							ctx->win,
 							0);
 					break;
 
-				case INPUT_EVENT_TAKE_SCREENCAPTURE:
-					take_screencapture(ctx);
+				case INPUT_EVENT_TAKE_SCREENSHOT:
+					take_screenshot(ctx);
 					break;
 
 #if ENABLE_VIDEO_RECORDING == 1
 				case INPUT_EVENT_RECORD_VIDEO_TOGGLE:
 				{
 					if(ctx->vid == NULL &&
-						ctx->env.status_bits.valid_frame)
+					   ctx->env.status_bits.valid_frame)
 					{
 						char vidfile[64];
 						gen_filename(vidfile,
-							ctx->core_log_name,
-							"h264");
+							     ctx->core_log_name,
+							     "h264");
 
 						/* FIXME: add double to Sint32 sample compensation should the sample rate not be an integer. */
 						ctx->vid = rec_init(vidfile,
-							ctx->game_frame_res.w,
-							ctx->game_frame_res.h,
-							ctx->av_info.timing.fps,
-							SDL_ceil(ctx->av_info.timing.sample_rate));
+								    ctx->game_frame_res.w,
+								    ctx->game_frame_res.h,
+								    ctx->av_info.timing.fps,
+								    SDL_ceil(
+									    ctx->av_info.timing.sample_rate));
 						if(ctx->vid == NULL)
 						{
 							SDL_LogWarn(
@@ -539,16 +543,16 @@ static void run(struct core_ctx_s *ctx)
 		SDL_RenderClear(ctx->disp_rend);
 		play_frame(ctx);
 		SDL_RenderCopyEx(ctx->disp_rend, ctx->core_tex,
-			&ctx->game_frame_res, NULL, 0.0, NULL,
-			ctx->env.flip);
+				 &ctx->game_frame_res, NULL, 0.0, NULL,
+				 ctx->env.flip);
 
 		if(ctx->stngs.vid_info)
 		{
-			static char busy_str[10] = { '\0' };
-			static char fps_str[10] = { '\0' };
-			static char acc_str[10] = { '\0' };
-			static char aud_str[10] = { '\0' };
-			static char frames_str[10] = { '\0' };
+			static char busy_str[10] = {'\0'};
+			static char fps_str[10] = {'\0'};
+			static char acc_str[10] = {'\0'};
+			static char aud_str[10] = {'\0'};
+			static char frames_str[10] = {'\0'};
 			const SDL_Rect font_bg =
 				{
 					.w = 10 * FONT_CHAR_WIDTH,
@@ -556,7 +560,7 @@ static void run(struct core_ctx_s *ctx)
 					.x = 0,
 					.y = 0
 				};
-			SDL_Rect dim = { .w = 1, .h = 1, .x = 0, .y = 0 };
+			SDL_Rect dim = {.w = 1, .h = 1, .x = 0, .y = 0};
 			Uint32 ticks_busy = SDL_GetTicks();
 			Uint32 busy_diff = ticks_busy - ticks_before;
 
@@ -566,13 +570,14 @@ static void run(struct core_ctx_s *ctx)
 			{
 				SDL_snprintf(busy_str, 10, "%6u ms", busy_diff);
 				SDL_snprintf(acc_str, 10, "%6.2f ms",
-					tim.timer_accumulator);
+					     tim.timer_accumulator);
 				SDL_snprintf(aud_str, 10, "%6" PRIu32,
-					(Uint32)(
-						SDL_GetQueuedAudioSize(ctx->audio_dev)
-							/
-								sizeof(Uint16)
-							/ 2U));
+					     (Uint32)(
+						     SDL_GetQueuedAudioSize(
+							     ctx->audio_dev)
+						     /
+						     sizeof(Uint16)
+						     / 2U));
 				SDL_snprintf(frames_str, 10, "%6u", frames);
 			}
 
@@ -581,11 +586,11 @@ static void run(struct core_ctx_s *ctx)
 				SDL_snprintf(fps_str, 10, "%6.2f Hz", fps);
 
 			SDL_SetRenderDrawColor(ctx->disp_rend,
-				0x00, 0x00, 0x00, 0x40);
+					       0x00, 0x00, 0x00, 0x40);
 			SDL_RenderFillRect(ctx->disp_rend, &font_bg);
 
 			SDL_SetRenderDrawColor(ctx->disp_rend,
-				0xFF, 0xFF, 0xFF, 0xFF);
+					       0xFF, 0xFF, 0xFF, 0xFF);
 			FontPrintToRenderer(font, busy_str, &dim);
 
 			dim.y += FONT_CHAR_HEIGHT + 1;
@@ -601,7 +606,7 @@ static void run(struct core_ctx_s *ctx)
 			FontPrintToRenderer(font, frames_str, &dim);
 
 			SDL_SetRenderDrawColor(ctx->disp_rend,
-				0x00, 0x00, 0x00, 0x00);
+					       0x00, 0x00, 0x00, 0x00);
 		}
 
 #if ENABLE_VIDEO_RECORDING == 1
@@ -614,14 +619,14 @@ static void run(struct core_ctx_s *ctx)
 					.w = 2,
 					.h = 2
 				};
-			struct
-			{
+			struct {
 				Sint64 (*get_size)(rec *);
+
 				char str[16];
 			} sz_map[2] =
 				{
-					{ rec_video_size, "" },
-					{ rec_audio_size, "" }
+					{rec_video_size, ""},
+					{rec_audio_size, ""}
 				};
 
 			SDL_RenderGetLogicalSize(ctx->disp_rend, &loc.x, NULL);
@@ -629,10 +634,10 @@ static void run(struct core_ctx_s *ctx)
 				break;
 
 			cap_frame(ctx->vid, ctx->disp_rend, ctx->core_tex,
-				&ctx->game_frame_res, ctx->env.flip);
+				  &ctx->game_frame_res, ctx->env.flip);
 
 			SDL_SetRenderDrawColor(ctx->disp_rend, UINT8_MAX, 0, 0,
-				SDL_ALPHA_OPAQUE);
+					       SDL_ALPHA_OPAQUE);
 
 			loc.x -= FONT_CHAR_WIDTH * loc.h * 5;
 			FontPrintToRenderer(font, " REC", &loc);
@@ -660,9 +665,9 @@ static void run(struct core_ctx_s *ctx)
 				}
 
 				SDL_snprintf(sz_map[i].str,
-					SDL_arraysize(sz_map[0].str),
-					"%5" PRIu64 " %.2s",
-					sz, prefix[p]);
+					     SDL_arraysize(sz_map[0].str),
+					     "%5" PRIu64 " %.2s",
+					     sz, prefix[p]);
 			}
 
 			FontPrintToRenderer(font, sz_map[0].str, &loc);
@@ -670,14 +675,14 @@ static void run(struct core_ctx_s *ctx)
 			FontPrintToRenderer(font, sz_map[1].str, &loc);
 
 			SDL_SetRenderDrawColor(ctx->disp_rend,
-				0x00, 0x00, 0x00, 0x00);
+					       0x00, 0x00, 0x00, 0x00);
 			break;
 		}
 #endif
 
 		/* If the user took a screen capture within the last second,
 		 * respond in the interface. */
-		if(SDL_AtomicGet(&screencap_timeout) != 0)
+		if(SDL_AtomicGet(&screenshot_timeout) != 0)
 		{
 			SDL_Rect loc =
 				{
@@ -687,12 +692,12 @@ static void run(struct core_ctx_s *ctx)
 					.h = 2
 				};
 			SDL_SetRenderDrawColor(ctx->disp_rend, UINT8_MAX,
-				UINT8_MAX, 0, SDL_ALPHA_OPAQUE);
+					       UINT8_MAX, 0, SDL_ALPHA_OPAQUE);
 			SDL_RenderGetLogicalSize(ctx->disp_rend, &loc.x, NULL);
 			loc.x -= FONT_CHAR_WIDTH * loc.h * 8;
 			FontPrintToRenderer(font, "CAP", &loc);
 			SDL_SetRenderDrawColor(ctx->disp_rend,
-				0x00, 0x00, 0x00, 0x00);
+					       0x00, 0x00, 0x00, 0x00);
 		}
 
 		timer_profile_end(&tim);
@@ -723,7 +728,7 @@ static void run(struct core_ctx_s *ctx)
 			Uint32 fps_end = SDL_GetTicks();
 			fps_delta = fps_end - fps_beg;
 			fps = 1000.0F / ((float)fps_delta
-				/ (float)fps_calc_frame_dur);
+					 / (float)fps_calc_frame_dur);
 			fps_curr_frame_dur = fps_calc_frame_dur;
 			fps_beg = fps_end;
 		}
@@ -740,9 +745,9 @@ static void run(struct core_ctx_s *ctx)
 				break;
 
 			bench_fps = (float)bench_frames /
-				((float)elapsed / 1000.0F);
+				    ((float)elapsed / 1000.0F);
 			SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-				"Benchmark: %.2f FPS", bench_fps);
+				    "Benchmark: %.2f FPS", bench_fps);
 			goto out;
 		}
 	}
@@ -758,7 +763,7 @@ out:
 int main(int argc, char *argv[])
 {
 	int ret = EXIT_FAILURE;
-	struct core_ctx_s ctx = { 0 };
+	struct core_ctx_s ctx = {0};
 
 	/* Ignore argc being unused warning. */
 	(void)argc;
@@ -771,8 +776,8 @@ int main(int argc, char *argv[])
 	SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO);
 
 	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-		"%s Libretro Interface -- %s (GIT %s)\n", PROG_NAME,
-		REL_VERSION, GIT_VERSION);
+		    "%s Libretro Interface -- %s (GIT %s)\n", PROG_NAME,
+		    REL_VERSION, GIT_VERSION);
 
 	print_info();
 	prerun_checks();
@@ -782,19 +787,19 @@ int main(int argc, char *argv[])
 #endif
 
 	if(SDL_Init(SDL_INIT_AUDIO | SDL_INIT_EVENTS | SDL_INIT_GAMECONTROLLER
-		| SDL_INIT_TIMER) != 0)
+		    | SDL_INIT_TIMER) != 0)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-			"SDL initialisation failed: %s",
-			SDL_GetError());
+				"SDL initialisation failed: %s",
+				SDL_GetError());
 		exit(EXIT_FAILURE);
 	}
 
 	apply_settings(argv, &ctx);
 
 	ctx.win = SDL_CreateWindow(PROG_NAME, SDL_WINDOWPOS_UNDEFINED,
-		SDL_WINDOWPOS_UNDEFINED, 320, 240,
-		SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+				   SDL_WINDOWPOS_UNDEFINED, 320, 240,
+				   SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
 	if(ctx.win == NULL)
 		goto err;
@@ -814,7 +819,7 @@ int main(int argc, char *argv[])
 #if 1
 	//SDL_SetHint(SDL_HINT_RENDER_OPENGL_SHADERS, "0");
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
-		SDL_GL_CONTEXT_PROFILE_CORE);
+			    SDL_GL_CONTEXT_PROFILE_CORE);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 #endif
@@ -824,7 +829,7 @@ int main(int argc, char *argv[])
 		SDL_SetRenderDrawBlendMode(ctx.disp_rend, SDL_BLENDMODE_BLEND);
 
 	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
-		"Created window and renderer");
+		       "Created window and renderer");
 
 	if(load_libretro_core(ctx.file_core, &ctx))
 		goto err;
@@ -833,8 +838,8 @@ int main(int argc, char *argv[])
 	 * - Check that input file is supported by core
 	 */
 	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-		"Libretro core \"%.32s\" loaded successfully.",
-		ctx.sys_info.library_name);
+		    "Libretro core \"%.32s\" loaded successfully.",
+		    ctx.sys_info.library_name);
 
 #if SDL_VERSION_ATLEAST(2, 0, 13)
 	SDL_SetHint(SDL_HINT_AUDIO_DEVICE_STREAM_NAME, ctx.sys_info.library_name);
@@ -843,7 +848,7 @@ int main(int argc, char *argv[])
 	{
 		char title[MAX_TITLE_LEN];
 		SDL_snprintf(title, MAX_TITLE_LEN, "%s: %s", PROG_NAME,
-			ctx.sys_info.library_name);
+			     ctx.sys_info.library_name);
 		SDL_SetWindowTitle(ctx.win, title);
 	}
 
@@ -856,10 +861,10 @@ int main(int argc, char *argv[])
 		goto err;
 
 	SDL_SetWindowMinimumSize(ctx.win, ctx.game_max_res.w,
-		ctx.game_max_res.h);
+				 ctx.game_max_res.h);
 	SDL_SetWindowSize(ctx.win, ctx.game_max_res.w, ctx.game_max_res.h);
 	SDL_RenderSetLogicalSize(ctx.disp_rend, ctx.game_max_res.w,
-		ctx.game_max_res.h);
+				 ctx.game_max_res.h);
 	run(&ctx);
 
 	ret = EXIT_SUCCESS;
@@ -884,14 +889,14 @@ out:
 	if(ret == EXIT_SUCCESS)
 	{
 		SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-			"Exiting gracefully.");
+			    "Exiting gracefully.");
 	}
 
 	exit(ret);
 
 err:
 	SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-		"Exiting due to an error. %s", SDL_GetError());
+			"Exiting due to an error. %s", SDL_GetError());
 
 	goto out;
 }

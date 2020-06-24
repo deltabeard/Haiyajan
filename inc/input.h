@@ -50,7 +50,7 @@ typedef enum input_cmd_type_e input_cmd_type;
 enum input_cmd_event_codes_e {
 	INPUT_EVENT_TOGGLE_INFO = 0,
 	INPUT_EVENT_TOGGLE_FULLSCREEN,
-	INPUT_EVENT_TAKE_SCREENCAPTURE,
+	INPUT_EVENT_TAKE_SCREENSHOT,
 	INPUT_EVENT_RECORD_VIDEO_TOGGLE
 };
 typedef enum input_cmd_event_codes_e input_cmd_event;

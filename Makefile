@@ -15,9 +15,9 @@ CFLAGS += $(OPT)
 
 # Enable static build by default on Windows.
 ifeq ($(OS),Windows_NT)
-	STATIC ?= 1
+	STATIC := 1
 else
-	STATIC ?= 0
+	STATIC := 0
 endif
 ifeq ($(STATIC),1)
 	LDLIBS += $(shell sdl2-config --static-libs)
@@ -39,13 +39,13 @@ endif
 # Clang.
 IS_LIB_AVAIL = $(shell $(CC) -l$(CHECK_LIB) 2>&1 >/dev/null | grep "cannot find" > /dev/null; echo $$?)
 
-# Check if WEBP is available. Otherwise use BMP for screencaps.
+# Check if WEBP is available. Otherwise use BMP for screenshots.
 CHECK_LIB := webp
 USE_WEBP := $(IS_LIB_AVAIL)
-ENABLE_WEBP_SCREENCAPS ?= $(USE_WEBP)
-ifeq ($(ENABLE_WEBP_SCREENCAPS),1)
+ENABLE_WEBP_SCREENSHOTS ?= $(USE_WEBP)
+ifeq ($(ENABLE_WEBP_SCREENSHOTS),1)
 	LDLIBS += -lwebp
-	CFLAGS += -D ENABLE_WEBP_SCREENCAPS=1
+	CFLAGS += -D ENABLE_WEBP_SCREENSHOTS=1
 endif
 
 CHECK_LIB := x264
@@ -105,11 +105,11 @@ help:
 	@echo "  STATIC=$(STATIC)"
 	@echo "          Enables static build."
 	@echo
-	@echo "  ENABLE_WEBP_SCREENCAPS=$(ENABLE_WEBP_SCREENCAPS)"
-	@echo "          Uses libwebp to encode screencaps instead of BMP."
+	@echo "  ENABLE_WEBP_SCREENSHOTS=$(ENABLE_WEBP_SCREENSHOTS)"
+	@echo "          Uses libwebp to encode screenshots instead of BMP."
 	@echo "          This option will be enabled automatically if the linker is able to"
 	@echo "          detect the availability of libwebp."
-	@echo "          If this option is disabled, screencaps will be saved as BMP files."
+	@echo "          If this option is disabled, screenshots will be saved as BMP files."
 	@echo
 	@echo "  ENABLE_VIDEO_RECORDING=$(ENABLE_VIDEO_RECORDING)"
 	@echo "          Enables video recording of gameplay using libx264 and libwebpack."
