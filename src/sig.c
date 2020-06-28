@@ -70,11 +70,11 @@ void windows_print_stacktrace(CONTEXT* context)
 	STACKFRAME frame = { 0 };
 
 	/* setup initial stack frame */
-	frame.AddrPC.Offset         = context->Eip;
+	frame.AddrPC.Offset         = context->Rip;
 	frame.AddrPC.Mode           = AddrModeFlat;
-	frame.AddrStack.Offset      = context->Esp;
+	frame.AddrStack.Offset      = context->Rsp;
 	frame.AddrStack.Mode        = AddrModeFlat;
-	frame.AddrFrame.Offset      = context->Ebp;
+	frame.AddrFrame.Offset      = context->Rbp;
 	frame.AddrFrame.Mode        = AddrModeFlat;
 
 	while (StackWalk(IMAGE_FILE_MACHINE_I386 ,
@@ -170,7 +170,7 @@ LONG WINAPI windows_exception_handler(EXCEPTION_POINTERS * ExceptionInfo)
 	}
 	else
 	{
-		addr2line(icky_global_program_name, (void*)ExceptionInfo->ContextRecord->Eip);
+		addr2line(icky_global_program_name, (void*)ExceptionInfo->ContextRecord->Rip);
 	}
 
 	return EXCEPTION_EXECUTE_HANDLER;

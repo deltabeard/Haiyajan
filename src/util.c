@@ -16,8 +16,8 @@
 #include <time.h>
 #include <util.h>
 
-void gen_filename(char filename[static 64], const char *core_name,
-		  const char fmt[static 3])
+void gen_filename(char filename[atleast 64], const char *core_name,
+		  const char fmt[atleast 3])
 {
 	time_t now;
 	struct tm *tmp;

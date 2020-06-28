@@ -571,8 +571,8 @@ static void run(struct core_ctx_s *ctx)
 				SDL_snprintf(busy_str, 10, "%6u ms", busy_diff);
 				SDL_snprintf(acc_str, 10, "%6.2f ms",
 					     tim.timer_accumulator);
-				SDL_snprintf(aud_str, 10, "%6" PRIu32,
-					     (Uint32)(
+				SDL_snprintf(aud_str, 10, "%6u",
+					     (unsigned)(
 						     SDL_GetQueuedAudioSize(
 							     ctx->audio_dev)
 						     /

@@ -16,6 +16,12 @@
 
 #include <SDL2/SDL.h>
 
+#ifdef _WIN32
+#define atleast
+#else
+#define atleast static
+#endif
+
 /**
  * Generates a filename based upon the current time, and the core name. Filename
  * will be a maximum of 63 characters with a NULL terminator.
@@ -24,8 +30,8 @@
  * \param core_name	Name of the core. Can be NULL if not available.
  * \param fmt		File format to use in filename.
  */
-void gen_filename(char filename[static 64], const char *core_name,
-		  const char fmt[static 3]);
+void gen_filename(char filename[atleast 64], const char *core_name,
+		  const char fmt[atleast 3]);
 
 /**
  * Modify an atomic variable to a value after a given time.
