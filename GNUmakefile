@@ -63,23 +63,21 @@ ifeq ($(ENABLE_VIDEO_RECORDING),1)
 	CFLAGS += -D ENABLE_VIDEO_RECORDING=1
 endif
 
+SRC_DIR	:= ./src
+INC_DIR	:= ./inc
+SRCS	:= $(shell find ./src -type f -name *.c)
+HDRS	:= $(shell find ./inc -type f -name *.h)
+OBJS	:= $(SRCS:.c=.o)
+DEPS	:= Makefile.depend
+
 .PHONY: test
 
 all: $(TARGETS)
-haiyajan: ./src/haiyajan.o ./src/load.o ./src/play.o ./src/load.o \
-		./src/timer.o ./src/font.o ./src/input.o ./src/gl.o \
-		./src/rec.o ./src/util.o ./src/tinflate.o
-	+$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
+haiyajan: $(DEPS) $(OBJS) $(HDRS)
+	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LDLIBS)
 
-./src/haiyajan.o: ./src/haiyajan.c ./inc/*.h
-./src/rec.o: ./src/rec.c ./inc/rec.h
-./src/gl.o: ./src/gl.c ./inc/gl.h ./inc/libretro.h
-./src/load.o: ./src/load.c ./inc/load.h ./inc/haiyajan.h ./inc/libretro.h
-./src/play.o: ./src/play.c ./inc/play.h ./inc/haiyajan.h ./inc/libretro.h
-./src/timer.o: ./src/timer.c ./inc/timer.h
-./src/input.o: ./src/input.c ./inc/input.h ./inc/gcdb_bin_all.h \
-		./inc/gcdb_bin_linux.h ./inc/gcdb_bin_windows.h
-./src/util.o: ./src/util.c ./inc/util.h
+$(DEPS): $(SRCS)
+	$(CC) $(CFLAGS) -MM $^ > $(DEPS)
 
 # Saves debug symbols in a separate file, and strips the main executable.
 # To get information from stack trace: `addr2line -e haiyajan.debug addr`
@@ -92,7 +90,7 @@ test: haiyajan
 	$(MAKE) -C ./test run
 
 clean:
-	$(RM) ./src/*.o ./src/*.gcda
+	$(RM) $(OBJS) $(SRCS:.c=.gcda)
 	$(RM) ./haiyajan ./haiyajan.exe ./haiyajan.sym
 	$(MAKE) -C ./test clean
 
@@ -125,3 +123,5 @@ help:
 	@echo "Haiyajan is free software; see the LICENSE file for copying conditions. There is"
 	@echo "NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
 	@echo ""
+
+-include $(DEPS)

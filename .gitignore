@@ -1,9 +1,22 @@
-*.o
-*.so
-*.dll
-*.gcda
+*
 
-haiyajan
-haiyajan.exe
-haiyajan.stripped
-test
+# Hidden files
+!.gitignore
+!.astylerc
+!.editorconfig
+
+# Project documentation
+!Makefile
+!LICENSE
+!*.md
+!*.sh
+!/meta/*.xcf
+!/meta/*.png
+!/meta/*.jpg
+
+# Source code
+!/inc/*.h
+!/src/*.c
+!link.T
+
+!*/
