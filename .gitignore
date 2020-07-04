@@ -15,8 +15,8 @@
 !/meta/*.jpg
 
 # Source code
-!/inc/*.h
-!/src/*.c
+!*.h
+!*.c
 !link.T
 
 !*/

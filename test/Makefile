@@ -12,10 +12,13 @@ test: test.o ../src/load.o ../src/timer.o
 libretro-init:
 	$(MAKE) -C ./libretro_init
 
+libretro-abort:
+	$(MAKE) -C ./libretro_abort
+
 libretro-av:
 	$(MAKE) -C ./libretro_av
 
-run: libretro-init libretro-av test
+run: libretro-init libretro_abort libretro-av test
 	@./test
 
 clean:

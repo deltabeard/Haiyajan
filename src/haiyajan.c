@@ -30,6 +30,7 @@
 #include <rec.h>
 #include <timer.h>
 #include <util.h>
+#include <sig.h>
 
 #define PROG_NAME       "Haiyajan"
 #define MAX_TITLE_LEN   56
@@ -779,6 +780,7 @@ int main(int argc, char *argv[])
 		    "%s Libretro Interface -- %s (GIT %s)\n", PROG_NAME,
 		    REL_VERSION, GIT_VERSION);
 
+	init_sig();
 	print_info();
 	prerun_checks();
 

@@ -1,41 +1,69 @@
+/**
+ * Catches error signals.
+ * Copyright (C) 2020  Mahyar Koshkouei
+ *
+ * This is free software, and you are welcome to redistribute it under the terms
+ * of the GNU Affero General Public License version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.
+ *
+ * See the LICENSE file for more details.
+ */
+
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-void almost_c99_signal_handler(int sig)
+#include <sig.h>
+
+static void sig_handler(int sig)
 {
+	fputs("\nUnfortunately a critical error has occurred due to ", stderr);
+
 	switch(sig)
 	{
-		case SIGABRT:
-			fputs("Caught SIGABRT: usually caused by an abort() or assert()\n", stderr);
-			break;
-		case SIGFPE:
-			fputs("Caught SIGFPE: arithmetic exception, such as divide by zero\n", stderr);
-			break;
-		case SIGILL:
-			fputs("Caught SIGILL: illegal instruction\n", stderr);
-			break;
-		case SIGINT:
-			fputs("Caught SIGINT: interactive attention signal, probably a ctrl+c\n", stderr);
-			break;
-		case SIGSEGV:
-			fputs("Caught SIGSEGV: segfault\n", stderr);
-			break;
-		case SIGTERM:
-		default:
-			fputs("Caught SIGTERM: a termination request was sent to the program\n", stderr);
-			break;
+	case SIGABRT:
+		fputs("the calling of an abort() or assert() function (SIGABRT)",
+		      stderr);
+		break;
+	case SIGFPE:
+		fputs("an invalid floating point calculation (SIGFPE)", stderr);
+		break;
+	case SIGILL:
+		fputs("the execution of an illegal instruction (SIGILL)",
+		      stderr);
+		break;
+	case SIGSEGV:
+		fputs("a segmentation fault (SIGSEGV)", stderr);
+		break;
+	default:
+		fputs("an unknown error", stderr);
+		break;
 	}
 
-	_Exit(EXIT_FAILURE);
+	fputs(".\n"
+	      "If your system is configured to do so, a core dump will be "
+	      "generated containing information that may help in resolving "
+	      "this issue.\n"
+	      "If this issue persists, please open a bug report (with your "
+	      "core dump file attached if possible), to "
+	      "https://github.com/deltabeard/Haiyajan/issues or email "
+	      "bugs@deltabeard.com\n",
+	      stderr);
+
+	fputs("Haiyajan will now abort.\n", stderr);
+	fflush(stderr);
+
+	signal(SIGABRT, SIG_DFL);
+	abort();
 }
 
-void set_signal_handler()
+void init_sig(void)
 {
-	signal(SIGABRT, almost_c99_signal_handler);
-	signal(SIGFPE,  almost_c99_signal_handler);
-	signal(SIGILL,  almost_c99_signal_handler);
-	signal(SIGINT,  almost_c99_signal_handler);
-	signal(SIGSEGV, almost_c99_signal_handler);
-	signal(SIGTERM, almost_c99_signal_handler);
+	signal(SIGABRT, sig_handler);
+	signal(SIGFPE, sig_handler);
+	signal(SIGILL, sig_handler);
+	signal(SIGSEGV, sig_handler);
 }
