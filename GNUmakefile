@@ -65,19 +65,22 @@ endif
 
 SRC_DIR	:= ./src
 INC_DIR	:= ./inc
-SRCS	:= $(shell find ./src -type f -name *.c)
-HDRS	:= $(shell find ./inc -type f -name *.h)
+SRCS	:= $(wildcard ./src/*.c)
+HDRS	:= $(wildcard ./inc/*.h)
 OBJS	:= $(SRCS:.c=.o)
 DEPS	:= Makefile.depend
 
 .PHONY: test
 
 all: $(TARGETS)
-haiyajan: $(DEPS) $(OBJS) $(HDRS)
+haiyajan: $(DEPS) $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LDLIBS)
 
 $(DEPS): $(SRCS)
 	$(CC) $(CFLAGS) -MM $^ > $(DEPS)
+	@sed -i -E "s/^(.+?).o: ([^ ]+?)\1/\2\1.o: \2\1/g" $(DEPS)
+
+-include $(DEPS)
 
 # Saves debug symbols in a separate file, and strips the main executable.
 # To get information from stack trace: `addr2line -e haiyajan.debug addr`
@@ -90,7 +93,7 @@ test: haiyajan
 	$(MAKE) -C ./test run
 
 clean:
-	$(RM) $(OBJS) $(SRCS:.c=.gcda)
+	$(RM) $(OBJS) $(DEPS) $(SRCS:.c=.gcda)
 	$(RM) ./haiyajan ./haiyajan.exe ./haiyajan.sym
 	$(MAKE) -C ./test clean
 
@@ -123,5 +126,3 @@ help:
 	@echo "Haiyajan is free software; see the LICENSE file for copying conditions. There is"
 	@echo "NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
 	@echo ""
-
--include $(DEPS)
