@@ -101,7 +101,18 @@ void input_init(struct input_ctx_s *restrict in_ctx)
 		{{ .sc = SDL_SCANCODE_R },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_R2 }},
 		{{ .sc = SDL_SCANCODE_T },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_L3 }},
 		{{ .sc = SDL_SCANCODE_Y },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_R3 }},
-		{{ .sc = SDL_SCANCODE_I },	{ INPUT_CMD_CALL_FUNC,   INPUT_EVENT_TOGGLE_INFO }},
+
+		/* Analogue keyboard mappings for testing purposes. Won't work with all keyboards. */
+		{{ .sc = SDL_SCANCODE_LEFTBRACKET }, { INPUT_CMD_RETRO_INPUT, INPUT_ANALOGUE_LEFT_Y_NEG }},
+		{{ .sc = SDL_SCANCODE_APOSTROPHE }, { INPUT_CMD_RETRO_INPUT, INPUT_ANALOGUE_LEFT_Y_POS }},
+		{{ .sc = SDL_SCANCODE_BACKSLASH }, { INPUT_CMD_RETRO_INPUT, INPUT_ANALOGUE_LEFT_X_POS }},
+		{{ .sc = SDL_SCANCODE_SEMICOLON}, { INPUT_CMD_RETRO_INPUT, INPUT_ANALOGUE_LEFT_X_NEG }},
+		{{ .sc = SDL_SCANCODE_HOME },	{ INPUT_CMD_RETRO_INPUT, INPUT_ANALOGUE_RIGHT_X_POS }},
+		{{ .sc = SDL_SCANCODE_END },	{ INPUT_CMD_RETRO_INPUT, INPUT_ANALOGUE_RIGHT_X_NEG }},
+		{{ .sc = SDL_SCANCODE_PAGEDOWN }, { INPUT_CMD_RETRO_INPUT, INPUT_ANALOGUE_RIGHT_Y_POS }},
+		{{ .sc = SDL_SCANCODE_DELETE }, { INPUT_CMD_RETRO_INPUT, INPUT_ANALOGUE_RIGHT_Y_NEG }},
+
+		{{ .sc = SDL_SCANCODE_I },	{ INPUT_CMD_CALL_FUNC, INPUT_EVENT_TOGGLE_INFO }},
 		{{ .sc = SDL_SCANCODE_F },	{ INPUT_CMD_CALL_FUNC, INPUT_EVENT_TOGGLE_FULLSCREEN }},
 		{{ .sc = SDL_SCANCODE_P },	{ INPUT_CMD_CALL_FUNC, INPUT_EVENT_TAKE_SCREENSHOT }},
 		{{ .sc = SDL_SCANCODE_V },	{ INPUT_CMD_CALL_FUNC, INPUT_EVENT_RECORD_VIDEO_TOGGLE }}
@@ -261,9 +272,9 @@ void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev)
 	}
 }
 
-static void mod_bit(Uint16 *n, Uint8 pos, unsigned val)
+static void mod_bit(Uint32 *n, Uint8 pos, unsigned val)
 {
-	unsigned mask = 1 << pos;
+	uint32_t mask = 1 << pos;
 	*n = (*n & ~mask) | ((val << pos) & mask);
 }
 
@@ -317,6 +328,10 @@ Sint16 input_get(const struct input_ctx_s *const in_ctx,
 		SDL_CONTROLLER_BUTTON_LEFTSTICK,
 		SDL_CONTROLLER_BUTTON_RIGHTSTICK
 	};
+	const SDL_GameControllerAxis lr_to_gcax[2][2] = {
+		{ SDL_CONTROLLER_AXIS_LEFTX, SDL_CONTROLLER_AXIS_LEFTY },
+		{ SDL_CONTROLLER_AXIS_RIGHTX, SDL_CONTROLLER_AXIS_RIGHTY }
+	};
 
 	if(index != 0 || port >= MAX_PLAYERS)
 		return 0;
@@ -339,6 +354,30 @@ Sint16 input_get(const struct input_ctx_s *const in_ctx,
 		//return 0;
 	}
 
+	if(in_ctx->player[port].hai_type == RETRO_INPUT_KEYBOARD)
+	{
+		switch(device)
+		{
+		case RETRO_INPUT_ANALOG:
+		{
+			const uint8_t lr_to_keyax[2][2] = {
+				{ INPUT_ANALOGUE_LEFT_X_POS, INPUT_ANALOGUE_LEFT_Y_POS },
+				{ INPUT_ANALOGUE_RIGHT_X_POS, INPUT_ANALOGUE_RIGHT_Y_POS }
+			};
+			uint8_t is_pos = (in_ctx->player[port].retro_state >> lr_to_keyax[index][id]) & 0b1;
+			uint8_t is_neg = (in_ctx->player[port].retro_state >> (lr_to_keyax[index][id] + 1)) & 0b1;
+			if(is_pos)
+				return 0x7fff;
+			else if(is_neg)
+				return -0x7fff;
+
+			return 0;
+		}
+		case RETRO_INPUT_JOYPAD:
+			return (in_ctx->player[port].retro_state >> id) & 0b1;
+		}
+	}
+
 	switch(device)
 	{
 	case RETRO_INPUT_ANALOG:
@@ -347,11 +386,6 @@ Sint16 input_get(const struct input_ctx_s *const in_ctx,
 
 		if(index < RETRO_DEVICE_INDEX_ANALOG_BUTTON)
 		{
-			const SDL_GameControllerAxis lr_to_gcax[2][2] = {
-				{ SDL_CONTROLLER_AXIS_LEFTX, SDL_CONTROLLER_AXIS_LEFTY },
-				{ SDL_CONTROLLER_AXIS_RIGHTX, SDL_CONTROLLER_AXIS_RIGHTY }
-			};
-
 			//SDL_Log("Axis %d: %d", index, SDL_GameControllerGetAxis(in_ctx->player[port].gc, lr_to_gcax[index][id]));
 
 			return SDL_GameControllerGetAxis(in_ctx->player[port].gc,
@@ -360,9 +394,6 @@ Sint16 input_get(const struct input_ctx_s *const in_ctx,
 		/* Fall-through */
 	case RETRO_INPUT_JOYPAD:
 	{
-		if(in_ctx->player[port].hai_type == RETRO_INPUT_KEYBOARD)
-			return (in_ctx->player[port].retro_state >> id) & 0b1;
-
 		SDL_GameControllerButton btn = lr_to_gcb[id];
 		if(btn != -1)
 			return SDL_GameControllerGetButton(in_ctx->player[port].gc, btn);

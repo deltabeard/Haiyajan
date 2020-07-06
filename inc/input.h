@@ -72,7 +72,16 @@ enum input_cmd_joypad_codes_e {
 	INPUT_JOYPAD_L2,
 	INPUT_JOYPAD_R2,
 	INPUT_JOYPAD_L3,
-	INPUT_JOYPAD_R3
+	INPUT_JOYPAD_R3,
+	INPUT_ANALOGUE_LEFT_X_POS,
+	INPUT_ANALOGUE_LEFT_X_NEG,
+	INPUT_ANALOGUE_LEFT_Y_POS,
+	INPUT_ANALOGUE_LEFT_Y_NEG,
+	INPUT_ANALOGUE_RIGHT_X_POS,
+	INPUT_ANALOGUE_RIGHT_X_NEG,
+	INPUT_ANALOGUE_RIGHT_Y_POS,
+	INPUT_ANALOGUE_RIGHT_Y_NEG,
+	INPUT_ANALOGUE_BTN
 };
 typedef enum input_cmd_joypad_codes_e input_cmd_joypad;
 
@@ -104,7 +113,7 @@ struct input_device_s {
 
 	/* State of all the retro_device buttons.
 	 * Where bit 0 is RETRO_DEVICE_ID_JOYPAD_B. */
-	Uint16 retro_state;
+	Uint32 retro_state;
 
 	/* Pointer to gamecontroller if type is INPUT_TYPE_CONTROLLER*. */
 	SDL_GameController *gc;
@@ -153,3 +162,5 @@ void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev);
  */
 Sint16 input_get(const struct input_ctx_s *const in_ctx,
 		 unsigned port, unsigned device, unsigned index, unsigned id);
+
+
