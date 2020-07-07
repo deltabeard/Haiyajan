@@ -41,8 +41,9 @@ typedef enum input_type_e input_type;
 /* The type of command executed by the input button press. */
 enum input_cmd_type_e {
 	INPUT_CMD_NONE = 0,
-	INPUT_CMD_RETRO_INPUT,
-	INPUT_CMD_CALL_FUNC
+	INPUT_CMD_INPUT,
+	INPUT_CMD_EVENT,
+	INPUT_CMD_RESERVED
 };
 typedef enum input_cmd_type_e input_cmd_type;
 
@@ -56,7 +57,7 @@ enum input_cmd_event_codes_e {
 typedef enum input_cmd_event_codes_e input_cmd_event;
 
 /* Libretro joypad input as an enum for improved type tracking. */
-enum input_cmd_joypad_codes_e {
+enum input_cmd_input_e {
 	INPUT_JOYPAD_B = RETRO_DEVICE_ID_JOYPAD_B,
 	INPUT_JOYPAD_Y,
 	INPUT_JOYPAD_SELECT,
@@ -73,6 +74,7 @@ enum input_cmd_joypad_codes_e {
 	INPUT_JOYPAD_R2,
 	INPUT_JOYPAD_L3,
 	INPUT_JOYPAD_R3,
+
 	INPUT_ANALOGUE_LEFT_X_POS,
 	INPUT_ANALOGUE_LEFT_X_NEG,
 	INPUT_ANALOGUE_LEFT_Y_POS,
@@ -83,45 +85,91 @@ enum input_cmd_joypad_codes_e {
 	INPUT_ANALOGUE_RIGHT_Y_NEG,
 	INPUT_ANALOGUE_BTN
 };
-typedef enum input_cmd_joypad_codes_e input_cmd_joypad;
+typedef enum input_cmd_input_e input_cmd_input;
 
-/* The command to execute on button press. This depends on the input_cmd_type of
- * the mapping. */
-union input_cmd_u {
-	input_cmd_event event;
-	input_cmd_joypad joypad;
-	unsigned char byte;
-};
-
-union input_cmd_trigger_u {
-	SDL_GameControllerButton btn;
-	//SDL_GameControllerAxis axis;
-	SDL_Scancode sc;
+struct input_joypad_btns_s
+{
+	union
+	{
+		Uint16 btns;
+		struct
+		{
+			unsigned input_joypad_btns_b : 1;
+			unsigned input_joypad_btns_y : 1;
+			unsigned input_joypad_btns_select : 1;
+			unsigned input_joypad_btns_start : 1;
+			unsigned input_joypad_btns_up : 1;
+			unsigned input_joypad_btns_down : 1;
+			unsigned input_joypad_btns_left : 1;
+			unsigned input_joypad_btns_right : 1;
+			unsigned input_joypad_btns_a : 1;
+			unsigned input_joypad_btns_x : 1;
+			unsigned input_joypad_btns_l : 1;
+			unsigned input_joypad_btns_r : 1;
+			unsigned input_joypad_btns_l2 : 1;
+			unsigned input_joypad_btns_r2 : 1;
+			unsigned input_joypad_btns_l3 : 1;
+			unsigned input_joypad_btns_r3 : 1;
+		} btns_bits;
+	};
 };
 
 struct input_device_s {
 	/* Type of device connected to Haiyajan. */
 	input_type hai_type;
 
-	/* Type of device connected to Libretro core. */
+	/* Type of device connected to Libretro core. Used to check
+	 * compatability with the input selected in Haiyajan. */
 	input_type lr_type;
 
-#if 0
-	/* Player number. Undefined if lr_type is RETRO_INPUT_NONE. */
-	Uint8 player;
-#endif
+	/* Values within this union depend on the input_type hai_type. */
+	union {
+		struct {
+			SDL_GameController *ctx;
+			struct input_joypad_btns_s btns;
+		} joypad;
+		struct {
+			struct input_joypad_btns_s btns;
+			Sint16 x, y;
+		} mouse;
+		struct {
+			struct input_joypad_btns_s btns;
+			Sint16 left_x, left_y;
+			Sint16 right_x, right_y;
+		} keyboard;
+		struct {
+			Sint16 x, y;
+			unsigned on_screen : 1;
+			unsigned trigger : 1;
+			unsigned select : 1;
+			unsigned start : 1;
+			unsigned a : 1;
+			unsigned b : 1;
+			unsigned c : 1;
+			unsigned d : 1;
+			unsigned dpad_up : 1;
+			unsigned dpad_down : 1;
+			unsigned dpad_left : 1;
+			unsigned dpad_right : 1;
+		} lightgun;
+		struct {
+			SDL_GameController *ctx;
+			struct input_joypad_btns_s btns;
+			Sint16 left_x, left_y;
+			Sint16 right_x, right_y;
+			Sint16 l2_x, r2_x;
+		} analogue;
+		struct {
+			/* Number of presses on screen. */
+			Uint8 pressed;
 
-	/* State of all the retro_device buttons.
-	 * Where bit 0 is RETRO_DEVICE_ID_JOYPAD_B. */
-	Uint32 retro_state;
-
-	/* Pointer to gamecontroller if type is INPUT_TYPE_CONTROLLER*. */
-	SDL_GameController *gc;
-	/* Game Controller mapping if type is INPUT_TYPE_CONTROLLER*. */
-	//Uint8 gcbtn[SDL_CONTROLLER_BUTTON_MAX];
-	/* Additional mappings if the controller has axis input, and hence is a
-	 * INPUT_TYPE_CONTROLLER_ANALOGUE only. */
-	//Sint16 gcax[SDL_CONTROLLER_AXIS_MAX];
+			/* Array of coordinates of "pressed" length, else NULL.
+			 */
+			struct touch_coords_s {
+				Sint16 x, y;
+			} *touch_coords;
+		} pointer;
+	};
 };
 
 struct input_ctx_s

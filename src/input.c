@@ -17,49 +17,21 @@
 #include <input.h>
 #include <tinf.h>
 
-struct keymap_info_s {
-	/* A value of type input_cmd_type. */
-	unsigned char input_cmd_type : 2;
+struct keymap_info_s
+{
+	/* A command type listed in input_cmd_type. */
+	unsigned char cmd_type : 2;
 
-	/* Hold either input_cmd_event or input_cmd_joypad depending on
-	 * input_cmd_type. */
-	unsigned char input_cmd : 6;
-	/*
-	union input_cmd_u input_cmd;
-	*/
+	/* The command to execute. Either input_cmd_event or
+	 * input_cmd_input. */
+	unsigned char cmd : 6;
 };
-
-/* It is assumed that the user only has one keyboard in use. This one keyboard
- * may be used to control any number of players. */
-/* TODO: Set default keymapping here. */
-static struct keymap_info_s keymap[SDL_NUM_SCANCODES] = { 0 };
-
-/* Forward declarations. */
-static void input_set(struct input_ctx_s *const in_ctx, SDL_Scancode sc,
-		      Uint8 state);
-void input_toggle_ui_info(struct input_ctx_s *const in_ctx);
-void input_toggle_fullscreen(struct input_ctx_s *const in_ctx);
 
 static const char *const input_type_str[] = {
 	"None", "Joypad", "Mouse", "Keyboard", "Lightgun", "Analogue", "Pointer"
 };
 
-void input_map(struct input_ctx_s *const in_ctx, input_type input_type,
-	       union input_cmd_trigger_u trig,
-	       const struct keymap_info_s *const map)
-{
-	(void)in_ctx;
-	if(input_type == RETRO_INPUT_JOYPAD ||
-		input_type == RETRO_INPUT_KEYBOARD)
-	{
-		keymap[trig.sc] = *map;
-	}
-	else
-	{
-		SDL_LogWarn(SDL_LOG_CATEGORY_INPUT,
-			    "Unable to map command to unsupported input type");
-	}
-}
+static struct keymap_info_s keymap[512] = { 0 };
 
 void input_init(struct input_ctx_s *restrict in_ctx)
 {
@@ -74,48 +46,42 @@ void input_init(struct input_ctx_s *restrict in_ctx)
 	Uint8 *gcdb_txt;
 	size_t gcdb_txt_len_act = gcdb_txt_len;
 	tinf_error_code tinf;
-	const struct {
-		union input_cmd_trigger_u trig;
+	static const struct
+	{
+		SDL_Scancode sc;
 		struct keymap_info_s map;
-	} keymap_defaults[] = {
-		{
-			{ .sc = SDL_SCANCODE_X },
-			{
-				.input_cmd_type = INPUT_CMD_RETRO_INPUT,
-				.input_cmd = INPUT_JOYPAD_B
-			}
-		},
-		{{ .sc = SDL_SCANCODE_X },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_B }},
-		{{ .sc = SDL_SCANCODE_S },	{INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_Y }},
-		{{ .sc = SDL_SCANCODE_RETURN },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_SELECT }},
-		{{ .sc = SDL_SCANCODE_BACKSPACE},{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_START }},
-		{{ .sc = SDL_SCANCODE_UP },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_UP }},
-		{{ .sc = SDL_SCANCODE_DOWN },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_DOWN }},
-		{{ .sc = SDL_SCANCODE_LEFT },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_LEFT }},
-		{{ .sc = SDL_SCANCODE_RIGHT },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_RIGHT }},
-		{{ .sc = SDL_SCANCODE_Z },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_A }},
-		{{ .sc = SDL_SCANCODE_A },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_X }},
-		{{ .sc = SDL_SCANCODE_Q },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_L }},
-		{{ .sc = SDL_SCANCODE_W },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_R }},
-		{{ .sc = SDL_SCANCODE_E },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_L2 }},
-		{{ .sc = SDL_SCANCODE_R },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_R2 }},
-		{{ .sc = SDL_SCANCODE_T },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_L3 }},
-		{{ .sc = SDL_SCANCODE_Y },	{ INPUT_CMD_RETRO_INPUT, INPUT_JOYPAD_R3 }},
+	} keymap_defaults[] =
+	{
+		{ SDL_SCANCODE_Z,	{ INPUT_CMD_INPUT, INPUT_JOYPAD_B }},
+		{ SDL_SCANCODE_A,	{INPUT_CMD_INPUT, INPUT_JOYPAD_Y }},
+		{ SDL_SCANCODE_BACKSPACE,{ INPUT_CMD_INPUT, INPUT_JOYPAD_SELECT }},
+		{ SDL_SCANCODE_RETURN,	{ INPUT_CMD_INPUT, INPUT_JOYPAD_START }},
+		{ SDL_SCANCODE_UP,	{ INPUT_CMD_INPUT, INPUT_JOYPAD_UP }},
+		{ SDL_SCANCODE_DOWN,	{ INPUT_CMD_INPUT, INPUT_JOYPAD_DOWN }},
+		{ SDL_SCANCODE_LEFT,	{ INPUT_CMD_INPUT, INPUT_JOYPAD_LEFT }},
+		{ SDL_SCANCODE_RIGHT,	{ INPUT_CMD_INPUT, INPUT_JOYPAD_RIGHT }},
+		{ SDL_SCANCODE_X,	{ INPUT_CMD_INPUT, INPUT_JOYPAD_A }},
+		{ SDL_SCANCODE_S,	{ INPUT_CMD_INPUT, INPUT_JOYPAD_X }},
+		{ SDL_SCANCODE_Q,	{ INPUT_CMD_INPUT, INPUT_JOYPAD_L }},
+		{ SDL_SCANCODE_W,	{ INPUT_CMD_INPUT, INPUT_JOYPAD_R }},
+		{ SDL_SCANCODE_1,	{ INPUT_CMD_INPUT, INPUT_JOYPAD_L2 }},
+		{ SDL_SCANCODE_2,	{ INPUT_CMD_INPUT, INPUT_JOYPAD_R2 }},
+		{ SDL_SCANCODE_E,	{ INPUT_CMD_INPUT, INPUT_JOYPAD_L3 }},
+		{ SDL_SCANCODE_R,	{ INPUT_CMD_INPUT, INPUT_JOYPAD_R3 }},
 
-		/* Analogue keyboard mappings for testing purposes. Won't work with all keyboards. */
-		{{ .sc = SDL_SCANCODE_LEFTBRACKET }, { INPUT_CMD_RETRO_INPUT, INPUT_ANALOGUE_LEFT_Y_NEG }},
-		{{ .sc = SDL_SCANCODE_APOSTROPHE }, { INPUT_CMD_RETRO_INPUT, INPUT_ANALOGUE_LEFT_Y_POS }},
-		{{ .sc = SDL_SCANCODE_BACKSLASH }, { INPUT_CMD_RETRO_INPUT, INPUT_ANALOGUE_LEFT_X_POS }},
-		{{ .sc = SDL_SCANCODE_SEMICOLON}, { INPUT_CMD_RETRO_INPUT, INPUT_ANALOGUE_LEFT_X_NEG }},
-		{{ .sc = SDL_SCANCODE_HOME },	{ INPUT_CMD_RETRO_INPUT, INPUT_ANALOGUE_RIGHT_X_POS }},
-		{{ .sc = SDL_SCANCODE_END },	{ INPUT_CMD_RETRO_INPUT, INPUT_ANALOGUE_RIGHT_X_NEG }},
-		{{ .sc = SDL_SCANCODE_PAGEDOWN }, { INPUT_CMD_RETRO_INPUT, INPUT_ANALOGUE_RIGHT_Y_POS }},
-		{{ .sc = SDL_SCANCODE_DELETE }, { INPUT_CMD_RETRO_INPUT, INPUT_ANALOGUE_RIGHT_Y_NEG }},
+		{ SDL_SCANCODE_LEFTBRACKET, { INPUT_CMD_INPUT, INPUT_ANALOGUE_LEFT_Y_NEG }},
+		{ SDL_SCANCODE_APOSTROPHE, { INPUT_CMD_INPUT, INPUT_ANALOGUE_LEFT_Y_POS }},
+		{ SDL_SCANCODE_BACKSLASH, { INPUT_CMD_INPUT, INPUT_ANALOGUE_LEFT_X_POS }},
+		{ SDL_SCANCODE_SEMICOLON, { INPUT_CMD_INPUT, INPUT_ANALOGUE_LEFT_X_NEG }},
+		{ SDL_SCANCODE_HOME,	{ INPUT_CMD_INPUT, INPUT_ANALOGUE_RIGHT_Y_NEG }},
+		{ SDL_SCANCODE_END,	{ INPUT_CMD_INPUT, INPUT_ANALOGUE_RIGHT_Y_POS }},
+		{ SDL_SCANCODE_PAGEDOWN, { INPUT_CMD_INPUT, INPUT_ANALOGUE_RIGHT_X_POS }},
+		{ SDL_SCANCODE_DELETE,	{ INPUT_CMD_INPUT, INPUT_ANALOGUE_RIGHT_X_NEG }},
 
-		{{ .sc = SDL_SCANCODE_I },	{ INPUT_CMD_CALL_FUNC, INPUT_EVENT_TOGGLE_INFO }},
-		{{ .sc = SDL_SCANCODE_F },	{ INPUT_CMD_CALL_FUNC, INPUT_EVENT_TOGGLE_FULLSCREEN }},
-		{{ .sc = SDL_SCANCODE_P },	{ INPUT_CMD_CALL_FUNC, INPUT_EVENT_TAKE_SCREENSHOT }},
-		{{ .sc = SDL_SCANCODE_V },	{ INPUT_CMD_CALL_FUNC, INPUT_EVENT_RECORD_VIDEO_TOGGLE }}
+		{ SDL_SCANCODE_I,	{ INPUT_CMD_EVENT, INPUT_EVENT_TOGGLE_INFO }},
+		{ SDL_SCANCODE_F,	{ INPUT_CMD_EVENT, INPUT_EVENT_TOGGLE_FULLSCREEN }},
+		{ SDL_SCANCODE_P,	{ INPUT_CMD_EVENT, INPUT_EVENT_TAKE_SCREENSHOT }},
+		{ SDL_SCANCODE_V,	{ INPUT_CMD_EVENT, INPUT_EVENT_RECORD_VIDEO_TOGGLE }}
 	};
 
 	SDL_zerop(in_ctx);
@@ -141,18 +107,11 @@ void input_init(struct input_ctx_s *restrict in_ctx)
 			SDL_GetError());
 	}
 
-	/* Set default keyboard keymap. */
-	for(unsigned i = 0; i < SDL_arraysize(keymap_defaults); i++)
-	{
-		/* Set keyboard to JOYPAD input by default. */
-		/* TODO: Make smart decisions on default input device based on
-		 * what the core supports. */
-		input_map(in_ctx, RETRO_INPUT_JOYPAD, keymap_defaults[i].trig,
-				  &keymap_defaults[i].map);
-	}
-
 	in_ctx->player[0].hai_type = RETRO_INPUT_KEYBOARD;
 	in_ctx->player[0].lr_type = in_ctx->player[0].hai_type;
+
+	for(unsigned i = 0; i < SDL_arraysize(keymap_defaults); i++)
+		keymap[keymap_defaults[i].sc] = keymap_defaults[i].map;
 
 	SDL_LogVerbose(SDL_LOG_CATEGORY_INPUT, "Initialised keyboard input");
 	return;
@@ -160,8 +119,7 @@ void input_init(struct input_ctx_s *restrict in_ctx)
 err:
 	SDL_free(gcdb_txt);
 	SDL_LogWarn(SDL_LOG_CATEGORY_INPUT,
-		    "Unable to initialise input system: %s",
-		    SDL_GetError());
+		    "Unable to initialise input system: %s", SDL_GetError());
 	return;
 }
 
@@ -184,12 +142,71 @@ static SDL_bool input_is_analogue(SDL_GameController *gc)
 	return SDL_FALSE;
 }
 
+/* TODO: Change this if-statement mess to use address and pointers. */
+static void input_set_keyboard(struct input_device_s *dev, const SDL_Scancode sc,
+                      const Uint8 state, const Uint32 input_cmd_event)
+{
+
+	if(keymap[sc].cmd_type == INPUT_CMD_NONE)
+		return;
+	else if(keymap[sc].cmd_type == INPUT_CMD_INPUT &&
+	                keymap[sc].cmd <= INPUT_JOYPAD_R3)
+	{
+		dev->keyboard.btns.btns = (dev->keyboard.btns.btns & ~(1 << keymap[sc].cmd)) | (state << keymap[sc].cmd);
+	}
+	else if(keymap[sc].cmd_type == INPUT_CMD_INPUT)
+	{
+		switch(keymap[sc].cmd)
+		{
+		case INPUT_ANALOGUE_LEFT_X_POS:
+			dev->keyboard.left_x = state ? INT16_MAX : 0;
+			break;
+		case INPUT_ANALOGUE_LEFT_X_NEG:
+			dev->keyboard.left_x = state ? INT16_MIN : 0;
+			break;
+		case INPUT_ANALOGUE_LEFT_Y_POS:
+			dev->keyboard.left_y = state ? INT16_MAX : 0;
+			break;
+		case INPUT_ANALOGUE_LEFT_Y_NEG:
+			dev->keyboard.left_y = state ? INT16_MIN : 0;
+			break;
+		case INPUT_ANALOGUE_RIGHT_X_POS:
+			dev->keyboard.right_x = state ? INT16_MAX : 0;
+			break;
+		case INPUT_ANALOGUE_RIGHT_X_NEG:
+			dev->keyboard.right_x = state ? INT16_MIN : 0;
+			break;
+		case INPUT_ANALOGUE_RIGHT_Y_POS:
+			dev->keyboard.right_y = state ? INT16_MAX : 0;
+			break;
+		case INPUT_ANALOGUE_RIGHT_Y_NEG:
+			dev->keyboard.right_y = state ? INT16_MIN : 0;
+			break;
+			/* FIXME: INPUT_ANALOGUE_BTN ? */
+		}
+	}
+	else if(keymap[sc].cmd_type == INPUT_CMD_EVENT && state != 0 &&
+	                input_cmd_event != ((Uint32) - 1))
+	{
+		SDL_Event event;
+		event.type = input_cmd_event;
+		event.user.code = keymap[sc].cmd;
+		SDL_PushEvent(&event);
+	}
+}
+
 void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev)
 {
-	if(ev->type == SDL_KEYDOWN)
-		input_set(in_ctx, ev->key.keysym.scancode, SDL_PRESSED);
-	else if(ev->type == SDL_KEYUP)
-		input_set(in_ctx, ev->key.keysym.scancode, SDL_RELEASED);
+	if(ev->type == SDL_KEYDOWN && in_ctx->player[0].hai_type == RETRO_INPUT_KEYBOARD)
+	{
+		input_set_keyboard(&in_ctx->player[0], ev->key.keysym.scancode,
+			  SDL_PRESSED, in_ctx->input_cmd_event);
+	}
+	else if(ev->type == SDL_KEYUP && in_ctx->player[0].hai_type == RETRO_INPUT_KEYBOARD)
+	{
+		input_set_keyboard(&in_ctx->player[0], ev->key.keysym.scancode,
+			  SDL_RELEASED, in_ctx->input_cmd_event);
+	}
 	else if(ev->type == SDL_CONTROLLERDEVICEADDED)
 	{
 		SDL_GameController *gc;
@@ -223,7 +240,10 @@ void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev)
 		in_ctx->player[0].hai_type = input_is_analogue(gc) ?
 				RETRO_INPUT_ANALOG : RETRO_INPUT_JOYPAD;
 		in_ctx->player[0].lr_type = in_ctx->player[0].hai_type;
-		in_ctx->player[0].gc = gc;
+		if(in_ctx->player[0].hai_type == RETRO_INPUT_ANALOG)
+			in_ctx->player[0].analogue.ctx = gc;
+		else
+			in_ctx->player[0].joypad.ctx = gc;
 
 		SDL_GameControllerSetPlayerIndex(gc, 1);
 
@@ -246,7 +266,9 @@ void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev)
 		if(gc_name == NULL)
 			gc_name = gc_no_name;
 
-		if(gc == in_ctx->player[0].gc)
+		/* Assuming that in_ctx->player[0].joypad.ctx is at the same
+		 * location as in_ctx->player[0].analogue.ctx */
+		if(gc == in_ctx->player[0].joypad.ctx)
 		{
 			SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
 				    "Player 1 disconnected");
@@ -259,7 +281,7 @@ void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev)
 		/* TODO: Could just zero the struct? */
 		in_ctx->player[0].hai_type = RETRO_INPUT_NONE;
 		in_ctx->player[0].lr_type = RETRO_INPUT_NONE;
-		in_ctx->player[0].gc = NULL;
+		in_ctx->player[0].joypad.ctx = NULL;
 
 		/* Change player 1 to keyboard if no other players/controllers
 		 * are connected. */
@@ -272,43 +294,11 @@ void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev)
 	}
 }
 
-static void mod_bit(Uint32 *n, Uint8 pos, unsigned val)
-{
-	uint32_t mask = 1 << pos;
-	*n = (*n & ~mask) | ((val << pos) & mask);
-}
-
-static void input_set(struct input_ctx_s *const in_ctx, SDL_Scancode sc,
-		      Uint8 state)
-{
-	switch(keymap[sc].input_cmd_type)
-	{
-	case INPUT_CMD_RETRO_INPUT:
-		mod_bit(&in_ctx->player[0].retro_state, keymap[sc].input_cmd,
-			state);
-		break;
-
-	case INPUT_CMD_CALL_FUNC:
-		if(in_ctx->input_cmd_event == (Uint32) - 1)
-			break;
-
-		if(!state)
-			break;
-
-		{
-			SDL_Event event = { 0 };
-			event.type = in_ctx->input_cmd_event;
-			event.user.code = keymap[sc].input_cmd;
-			SDL_PushEvent(&event);
-		}
-		break;
-	}
-}
-
 Sint16 input_get(const struct input_ctx_s *const in_ctx,
 				 unsigned port, unsigned device, unsigned index,
 				 unsigned id)
 {
+#if 0
 	static SDL_GameControllerButton lr_to_gcb[] =
 	{
 		SDL_CONTROLLER_BUTTON_B,
@@ -332,8 +322,9 @@ Sint16 input_get(const struct input_ctx_s *const in_ctx,
 		{ SDL_CONTROLLER_AXIS_LEFTX, SDL_CONTROLLER_AXIS_LEFTY },
 		{ SDL_CONTROLLER_AXIS_RIGHTX, SDL_CONTROLLER_AXIS_RIGHTY }
 	};
+#endif
 
-	if(index != 0 || port >= MAX_PLAYERS)
+	if(port >= MAX_PLAYERS)
 		return 0;
 
 	if(in_ctx->player[port].hai_type != (input_type)device)
@@ -360,50 +351,31 @@ Sint16 input_get(const struct input_ctx_s *const in_ctx,
 		{
 		case RETRO_INPUT_ANALOG:
 		{
-			const uint8_t lr_to_keyax[2][2] = {
-				{ INPUT_ANALOGUE_LEFT_X_POS, INPUT_ANALOGUE_LEFT_Y_POS },
-				{ INPUT_ANALOGUE_RIGHT_X_POS, INPUT_ANALOGUE_RIGHT_Y_POS }
-			};
-			uint8_t is_pos = (in_ctx->player[port].retro_state >> lr_to_keyax[index][id]) & 0b1;
-			uint8_t is_neg = (in_ctx->player[port].retro_state >> (lr_to_keyax[index][id] + 1)) & 0b1;
-			if(is_pos)
-				return 0x7fff;
-			else if(is_neg)
-				return -0x7fff;
+			if(id == RETRO_DEVICE_ID_ANALOG_X)
+			{
+				if(index == RETRO_DEVICE_INDEX_ANALOG_LEFT)
+					return in_ctx->player[port].keyboard.left_x;
+				else if(index == RETRO_DEVICE_INDEX_ANALOG_RIGHT)
+					return in_ctx->player[port].keyboard.right_x;
+			}
+			else if(id == RETRO_DEVICE_ID_ANALOG_Y)
+			{
+				if(index == RETRO_DEVICE_INDEX_ANALOG_LEFT)
+					return in_ctx->player[port].keyboard.left_y;
+				else if(index == RETRO_DEVICE_INDEX_ANALOG_RIGHT)
+					return in_ctx->player[port].keyboard.right_y;
+			}
 
 			return 0;
 		}
 		case RETRO_INPUT_JOYPAD:
-			return (in_ctx->player[port].retro_state >> id) & 0b1;
+			return (in_ctx->player[port].keyboard.btns.btns >> id) & 1;
 		}
 	}
-
-	switch(device)
+	else if(in_ctx->player[port].hai_type == RETRO_INPUT_JOYPAD)
 	{
-	case RETRO_INPUT_ANALOG:
-		/* Only analogue input devices are supported by libretro analog
-		 * inputs. */
-
-		if(index < RETRO_DEVICE_INDEX_ANALOG_BUTTON)
-		{
-			//SDL_Log("Axis %d: %d", index, SDL_GameControllerGetAxis(in_ctx->player[port].gc, lr_to_gcax[index][id]));
-
-			return SDL_GameControllerGetAxis(in_ctx->player[port].gc,
-							 lr_to_gcax[index][id]);
-		}
-		/* Fall-through */
-	case RETRO_INPUT_JOYPAD:
-	{
-		SDL_GameControllerButton btn = lr_to_gcb[id];
-		if(btn != -1)
-			return SDL_GameControllerGetButton(in_ctx->player[port].gc, btn);
-		else if(id == RETRO_DEVICE_ID_JOYPAD_L2)
-			return SDL_GameControllerGetAxis(in_ctx->player[port].gc, SDL_CONTROLLER_AXIS_TRIGGERLEFT);
-		else if(id == RETRO_DEVICE_ID_JOYPAD_R2)
-			return SDL_GameControllerGetAxis(in_ctx->player[port].gc, SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
-
-		break;
+		return (in_ctx->player[port].joypad.btns.btns >> id) & 1;
 	}
-	}
+
 	return 0;
 }
