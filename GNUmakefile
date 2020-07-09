@@ -27,12 +27,8 @@ else
 endif
 
 GIT_VERSION := $(shell git rev-parse --short HEAD 2>/dev/null)
-REL_VERSION := $(shell git describe --tags 2>/dev/null)
 ifneq ($(GIT_VERSION),)
 	CFLAGS += -D GIT_VERSION=\"$(GIT_VERSION)\"
-endif
-ifneq ($(REL_VERSION),)
-	CFLAGS += -D REL_VERSION=\"$(REL_VERSION)\"
 endif
 
 # Checks if the given library is available for linking. Works with GCC and
@@ -69,6 +65,7 @@ SRCS	:= $(wildcard ./src/*.c)
 HDRS	:= $(wildcard ./inc/*.h)
 OBJS	:= $(SRCS:.c=.o)
 DEPS	:= Makefile.depend
+override CFLAGS += -I$(INC_DIR)
 
 .PHONY: test
 

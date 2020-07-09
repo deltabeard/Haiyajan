@@ -12,7 +12,7 @@
  * See the LICENSE file for more details.
  */
 
-#include <SDL2/SDL.h>
+#include <SDL.h>
 #include <stdlib.h>
 
 #ifdef _WIN32
@@ -35,9 +35,6 @@
 #define PROG_NAME       "Haiyajan"
 #define MAX_TITLE_LEN   56
 
-#ifndef REL_VERSION
-#define REL_VERSION     "UNRELEASED"
-#endif
 #ifndef GIT_VERSION
 #define GIT_VERSION     "NONE"
 #endif

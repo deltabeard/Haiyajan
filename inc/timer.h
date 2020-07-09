@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 enum timer_status_e {
 	TIMER_OKAY,

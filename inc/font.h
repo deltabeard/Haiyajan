@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 #define FONT_CHAR_WIDTH		9
 #define FONT_CHAR_HEIGHT	15

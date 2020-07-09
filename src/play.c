@@ -12,8 +12,7 @@
  * See the LICENSE file for more details.
  */
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_opengl.h>
+#include <SDL.h>
 
 #include <libretro.h>
 #include <haiyajan.h>

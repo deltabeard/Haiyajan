@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 #ifdef _WIN32
 #define atleast

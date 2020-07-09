@@ -1,7 +1,6 @@
 #pragma once
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_opengl.h>
+#include <SDL.h>
 #include <libretro.h>
 
 struct gl_ctx_s;

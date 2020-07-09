@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <SDL2/SDL.h>
+#include <SDL.h>
 #include <libretro.h>
 
 #define MAX_PLAYERS 4

@@ -29,7 +29,7 @@
 #include <limits.h>
 #include <stddef.h>
 
-#include <SDL2/SDL_assert.h>
+#include <SDL_assert.h>
 
 /* -- Internal data structures -- */
 

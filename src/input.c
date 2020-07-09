@@ -12,7 +12,7 @@
  * See the LICENSE file for more details.
  */
 
-#include <SDL2/SDL.h>
+#include <SDL.h>
 #include <libretro.h>
 #include <input.h>
 #include <tinf.h>

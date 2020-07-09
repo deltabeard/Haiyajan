@@ -12,7 +12,7 @@
  * See the LICENSE file for more details.
  */
 
-#include <SDL2/SDL.h>
+#include <SDL.h>
 #include <stdint.h>
 
 #include <haiyajan.h>

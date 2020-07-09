@@ -14,12 +14,15 @@
 
 #pragma once
 
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 #include <libretro.h>
 #include <input.h>
 #include <gl.h>
 #include <rec.h>
+
+#define REL_VERSION_MAJOR 0
+#define REL_VERSION_MINOR 0
 
 struct settings_s
 {

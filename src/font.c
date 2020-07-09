@@ -15,7 +15,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 #include <font.h>
 
