@@ -18,14 +18,13 @@ projects at the [official Libretro repository list](https://github.com/libretro/
 Haiyajan *should* work on any platform supported by SDL2. The only
 platforms that this project will be regularly tested on for major releases are:
 
-- Linux (x86_64, ArchLinux, glibc)
-- Linux (x86_64 Qemu, Alpine Linux, musl libc)
-- Linux (ARMv6 Raspberry Pi 1 B+, Alpine Linux, musl libc)
-- Linux (ARMv7 Raspberry Pi 3, Alpine Linux, musl libc)
-- Linux (ARMv8 Raspberry Pi 4B, Alpine Linux, musl libc)
-- Windows (x86_64, MinGW, glibc)
+- Arch Linux (x86_64, Nvidia Pascal/Intel Haswell, glibc)
+- Alpine Linux (aarch64, Raspberry Pi 2B/Qemu, musl libc)
+- Windows 10 (x86_64, AMD Radeon 500/Kaby Lake R, MSVC)
+- Mac OS X 10.6 (x86_64, Intel Haswell/VirtualBox, glibc)
 
-We welcome bug reports and contributions for all platforms.
+We welcome bug reports and contributions for all platforms, including those not
+listed above.
 
 ## License
 Copyright (C) 2020 Mahyar Koshkouei, et al.
@@ -51,11 +50,13 @@ project for brevity.
 ## Building
 The following dependencies are recommended for building Haiyajan. Other tools
 may be used, but are unsupported by this project.
-- SDL2 (Required)
-- GNU Compiler Collection (GCC)
-- GNU Make
+- SDL2
+- C99 Compiler (such as GCC or Clang)
+- GNU Make or NMake
 
-Simply execute `make` in the project folder.
+For Windows builds using NMake, use the `/f` switch to point to the Nmakefile
+file. As in `nmake /f Nmakefile`.
+When using GNU Make, simply execute `make` in the project folder.
 
 Execute `make help` in order to see various build options. Some options may be
 automatically selected or unsupported for your build platform.
