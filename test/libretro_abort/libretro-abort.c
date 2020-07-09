@@ -20,7 +20,7 @@ void retro_set_controller_port_device(unsigned port, unsigned device)
 
 void retro_get_system_info(struct retro_system_info *info)
 {
-	info->library_name = "Init";
+	info->library_name = "Abort";
 	info->library_version = "1";
 	info->valid_extensions = NULL;
 	info->need_fullpath = false;
@@ -91,6 +91,10 @@ void retro_reset(void)
 
 void retro_run(void)
 {
+	volatile double trouble = 1.0/0.0;
+	unsigned *p = NULL;
+	trouble = 1 % 0;
+	trouble = *p;
 	abort();
 }
 

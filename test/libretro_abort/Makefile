@@ -1,5 +1,5 @@
-CFLAGS := -Og -g3 -fPIC -shared -Wl,--version-script=link.T -Wl,--no-undefined \
-	-I../../inc
+CFLAGS := -Og -g3
+override CFLAGS += -fPIC -shared -Wl,--version-script=link.T -Wl,--no-undefined -I../../inc
 
 all: libretro-abort.so
 libretro-abort.so: libretro-abort.c

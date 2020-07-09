@@ -34,7 +34,9 @@ enum input_type_e {
 	/* Any game controller with analogue inputs. */
 	RETRO_INPUT_ANALOG =	RETRO_DEVICE_ANALOG,
 
-	RETRO_INPUT_POINTER =	RETRO_DEVICE_POINTER
+	RETRO_INPUT_POINTER =	RETRO_DEVICE_POINTER,
+
+	RETRO_INPUT_MAX
 };
 typedef enum input_type_e input_type;
 
@@ -118,16 +120,29 @@ struct input_device_s {
 	/* Type of device connected to Haiyajan. */
 	input_type hai_type;
 
-	/* Type of device connected to Libretro core. Used to check
-	 * compatability with the input selected in Haiyajan. */
-	input_type lr_type;
+	/* Compatible input controllers with libretro core.
+	 * Set bit: Input type compatible.
+	 * Unset bit: Input type not compatible.
+	 *
+	 * 0bxx000000
+	 *     │││││╰──── RETRO_INPUT_JOYPAD
+	 *     ││││╰───── RETRO_INPUT_MOUSE
+	 *     │││╰────── RETRO_INPUT_KEYBOARD
+	 *     ││╰─────── RETRO_INPUT_LIGHTGUN
+	 *     │╰──────── RETRO_INPUT_ANALOG
+	 *     ╰───────── RETRO_INPUT_POINTER
+	 */
+	Uint8 available_types;
 
 	/* Values within this union depend on the input_type hai_type. */
 	union {
 		struct {
 			SDL_GameController *ctx;
 			struct input_joypad_btns_s btns;
-		} joypad;
+			Sint16 left_x, left_y;
+			Sint16 right_x, right_y;
+			Sint16 l2_x, r2_x;
+		} pad;
 		struct {
 			struct input_joypad_btns_s btns;
 			Sint16 x, y;
@@ -152,13 +167,6 @@ struct input_device_s {
 			unsigned dpad_left : 1;
 			unsigned dpad_right : 1;
 		} lightgun;
-		struct {
-			SDL_GameController *ctx;
-			struct input_joypad_btns_s btns;
-			Sint16 left_x, left_y;
-			Sint16 right_x, right_y;
-			Sint16 l2_x, r2_x;
-		} analogue;
 		struct {
 			/* Number of presses on screen. */
 			Uint8 pressed;
@@ -189,6 +197,16 @@ struct input_ctx_s
  * \param in_ctx	Input structure context to initialise.
  */
 void input_init(struct input_ctx_s *restrict in_ctx);
+
+/**
+ * Set compatible controller information.
+ *
+ * \param ctx		Input module context.
+ * \param port		Port or player number for input device.
+ * \param device	Type of input device.
+ */
+void input_add_controller(struct input_ctx_s *ctx, unsigned port,
+			  input_type device);
 
 /**
  * Handle an input event.

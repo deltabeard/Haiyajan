@@ -108,7 +108,6 @@ void input_init(struct input_ctx_s *restrict in_ctx)
 	}
 
 	in_ctx->player[0].hai_type = RETRO_INPUT_KEYBOARD;
-	in_ctx->player[0].lr_type = in_ctx->player[0].hai_type;
 
 	for(unsigned i = 0; i < SDL_arraysize(keymap_defaults); i++)
 		keymap[keymap_defaults[i].sc] = keymap_defaults[i].map;
@@ -239,12 +238,8 @@ void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev)
 
 		in_ctx->player[0].hai_type = input_is_analogue(gc) ?
 				RETRO_INPUT_ANALOG : RETRO_INPUT_JOYPAD;
-		in_ctx->player[0].lr_type = in_ctx->player[0].hai_type;
-		if(in_ctx->player[0].hai_type == RETRO_INPUT_ANALOG)
-			in_ctx->player[0].analogue.ctx = gc;
-		else
-			in_ctx->player[0].joypad.ctx = gc;
 
+		in_ctx->player[0].pad.ctx = gc;
 		SDL_GameControllerSetPlayerIndex(gc, 1);
 
 		/* FIXME: assign controller mapping to core. */
@@ -266,9 +261,7 @@ void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev)
 		if(gc_name == NULL)
 			gc_name = gc_no_name;
 
-		/* Assuming that in_ctx->player[0].joypad.ctx is at the same
-		 * location as in_ctx->player[0].analogue.ctx */
-		if(gc == in_ctx->player[0].joypad.ctx)
+		if(gc == in_ctx->player[0].pad.ctx)
 		{
 			SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
 				    "Player 1 disconnected");
@@ -280,13 +273,11 @@ void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev)
 
 		/* TODO: Could just zero the struct? */
 		in_ctx->player[0].hai_type = RETRO_INPUT_NONE;
-		in_ctx->player[0].lr_type = RETRO_INPUT_NONE;
-		in_ctx->player[0].joypad.ctx = NULL;
+		in_ctx->player[0].pad.ctx = NULL;
 
 		/* Change player 1 to keyboard if no other players/controllers
 		 * are connected. */
 		in_ctx->player[0].hai_type = RETRO_INPUT_KEYBOARD;
-		in_ctx->player[0].lr_type = RETRO_INPUT_JOYPAD;
 	}
 	else if(ev->type == SDL_CONTROLLERDEVICEREMAPPED)
 	{
@@ -294,11 +285,24 @@ void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev)
 	}
 }
 
+void input_add_controller(struct input_ctx_s *ctx, unsigned port, input_type device)
+{
+	if(port >= MAX_PLAYERS)
+		return;
+
+	/* No support for device subclass. */
+	if(device >= RETRO_INPUT_MAX)
+		return;
+
+	ctx->player[port].available_types |= (1 << device);
+	return;
+}
+
 Sint16 input_get(const struct input_ctx_s *const in_ctx,
 				 unsigned port, unsigned device, unsigned index,
 				 unsigned id)
 {
-#if 0
+#if 1
 	static SDL_GameControllerButton lr_to_gcb[] =
 	{
 		SDL_CONTROLLER_BUTTON_B,
@@ -342,11 +346,11 @@ Sint16 input_get(const struct input_ctx_s *const in_ctx,
 				"%d", port);
 		}
 		log_lim |= 0b1 << port;
-		//return 0;
 	}
 
-	if(in_ctx->player[port].hai_type == RETRO_INPUT_KEYBOARD)
+	switch(in_ctx->player[port].hai_type)
 	{
+	case RETRO_INPUT_KEYBOARD:
 		switch(device)
 		{
 		case RETRO_INPUT_ANALOG:
@@ -371,10 +375,40 @@ Sint16 input_get(const struct input_ctx_s *const in_ctx,
 		case RETRO_INPUT_JOYPAD:
 			return (in_ctx->player[port].keyboard.btns.btns >> id) & 1;
 		}
-	}
-	else if(in_ctx->player[port].hai_type == RETRO_INPUT_JOYPAD)
+		break;
+
+	case RETRO_INPUT_JOYPAD:
+	case RETRO_INPUT_ANALOG:
 	{
-		return (in_ctx->player[port].joypad.btns.btns >> id) & 1;
+		switch(device)
+		{
+
+		case RETRO_INPUT_ANALOG:
+			/* Only analogue input devices are supported by libretro analog
+			* inputs. */
+
+			if(index < RETRO_DEVICE_INDEX_ANALOG_BUTTON)
+			{
+				return SDL_GameControllerGetAxis(in_ctx->player[port].pad.ctx,
+				                                 lr_to_gcax[index][id]);
+			}
+		/* Fall-through */
+		case RETRO_INPUT_JOYPAD:
+		{
+			SDL_GameControllerButton btn = lr_to_gcb[id];
+			if(btn != -1)
+				return SDL_GameControllerGetButton(in_ctx->player[port].pad.ctx, btn);
+			else if(id == RETRO_DEVICE_ID_JOYPAD_L2)
+				return SDL_GameControllerGetAxis(in_ctx->player[port].pad.ctx, SDL_CONTROLLER_AXIS_TRIGGERLEFT);
+			else if(id == RETRO_DEVICE_ID_JOYPAD_R2)
+				return SDL_GameControllerGetAxis(in_ctx->player[port].pad.ctx, SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
+
+			break;
+		}
+		}
+	}
+	default:
+		break;
 	}
 
 	return 0;

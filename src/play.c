@@ -94,8 +94,7 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		/* Check that this is called in retro_load_game(). */
 		/* Abort if this a paranoid debug build. */
 		SDL_assert_paranoid(ctx_retro->env.status_bits.core_init == 1);
-		SDL_assert_paranoid(ctx_retro->env.status_bits.game_loaded ==
-			0);
+		SDL_assert_paranoid(ctx_retro->env.status_bits.game_loaded == 0);
 
 		SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 			"Set performance level to %u", *perf);
@@ -301,6 +300,19 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		 */
 		path_sep = *(base_path + base_path_len - 1);
 #endif
+	}
+
+	case RETRO_ENVIRONMENT_SET_CONTROLLER_INFO:
+	{
+		const struct retro_controller_info *info = data;
+		do {
+			for(unsigned port = 0; port < info->num_types; port++)
+			{
+				input_add_controller(&ctx_retro->inp, port, info->types[port].id);
+			}
+		} while((++info)->types != 0);
+
+		break;
 	}
 
 	case RETRO_ENVIRONMENT_SET_GEOMETRY:

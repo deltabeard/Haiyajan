@@ -774,10 +774,10 @@ int main(int argc, char *argv[])
 	SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO);
 
 	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-		    "%s Libretro Interface -- %s (GIT %s)\n", PROG_NAME,
-		    REL_VERSION, GIT_VERSION);
+		    "%s Libretro Interface -- %d.%d (GIT %s)\n", PROG_NAME,
+		    REL_VERSION_MAJOR, REL_VERSION_MINOR, GIT_VERSION);
 
-	init_sig();
+	init_sig(&ctx);
 	print_info();
 	prerun_checks();
 
@@ -864,6 +864,7 @@ int main(int argc, char *argv[])
 	SDL_SetWindowSize(ctx.win, ctx.game_max_res.w, ctx.game_max_res.h);
 	SDL_RenderSetLogicalSize(ctx.disp_rend, ctx.game_max_res.w,
 				 ctx.game_max_res.h);
+
 	run(&ctx);
 
 	ret = EXIT_SUCCESS;

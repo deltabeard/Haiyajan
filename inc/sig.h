@@ -14,4 +14,4 @@
 
 #pragma once
 
-void init_sig(void);
+void init_sig(struct core_ctx_s *c);
