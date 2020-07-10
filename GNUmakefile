@@ -1,4 +1,5 @@
-CFLAGS := -std=c99 -g3 -fPIE -Wall -Wextra -pipe -I./inc $(shell sdl2-config --cflags)
+CFLAGS := -std=c99 -g3 -fPIE -Wall -Wextra -pipe
+LDLIBS :=
 TARGETS := haiyajan
 
 DEBUG ?= 0
@@ -19,44 +20,63 @@ ifeq ($(OS),Windows_NT)
 else
 	STATIC := 0
 endif
-ifeq ($(STATIC),1)
-	LDLIBS += $(shell sdl2-config --static-libs)
-	CFLAGS += -static
-else
-	LDLIBS += $(shell sdl2-config --libs)
-endif
 
 GIT_VERSION := $(shell git rev-parse --short HEAD 2>/dev/null)
 ifneq ($(GIT_VERSION),)
 	CFLAGS += -D GIT_VERSION=\"$(GIT_VERSION)\"
 endif
 
+ifeq ($(STATIC),1)
+	STATIC_CFLAG := -static
+	PKGSTC := --static
+endif
+
+ifeq ($(PKGCONFIG),)
+	PKGCONFIG := pkg-config
+endif
 # Checks if the given library is available for linking. Works with GCC and
 # Clang.
-IS_LIB_AVAIL = $(shell $(CC) -l$(CHECK_LIB) 2>&1 >/dev/null | grep "cannot find" > /dev/null; echo $$?)
+IS_LIB_AVAIL = $(shell ! $(PKGCONFIG) --exists $(CHECK_LIB) > /dev/null; echo $$?)
+PKGLIB = $(shell $(PKGCONFIG) --libs $(PKGSTC) $(CHECK_LIB))
+PKGFLG = $(shell $(PKGCONFIG) --cflags $(CHECK_LIB))
+
+CHECK_LIB := sdl2
+ifneq ($(IS_LIB_AVAIL),1)
+	err := $(error pkg-config could not find SDL2)
+endif
+LDLIBS += $(PKGLIB)
+CFLAGS += $(PKGFLG)
 
 # Check if WEBP is available. Otherwise use BMP for screenshots.
-CHECK_LIB := webp
-USE_WEBP := $(IS_LIB_AVAIL)
-ENABLE_WEBP_SCREENSHOTS ?= $(USE_WEBP)
+CHECK_LIB := libwebp
+ENABLE_WEBP_SCREENSHOTS := $(IS_LIB_AVAIL)
 ifeq ($(ENABLE_WEBP_SCREENSHOTS),1)
-	LDLIBS += -lwebp
-	CFLAGS += -D ENABLE_WEBP_SCREENSHOTS=1
+	LDLIBS += $(PKGLIB)
+	CFLAGS += $(PKGFLG) -D ENABLE_WEBP_SCREENSHOTS=1
 endif
 
+VIDLIBS :=
+VIDFLGS :=
 CHECK_LIB := x264
 USE_X264 := $(IS_LIB_AVAIL)
+ifeq ($(USE_X264),1)
+	VIDLIBS := $(PKGLIB)
+	VIDFLGS := $(PKGFLG)
+endif
+
 CHECK_LIB := wavpack
 USE_WAVPACK := $(IS_LIB_AVAIL)
+ifeq ($(USE_WAVPACK),1)
+	VIDLIBS += $(PKGLIB)
+	VIDFLGS += $(PKGFLG)
+endif
 
 ifeq ($(USE_X264)$(USE_WAVPACK),11)
-	ENABLE_VIDEO_RECORDING ?= 1
-else
-	ENABLE_VIDEO_RECORDING ?= 0
+	ENABLE_VIDEO_RECORDING := 1
 endif
 ifeq ($(ENABLE_VIDEO_RECORDING),1)
-	LDLIBS += -lx264 -lwavpack
-	CFLAGS += -D ENABLE_VIDEO_RECORDING=1
+	LDLIBS += $(VIDLIBS)
+	CFLAGS += $(LIBFLGS) -D ENABLE_VIDEO_RECORDING=1
 endif
 
 SRC_DIR	:= ./src
@@ -65,7 +85,7 @@ SRCS	:= $(wildcard ./src/*.c)
 HDRS	:= $(wildcard ./inc/*.h)
 OBJS	:= $(SRCS:.c=.o)
 DEPS	:= Makefile.depend
-override CFLAGS += -I$(INC_DIR)
+override CFLAGS += -I$(INC_DIR) $(STATIC_CFLAG)
 
 .PHONY: test
 
