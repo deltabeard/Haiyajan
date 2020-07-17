@@ -6,7 +6,7 @@
 !.editorconfig
 
 # Project documentation
-!Makefile
+!*Makefile*
 !LICENSE
 !*.md
 !*.sh

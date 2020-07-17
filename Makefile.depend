@@ -1,0 +1,18 @@
+src/font.o: src/font.c inc/font.h
+src/gl.o: src/gl.c inc/libretro.h inc/gl.h
+src/haiyajan.o: src/haiyajan.c inc/optparse.h inc/font.h inc/input.h \
+ inc/libretro.h inc/load.h inc/haiyajan.h inc/gl.h inc/rec.h inc/play.h \
+ inc/timer.h inc/util.h inc/sig.h
+src/input.o: src/input.c inc/libretro.h inc/input.h inc/tinf.h \
+ inc/gcdb_bin_linux.h
+src/load.o: src/load.c inc/haiyajan.h inc/libretro.h inc/input.h inc/gl.h \
+ inc/rec.h inc/load.h
+src/play.o: src/play.c inc/libretro.h inc/haiyajan.h inc/input.h inc/gl.h \
+	inc/rec.h inc/play.h
+src/rec.o: src/rec.c inc/rec.h inc/util.h
+src/sig.o: src/sig.c inc/haiyajan.h inc/libretro.h inc/input.h inc/gl.h \
+ inc/rec.h inc/sig.h
+src/timer.o: src/timer.c inc/timer.h
+src/tinflate.o: src/tinflate.c inc/tinf.h
+src/ui.o: src/ui.c
+src/util.o: src/util.c inc/util.h
