@@ -73,9 +73,10 @@ static void sig_handler(int sig)
 	fflush(stderr);
 
 	{
-		/* Checks if functions are initialised or not. */
+#define fn_max (sizeof(ctx->fn)/sizeof(uintptr_t))
+		/* Checks if functions are initialised or not. Each function is
+		 * represented by a bit in are_fn_set. */
 		Uint32 are_fn_set = 0;
-		const Uint8 fn_max = sizeof(ctx->fn)/sizeof(uintptr_t);
 		uintptr_t fns[fn_max];
 
 		SDL_memcpy(fns, &ctx->fn, sizeof(fns));
@@ -94,6 +95,7 @@ static void sig_handler(int sig)
 
 		if(ctx->env.status_bits.core_init == 1)
 			SDL_Log("CORE: %.10s\n", ctx->core_log_name);
+#undef fn_max
 	}
 
 	fputs("\nHaiyajan will now abort.\n", stderr);
