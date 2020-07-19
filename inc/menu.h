@@ -22,6 +22,20 @@
 			menu->item_selected = sel;		\
 	}while(0)
 
+enum ui_menu_type_e {
+	/* Show a small menu. */
+	UI_MENU_TYPE_SMALL_MENU = 0,
+
+	/* This menu uses as much space as possible on the screen.
+	 * Should be used for file selection. */
+	UI_MENU_TYPE_LARGE_MENU,
+
+	/* This menu has two entries: "ON" and "OFF". The menu text *must* be
+	 * "ON" and "OFF", and only those two entries. */
+	UI_MENU_TYPE_ON_OFF
+};
+typedef enum ui_menu_type_e ui_menu_type;
+
 struct menu_ctx_s
 {
 	struct menu_ctx_s *parent;
@@ -30,6 +44,7 @@ struct menu_ctx_s
 	unsigned long item_selected;
 	unsigned long items_nmemb;
 	const struct menu_item_s *items;
+	ui_menu_type type;
 };
 typedef struct menu_ctx_s menu_ctx;
 

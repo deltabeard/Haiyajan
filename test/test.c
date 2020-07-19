@@ -17,9 +17,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <load.h>
+#include <font.h>
 #include <haiyajan.h>
+#include <load.h>
+#include <menu.h>
 #include <timer.h>
+#include <ui.h>
 
 #include "minctest.h"
 
@@ -74,63 +77,6 @@ void test_retro_av(void)
 {
 	struct timer_ctx_s tim;
 
-#if 0
-	{
-		/* Testing 10 FPS core with 10 Hz display. */
-		timer_init(&tim, 10.0);
-
-		lequal(timer_get_delay(&tim, 100),   0);
-		lequal(timer_get_delay(&tim, 90),   10);
-		/* SDL_Delay(10); */
-		lequal(timer_get_delay(&tim, 90),   10);
-		/* SDL_Delay(10); */
-		lequal(timer_get_delay(&tim, 50),   50);
-		/* SDL_Delay(50); */
-
-		lequal(timer_get_delay(&tim, 150),  -50);
-		/* Skip next frame */
-		lequal(timer_get_delay(&tim, 150), -100);
-		/* Skip next frame */
-		lequal(timer_get_delay(&tim, 5),     -5);
-		/* Compensate for late frame skip */
-		lequal(timer_get_delay(&tim, 95),     0);
-		/* No delay. Immediately play next frame. */
-	}
-
-	{
-		/* Testing 11 FPS core with 10 Hz display. */
-		timer_init(&tim, 11.0);
-
-		lequal(timer_get_delay(&tim, 90),  0);
-		lequal(timer_get_delay(&tim, 90),  1);
-		lequal(timer_get_delay(&tim, 90),  0);
-		lequal(timer_get_delay(&tim, 90),  1);
-
-		lequal(timer_get_delay(&tim, 80), 10);
-		lequal(timer_get_delay(&tim, 80), 11);
-		lequal(timer_get_delay(&tim, 80), 10);
-		lequal(timer_get_delay(&tim, 80), 11);
-		lequal(timer_get_delay(&tim, 101), 0);
-
-		timer_init(&tim, 11.0);
-
-		for(int i = 1; i < 11; i++)
-			lequal(timer_get_delay(&tim, 100), -9 * i);
-
-		lequal(timer_get_delay(&tim, 100), -100);
-	}
-
-	{
-		/* Testing 10 FPS core with 11 Hz display. */
-		timer_init(&tim, 10.0);
-
-		lequal(timer_get_delay(&tim, 100), 0);
-		lequal(timer_get_delay(&tim, 99), 1);
-		lequal(timer_get_delay(&tim, 101), -1);
-		lequal(timer_get_delay(&tim, 5), 94);
-	}
-#endif
-
 	{
 		/* Testing 10 FPS core with 10 Hz display. */
 		timer_init(&tim, 10.0);
@@ -144,229 +90,46 @@ void test_retro_av(void)
 	}
 
 	{
-		/* Testing 60.10 FPS core with 60.00 Hz display. */
-		timer_init(&tim, 60.10);
+		/* Testing 50.00 FPS core with 100.00 Hz display. */
+		int ret = timer_init(&tim, 50.00);
+		lequal(ret, 0);
 
 		/* Our computer is really fast, so imagine that the time it
-		 * takes to render a single frame is less than a milisecond.
-		 */
-
-		/* Delta time is -0.10, therefore we need to skip a frame every
-		 * 10 seconds. */
-
-		/* Delta time is 0.10, therefore we need to play an extra frame
-		 * every 10 seconds. */
-		lequal(timer_get_delay(&tim, 1), 0);
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 1);
+		 * takes to render a single frame is less than a milisecond. */
+		lequal(timer_get_delay(&tim, 10), 0);
+		lequal(timer_get_delay(&tim, 10), 0);
+		lequal(timer_get_delay(&tim, 10), 0);
+		lequal(timer_get_delay(&tim, 10), 0);
 	}
+}
 
-	{
-		/* Testing 60.00 FPS core with 60.10 Hz display. */
-		timer_init(&tim, 60.00);
+void test_ui_drawing(void)
+{
+	SDL_Surface *ref = SDL_LoadBMP("../meta/menu_320x240.bmp");
+	SDL_Surface *surf = SDL_CreateRGBSurfaceWithFormat(0, ref->w, ref->h,
+			ref->format->BytesPerPixel, ref->format->format);
+	SDL_Renderer *rend = SDL_CreateSoftwareRenderer(surf);
+	font_ctx *font = FontStartup(rend);
+	ui *ui = ui_init(font, rend);
+	long unsigned surfsz = surf->pitch * surf->h;
+	menu_ctx menu;
+	menu_item menu_items[] = {
+		{ "Continue", NULL, MENU_SUB_MENU, { .sub_menu = NULL }},
+		{ "Open", NULL, MENU_SUB_MENU, { .sub_menu = NULL }},
+		{ "Quit", NULL, MENU_SUB_MENU, { .sub_menu = NULL }}
+	};
 
-		/* Our computer is really fast, so imagine that the time it
-		 * takes to render a single frame is less than a milisecond.
-		 */
+	menu_init(&menu, NULL, NULL, NULL, SDL_arraysize(menu_items),
+			menu_items);
+	menu_instruct(&menu, MENU_INSTR_NEXT_ITEM);
+	draw_menu(ui, &menu);
 
-		/* Delta time is -0.10, therefore we need to skip a frame every
-		 * 10 seconds. */
+	lequal(SDL_memcmp(surf->pixels, ref->pixels, surfsz), 0);
 
-		/* Delta time is 0.10, therefore we need to play an extra frame
-		 * every 10 seconds. */
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 1);
-	}
-
-	{
-		/* Testing 60.10 FPS core with 120.00 Hz display. */
-		timer_init(&tim, 60.10);
-
-		/* Delta time is -0.10, therefore we need to skip a frame every
-		 * 10 seconds. */
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), 0);
-		lequal(timer_get_delay(&tim, 60), -1);
-	}
-
-#if 0
-	struct core_ctx_s ctx;
-	const char av_so_path[] = "./libretro_av/libretro-av.so";
-	double core_fps;
-	unsigned frames;
-	unsigned display;
-	struct timer_ctx_s tim;
-
-	/* Continuing tests will result in seg fault.
-	 * Abort() for severe failure. */
-	if(load_libretro_core(av_so_path, &ctx))
-	{
-		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "%s",
-			SDL_GetError());
-		abort();
-	}
-
-	{
-		struct retro_system_info info;
-		struct retro_system_av_info av_info;
-		ctx.fn.retro_get_system_info(&info);
-		ctx.fn.retro_get_system_av_info(&av_info);
-		core_fps = av_info.timing.fps;
-
-		lok(strcmp(info.library_name, "Test AV") == 0);
-		lok(strcmp(info.library_version, "1") == 0);
-		lok(info.need_fullpath == false);
-		lok(info.valid_extensions == NULL);
-	}
-
-	timer_init(&tim, core_fps);
-
-	/* Reset frame buffer. */
-	fb = 0x0000;
-	frames = 0;
-	display = 0;
-	ctx.fn.retro_init();
-	ctx.fn.retro_set_video_refresh(test_retro_av_video_cb);
-
-	do
-	{
-		int delay;
-
-		if(frames % 2 == 0)
-			lok(fb == 0x0000);
-		else
-			lok(fb == 0xFFFF);
-
-		ctx.fn.retro_run();
-		frames++;
-
-		/* Simulate 10 Hz VSYNC. */
-		delay = timer_show_frame(&tim, (1.0 / 10.0) * 1000.0);
-
-		/* There should be no delay or skips, as the display has the
-		 * same refresh rate as the core. */
-		lequal(delay, 0);
-
-		/* Draw frame here. */
-		display++;
-
-		/* For clarity. */
-		lok(display == frames);
-
-		/* End test after 40 frames. */
-	} while(frames < 40);
-
-	timer_init(&tim, core_fps);
-	/* Reset frame buffer. */
-	fb = 0x0000;
-	frames = 0;
-	display = 0;
-	ctx.fn.retro_init();
-	ctx.fn.retro_set_video_refresh(test_retro_av_video_cb);
-
-	do
-	{
-		int delay = 0;
-
-		if(frames % 2 == 0)
-			lok(fb == 0x0000);
-		else
-			lok(fb == 0xFFFF);
-
-		ctx.fn.retro_run();
-		frames++;
-
-		/* Simulate 8 Hz VSYNC. */
-		delay = timer_show_frame(&tim, (1.0 / 8.0) * 1000.0);
-		display++;
-
-		/* The timer will report that the frame must be skipped. */
-		lequal(delay, (int)(frames * -25));
-		lok(display == frames);
-	} while(frames < 10);
-
-	timer_init(&tim, core_fps);
-
-	/* Reset frame buffer. */
-	fb = 0x0000;
-	frames = 0;
-	display = 0;
-	ctx.fn.retro_init();
-	ctx.fn.retro_set_video_refresh(test_retro_av_video_cb);
-
-	do
-	{
-		int delay = 0;
-
-		if(frames % 2 == 0)
-			lok(fb == 0x0000);
-		else
-			lok(fb == 0xFFFF);
-
-		ctx.fn.retro_run();
-		frames++;
-
-		/* Simulate 12 Hz VSYNC. */
-		delay = timer_show_frame(&tim, (1.0 / 12.0) * 1000.0);
-
-		/* There should be no delay or skips, as the display has the
-		 * same refresh rate as the core. */
-
-		/* Draw frame here. */
-		display++;
-
-		lequal(delay, (int)(frames * 17));
-
-		/* As the display is faster than the core, we should always be
-		 * able to draw the frame. */
-		lok(frames == display);
-	} while(frames < 10);
-
-	timer_init(&tim, core_fps);
-	fb = 0x0000;
-	frames = 0;
-	display = 0;
-	ctx.fn.retro_init();
-	ctx.fn.retro_set_video_refresh(test_retro_av_video_cb);
-
-	/* Testing variable frame rate. */
-	{
-		int delay;
-		/* (1/10) * 1000 = 100ms */
-		delay = timer_show_frame(&tim, 125);
-		lequal(delay, -25);
-
-		delay = timer_show_frame(&tim, 50);
-		lequal(delay, 25);
-
-		delay = timer_show_frame(&tim, 125);
-		lequal(delay, 0);
-	}
-
-	ctx.fn.retro_deinit();
-#endif
+	FontExit(font);
+	SDL_DestroyRenderer(rend);
+	SDL_FreeSurface(surf);
+	SDL_FreeSurface(ref);
 }
 
 int main(void)
@@ -381,6 +144,8 @@ int main(void)
 	puts("Executing tests:");
 	lrun("Init", test_retro_init);
 	lrun("Frame Timing", test_retro_av);
+	lrun("UI Drawing", test_ui_drawing);
+	SDL_Quit();
 	lresults();
 	return lfails != 0;
 }

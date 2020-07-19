@@ -12,4 +12,9 @@
  * See the LICENSE file for more details.
  */
 
+#pragma once
+
 typedef struct ui_s ui;
+ui *ui_init(font_ctx *font, SDL_Renderer *rend);
+void draw_menu(ui *ui, menu_ctx *menu);
+void launch_menu(ui *ui, menu_ctx *menu);

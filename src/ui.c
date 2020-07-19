@@ -30,7 +30,7 @@ ui *ui_init(font_ctx *font, SDL_Renderer *rend)
 	return ui;
 }
 
-static void draw_menu(ui *ui, menu_ctx *menu)
+void draw_menu(ui *ui, menu_ctx *menu)
 {
 	SDL_Rect bg = { .x = 10, .y = 10, .w = 110, .h = 62 };
 	SDL_Rect txtloc = { .x = 17, .y = 13, .w = 2, .h = 2 };
@@ -63,5 +63,7 @@ static void draw_menu(ui *ui, menu_ctx *menu)
 
 void launch_menu(ui *ui, menu_ctx *menu)
 {
+	(void) ui;
+	(void) menu;
 	return;
 }
