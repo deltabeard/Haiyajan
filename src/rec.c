@@ -86,7 +86,7 @@ static void x264_log(void *priv, int i_level, const char *fmt, va_list ap)
 
 static int wav_pack_write_file(void *priv, void *data, int32_t bcount)
 {
-	rec *ctx = priv;
+	rec_ctx *ctx = priv;
 
 	/* If ctx == NULL, then Initialisation error or data is for lossless
 	 * wvc data. */
@@ -106,7 +106,7 @@ static int wav_pack_write_file(void *priv, void *data, int32_t bcount)
 
 static int vid_thread_cmd(void *data)
 {
-	rec *ctx = data;
+	rec_ctx *ctx = data;
 
 	ctx->h = x264_encoder_open(&ctx->param);
 	if(ctx->h == NULL)
@@ -235,10 +235,10 @@ end:
 	return 0;
 }
 
-rec *rec_init(const char *fileout, int width, int height, double fps,
+rec_ctx *rec_init(const char *fileout, int width, int height, double fps,
 	      Sint32 sample_rate)
 {
-	rec *ctx = SDL_calloc(1, sizeof(rec));
+	rec_ctx *ctx = SDL_calloc(1, sizeof(rec_ctx));
 
 	if(ctx == NULL)
 		goto out;
@@ -338,7 +338,7 @@ err:
 	goto out;
 }
 
-void rec_enc_video(rec *ctx, SDL_Surface *surf)
+void rec_enc_video(rec_ctx *ctx, SDL_Surface *surf)
 {
 	if(ctx == NULL || ctx->venc_stor.cmd == VID_CMD_ENCODE_INIT ||
 	   surf == NULL)
@@ -353,7 +353,7 @@ void rec_enc_video(rec *ctx, SDL_Surface *surf)
 	SDL_UnlockMutex(ctx->venc_mtx);
 }
 
-static void apply_preset(rec *ctx)
+static void apply_preset(rec_ctx *ctx)
 {
 	float crf = ctx->param.rc.f_rf_constant;
 	x264_param_default_preset(&ctx->param,
@@ -365,7 +365,7 @@ static void apply_preset(rec *ctx)
 		       x264_preset_names[ctx->preset]);
 }
 
-void rec_set_crf(rec *ctx, Uint8 crf)
+void rec_set_crf(rec_ctx *ctx, Uint8 crf)
 {
 	if(ctx == NULL)
 		return;
@@ -376,7 +376,7 @@ void rec_set_crf(rec *ctx, Uint8 crf)
 	SDL_AtomicUnlock(&ctx->venc_slk);
 }
 
-void rec_speedup(rec *ctx)
+void rec_speedup(rec_ctx *ctx)
 {
 	if(ctx == NULL || ctx->venc_stor.cmd == VID_CMD_ENCODE_INIT ||
 	   ctx->preset <= 2)
@@ -388,7 +388,7 @@ void rec_speedup(rec *ctx)
 	SDL_AtomicUnlock(&ctx->venc_slk);
 }
 
-void rec_relax(rec *ctx)
+void rec_relax(rec_ctx *ctx)
 {
 	if(ctx == NULL || ctx->venc_stor.cmd == VID_CMD_ENCODE_INIT ||
 	   ctx->preset == preset_max)
@@ -400,7 +400,7 @@ void rec_relax(rec *ctx)
 	SDL_AtomicUnlock(&ctx->venc_slk);
 }
 
-void rec_enc_audio(rec *ctx, const Sint16 *data, uint32_t frames)
+void rec_enc_audio(rec_ctx *ctx, const Sint16 *data, uint32_t frames)
 {
 	int ret;
 	size_t samples = frames * 2;
@@ -446,7 +446,7 @@ void rec_enc_audio(rec *ctx, const Sint16 *data, uint32_t frames)
 	return;
 }
 
-Sint64 rec_video_size(rec *ctx)
+Sint64 rec_video_size(rec_ctx *ctx)
 {
 	if(ctx == NULL)
 		return 0;
@@ -454,7 +454,7 @@ Sint64 rec_video_size(rec *ctx)
 	return SDL_RWtell(ctx->fv);
 }
 
-Sint64 rec_audio_size(rec *ctx)
+Sint64 rec_audio_size(rec_ctx *ctx)
 {
 	if(ctx == NULL)
 		return 0;
@@ -462,12 +462,12 @@ Sint64 rec_audio_size(rec *ctx)
 	return SDL_RWtell(ctx->fa);
 }
 
-void rec_end(rec **ctxp)
+void rec_end(rec_ctx **ctxp)
 {
 	if(*ctxp == NULL)
 		return;
 
-	rec *ctx = *ctxp;
+	rec_ctx *ctx = *ctxp;
 	SDL_AtomicLock(&ctx->venc_slk);
 	ctx->venc_stor.cmd = VID_CMD_ENCODE_FINISH;
 

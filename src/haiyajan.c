@@ -335,7 +335,7 @@ err:
 
 #if ENABLE_VIDEO_RECORDING == 1
 
-void cap_frame(rec *vid, SDL_Renderer *rend, SDL_Texture *tex,
+void cap_frame(rec_ctx *vid, SDL_Renderer *rend, SDL_Texture *tex,
 	       const SDL_Rect *src, SDL_RendererFlip flip)
 {
 	SDL_Surface *surf = util_tex_to_surf(rend, tex, src, flip);
@@ -618,7 +618,7 @@ static void run(struct core_ctx_s *ctx)
 					.h = 2
 				};
 			struct {
-				Sint64 (*get_size)(rec *);
+				Sint64 (*get_size)(rec_ctx *);
 
 				char str[16];
 			} sz_map[2] =

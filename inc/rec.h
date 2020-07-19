@@ -15,7 +15,7 @@
 #pragma once
 
 #if ENABLE_VIDEO_RECORDING == 1
-typedef struct rec_s rec;
+typedef struct rec_s rec_ctx;
 
 /**
  * Initialise video recording context.
@@ -38,7 +38,7 @@ typedef struct rec_s rec;
  * \param sample_rate	Sample rate of audio.
  * \return		Valid context used for recording, or NULL on error.
  */
-rec *rec_init(const char *fileout, int width, int height, double fps,
+rec_ctx *rec_init(const char *fileout, int width, int height, double fps,
 		      Sint32 sample_rate);
 
 /**
@@ -46,45 +46,45 @@ rec *rec_init(const char *fileout, int width, int height, double fps,
  * This may take too long too complete. Use rec_speedup() and rec_relax() to
  * control the time taken to encode frames.
  */
-void rec_enc_video(rec *ctx, SDL_Surface *surf);
+void rec_enc_video(rec_ctx *ctx, SDL_Surface *surf);
 
 /**
  * Encode a given number of audio frames.
  */
-void rec_enc_audio(rec *ctx, const Sint16 *data, uint32_t frames);
+void rec_enc_audio(rec_ctx *ctx, const Sint16 *data, uint32_t frames);
 
 /**
  * Finish encoding video and audio, and save to output file.
  * The recording context is free'd and invalidated after this call.
  */
-void rec_end(rec **ctxp);
+void rec_end(rec_ctx **ctxp);
 
 /**
  * Returns the current output file size of the video file, or -1 on error.
  */
-Sint64 rec_video_size(rec *ctx);
+Sint64 rec_video_size(rec_ctx *ctx);
 
 /**
  * Returns the current output file size of the audio file, or -1 on error.
  */
-Sint64 rec_audio_size(rec *ctx);
+Sint64 rec_audio_size(rec_ctx *ctx);
 
 /**
  * Set the quality of the video.
  */
-void rec_set_crf(rec *ctx, Uint8 crf);
+void rec_set_crf(rec_ctx *ctx, Uint8 crf);
 
 /**
  * Improve the speed of video encoding by reducing the quality of the output.
  */
-void rec_speedup(rec *ctx);
+void rec_speedup(rec_ctx *ctx);
 
 /**
  * Improve the quality of encoded video by increasing the time spent processing
  * the input frames.
  */
-void rec_relax(rec *ctx);
-#endif
+void rec_relax(rec_ctx *ctx);
+#endif /* ENABLE_VIDEO_RECORDING */
 
 /**
  * Save a surface to a file.
