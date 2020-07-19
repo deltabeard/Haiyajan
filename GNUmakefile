@@ -90,7 +90,7 @@ override CFLAGS += -I$(INC_DIR) $(STATIC_CFLAG)
 .PHONY: test
 
 all: $(TARGETS)
-haiyajan: $(DEPS) $(OBJS)
+haiyajan: $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LDLIBS)
 
 $(DEPS): $(SRCS)

@@ -20,7 +20,7 @@
 #define MAX_PLAYERS 4
 
 /* The input type connected to Haiyajan and to the Libretro core. */
-enum input_type_e {
+typedef enum {
 	/* Any unused device is set to NONE. */
 	RETRO_INPUT_NONE =	RETRO_DEVICE_NONE,
 
@@ -37,29 +37,26 @@ enum input_type_e {
 	RETRO_INPUT_POINTER =	RETRO_DEVICE_POINTER,
 
 	RETRO_INPUT_MAX
-};
-typedef enum input_type_e input_type;
+} input_type_e;
 
 /* The type of command executed by the input button press. */
-enum input_cmd_type_e {
+typedef enum {
 	INPUT_CMD_NONE = 0,
 	INPUT_CMD_INPUT,
 	INPUT_CMD_EVENT,
 	INPUT_CMD_RESERVED
-};
-typedef enum input_cmd_type_e input_cmd_type;
+} input_cmd_type_e;
 
 /* The commands that may be mapped to input button press. */
-enum input_cmd_event_codes_e {
+typedef enum {
 	INPUT_EVENT_TOGGLE_INFO = 0,
 	INPUT_EVENT_TOGGLE_FULLSCREEN,
 	INPUT_EVENT_TAKE_SCREENSHOT,
 	INPUT_EVENT_RECORD_VIDEO_TOGGLE
-};
-typedef enum input_cmd_event_codes_e input_cmd_event;
+} input_cmd_event_codes_e;
 
 /* Libretro joypad input as an enum for improved type tracking. */
-enum input_cmd_input_e {
+typedef enum {
 	INPUT_JOYPAD_B = RETRO_DEVICE_ID_JOYPAD_B,
 	INPUT_JOYPAD_Y,
 	INPUT_JOYPAD_SELECT,
@@ -86,8 +83,7 @@ enum input_cmd_input_e {
 	INPUT_ANALOGUE_RIGHT_Y_POS,
 	INPUT_ANALOGUE_RIGHT_Y_NEG,
 	INPUT_ANALOGUE_BTN
-};
-typedef enum input_cmd_input_e input_cmd_input;
+} input_cmd_input_e;
 
 struct input_joypad_btns_s
 {
@@ -118,7 +114,7 @@ struct input_joypad_btns_s
 
 struct input_device_s {
 	/* Type of device connected to Haiyajan. */
-	input_type hai_type;
+	input_type_e hai_type;
 
 	/* Compatible input controllers with libretro core.
 	 * Set bit: Input type compatible.
@@ -134,7 +130,7 @@ struct input_device_s {
 	 */
 	Uint8 available_types;
 
-	/* Values within this union depend on the input_type hai_type. */
+	/* Values within this union depend on the input_type_e hai_type. */
 	union {
 		struct {
 			SDL_GameController *ctx;
@@ -206,7 +202,7 @@ void input_init(struct input_ctx_s *restrict in_ctx);
  * \param device	Type of input device.
  */
 void input_add_controller(struct input_ctx_s *ctx, unsigned port,
-			  input_type device);
+			  input_type_e device);
 
 /**
  * Handle an input event.

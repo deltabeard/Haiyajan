@@ -285,7 +285,8 @@ void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev)
 	}
 }
 
-void input_add_controller(struct input_ctx_s *ctx, unsigned port, input_type device)
+void input_add_controller(struct input_ctx_s *ctx, unsigned port,
+		input_type_e device)
 {
 	if(port >= MAX_PLAYERS)
 		return;
@@ -331,7 +332,7 @@ Sint16 input_get(const struct input_ctx_s *const in_ctx,
 	if(port >= MAX_PLAYERS)
 		return 0;
 
-	if(in_ctx->player[port].hai_type != (input_type)device)
+	if(in_ctx->player[port].hai_type != (input_type_e)device)
 	{
 		static Uint8 log_lim = 0;
 		if(((log_lim >> port) & 0b1) == 0)

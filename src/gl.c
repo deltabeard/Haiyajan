@@ -134,7 +134,7 @@ uintptr_t get_current_framebuffer(void)
 	return framebuffer;
 }
 
-static int gl_init_fn(glctx *ctx)
+static int gl_init_fn(gl_ctx *ctx)
 {
 	struct gl_fn_gen_s {
 		const char *fn_str;
@@ -191,7 +191,7 @@ static int gl_init_fn(glctx *ctx)
 	return ret;
 }
 
-static GLuint compile_shader(glctx *ctx, GLenum type, GLsizei count,
+static GLuint compile_shader(gl_ctx *ctx, GLenum type, GLsizei count,
 			     const char *const *strings)
 {
 	GLuint shader = ctx->fn.glCreateShader(type);
@@ -214,7 +214,7 @@ static GLuint compile_shader(glctx *ctx, GLenum type, GLsizei count,
 	return shader;
 }
 
-static void init_shaders(glctx *ctx)
+static void init_shaders(gl_ctx *ctx)
 {
 	const char *const g_vshader_src =
 		"attribute vec4 vPosition;"
@@ -271,7 +271,7 @@ static void init_shaders(glctx *ctx)
 	ctx->fn.glUseProgram(0);
 }
 
-static void refresh_vertex_data(const glctx *ctx, int w, int h)
+static void refresh_vertex_data(const gl_ctx *ctx, int w, int h)
 {
 	int tex_w, tex_h;
 
@@ -302,11 +302,11 @@ static void refresh_vertex_data(const glctx *ctx, int w, int h)
 /**
  * FIXME: Do checks, but initialise context in reset function.
  */
-glctx *gl_init(SDL_Renderer *rend, SDL_Texture **tex,
+gl_ctx *gl_init(SDL_Renderer *rend, SDL_Texture **tex,
 	       struct retro_hw_render_callback *lrhw)
 {
 	SDL_RendererInfo info;
-	glctx *ctx;
+	gl_ctx *ctx;
 	int major, minor;
 
 	if(SDL_GetRendererInfo(rend, &info) != 0)
@@ -325,7 +325,7 @@ glctx *gl_init(SDL_Renderer *rend, SDL_Texture **tex,
 		return NULL;
 	}
 
-	if((ctx = SDL_calloc(1, sizeof(glctx))) == NULL)
+	if((ctx = SDL_calloc(1, sizeof(gl_ctx))) == NULL)
 		return NULL;
 
 	if(gl_init_fn(ctx) != 0)
@@ -382,7 +382,7 @@ glctx *gl_init(SDL_Renderer *rend, SDL_Texture **tex,
 	return ctx;
 }
 
-void gl_reset_context(const glctx *const ctx)
+void gl_reset_context(const gl_ctx *const ctx)
 {
 	int access, w, h;
 
@@ -420,7 +420,7 @@ void gl_reset_context(const glctx *const ctx)
 	ctx->context_reset();
 }
 
-void gl_prerun(glctx *ctx)
+void gl_prerun(gl_ctx *ctx)
 {
 	SDL_SetRenderTarget(ctx->rend, *ctx->tex);
 	SDL_GL_BindTexture(*ctx->tex, NULL, NULL);
@@ -429,7 +429,7 @@ void gl_prerun(glctx *ctx)
 	ctx->fn.glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 }
 
-void gl_postrun(glctx *ctx)
+void gl_postrun(gl_ctx *ctx)
 {
 	ctx->fn.glUseProgram(ctx->gl_sh.program);
 	ctx->fn.glBindVertexArray(ctx->gl_sh.vao);
@@ -442,7 +442,7 @@ void gl_postrun(glctx *ctx)
 	SDL_SetRenderTarget(ctx->rend, NULL);
 }
 
-void gl_deinit(glctx *ctx)
+void gl_deinit(gl_ctx *ctx)
 {
 #if 0
 	/* Causes segmentation fault currently. */

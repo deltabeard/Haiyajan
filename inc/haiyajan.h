@@ -105,7 +105,7 @@ struct core_ctx_s
 		SDL_AudioDeviceID audio_dev;
 	};
 
-	glctx *gl;
+	gl_ctx *gl;
 
 	/* Libretro core information. */
 	struct retro_system_info sys_info;
@@ -152,6 +152,6 @@ struct core_ctx_s
 	struct settings_s stngs;
 
 #if ENABLE_VIDEO_RECORDING == 1
-	rec *vid;
+	rec_ctx *vid;
 #endif
 };
