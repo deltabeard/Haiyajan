@@ -17,8 +17,10 @@ CFLAGS += $(OPT)
 # Enable static build by default on Windows.
 ifeq ($(OS),Windows_NT)
 	STATIC := 1
+	NEWLN := echo.
 else
 	STATIC := 0
+	NEWLN := echo
 endif
 
 GIT_VERSION := $(shell git rev-parse --short HEAD 2>/dev/null)
@@ -119,27 +121,27 @@ help:
 	@echo "Available options and their descriptions when enabled:"
 	@echo "  DEBUG=$(DEBUG)"
 	@echo "          Enables all asserts and reduces optimisation."
-	@echo
+	@$(NEWLN)
 	@echo "  STATIC=$(STATIC)"
 	@echo "          Enables static build."
-	@echo
+	@$(NEWLN)
 	@echo "  ENABLE_WEBP_SCREENSHOTS=$(ENABLE_WEBP_SCREENSHOTS)"
 	@echo "          Uses libwebp to encode screenshots instead of BMP."
 	@echo "          This option will be enabled automatically if the linker is able to"
 	@echo "          detect the availability of libwebp."
 	@echo "          If this option is disabled, screenshots will be saved as BMP files."
-	@echo
+	@$(NEWLN)
 	@echo "  ENABLE_VIDEO_RECORDING=$(ENABLE_VIDEO_RECORDING)"
 	@echo "          Enables video recording of gameplay using libx264 and libwebpack."
 	@echo "          This option will be enabled automatically if the linker is able to"
 	@echo "          detect the availability of libx264 and libwebpack."
-	@echo
+	@$(NEWLN)
 	@echo "  OPT=\"$(OPT)\"   Set custom optimisation options."
-	@echo
+	@$(NEWLN)
 	@echo "  Example: make DEBUG=1 OPT=\"-Ofast -march=native\""
-	@echo
-	@echo
+	@$(NEWLN)
+	@$(NEWLN)
 	@echo "Copyright (C) 2020 Mahyar Koshkouei"
 	@echo "Haiyajan is free software; see the LICENSE file for copying conditions. There is"
 	@echo "NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
-	@echo ""
+	@$(NEWLN)
