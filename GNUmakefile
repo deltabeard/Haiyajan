@@ -112,7 +112,7 @@ test: haiyajan
 	$(MAKE) -C ./test run
 
 clean:
-	$(RM) $(OBJS) $(DEPS) $(SRCS:.c=.gcda)
+	$(RM) $(OBJS) $(SRCS:.c=.gcda)
 	$(RM) ./haiyajan ./haiyajan.exe ./haiyajan.sym
 	$(MAKE) -C ./test clean
 
