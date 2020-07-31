@@ -1,5 +1,6 @@
 *.obj
 *.o
+*.so
 *.exe
 *.sym
 haiyajan
