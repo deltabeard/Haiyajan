@@ -18,12 +18,14 @@ CFLAGS += $(OPT)
 ifeq ($(OS),Windows_NT)
 	STATIC := 1
 	NEWLN := echo.
+	PIPE_SINK := nul
 else
 	STATIC := 0
 	NEWLN := echo
+	PIPE_SINK := /dev/null
 endif
 
-GIT_VERSION := $(shell git rev-parse --short HEAD 2>/dev/null)
+GIT_VERSION := $(shell git rev-parse --short HEAD 2> $(PIPE_SINK))
 ifneq ($(GIT_VERSION),)
 	CFLAGS += -D GIT_VERSION=\"$(GIT_VERSION)\"
 endif
@@ -38,7 +40,7 @@ ifeq ($(PKGCONFIG),)
 endif
 # Checks if the given library is available for linking. Works with GCC and
 # Clang.
-IS_LIB_AVAIL = $(shell ! $(PKGCONFIG) --exists $(CHECK_LIB) > /dev/null; echo $$?)
+IS_LIB_AVAIL = $(shell ! $(PKGCONFIG) --exists $(CHECK_LIB) > $(PIPE_SINK); echo $$?)
 PKGLIB = $(shell $(PKGCONFIG) --libs $(PKGSTC) $(CHECK_LIB))
 PKGFLG = $(shell $(PKGCONFIG) --cflags $(CHECK_LIB))
 

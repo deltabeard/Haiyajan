@@ -1,22 +1,5 @@
-*
-
-# Hidden files
-!.gitignore
-!.astylerc
-!.editorconfig
-
-# Project documentation
-!*Makefile*
-!LICENSE
-!*.md
-!*.sh
-!/meta/*.xcf
-!/meta/*.png
-!/meta/*.jpg
-
-# Source code
-!*.h
-!*.c
-!link.T
-
-!*/
+*.obj
+*.o
+*.exe
+*.sym
+haiyajan
