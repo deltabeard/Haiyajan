@@ -1,0 +1,13 @@
+include inc.mk
+
+init = $(call fn_init)
+fn_print_test = $(call fn_println, "Print line test")
+
+.PHONY: all
+all: test.fn_println
+test.fn_println: inc.mk
+	@echo $(fn_print_test)
+	@touch $@
+
+clean:
+	$(RM) test.fn_println
