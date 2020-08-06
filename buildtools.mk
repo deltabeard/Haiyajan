@@ -1,7 +1,7 @@
 # This Makefile is for use with GNU make only.
 
 #              Unix           Mac OS     Windows
-.LIBPATTERNS = lib%.a lib%.so lib%.dylib lib%.lib
+.LIBPATTERNS = lib%.a lib%.so lib%.dylib %.lib
 
 ifneq ($(OS),Windows_NT)
 	NULL := /dev/null
@@ -13,6 +13,7 @@ endif
 ifeq ($(CC),cl)
 	OBJEXT := obj
 	EXEOUT := /Fe
+	LINKCMDS := /link /SUBSYSTEM:CONSOLE
 else
 	OBJEXT := o
 	EXEOUT := -o

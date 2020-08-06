@@ -72,7 +72,7 @@ ifeq ($(USE_WEBP), 0)
 else
 	ENABLE_WEBP_SCREENSHOTS := 0
 endif
-ifeq ($(ENABLE_WEBP_SCREENSHOTS), 0)
+ifeq ($(ENABLE_WEBP_SCREENSHOTS), 1)
 	LDLIBS += -lwebp
 	CFLAGS += -DENABLE_WEBP_SCREENSHOTS=1
 endif
@@ -107,7 +107,7 @@ override CFLAGS += -Iinc $(SDL_LIBS) $(SDL_CFLAGS)
 
 all: $(TARGETS)
 haiyajan: $(OBJS) $(LDLIBS)
-	$(CC) $(CFLAGS) $(EXEOUT) $@ $^ $(LINKCMDS)
+	$(CC) $(CFLAGS) $(EXEOUT)$@ $^ $(LINKCMDS)
 
 %.obj: %.c
 	$(CC) $(CFLAGS) /Fo$@ /c $^
