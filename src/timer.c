@@ -20,7 +20,7 @@ int timer_init(struct timer_ctx_s *const tim, double emulated_rate)
 {
 	int ret = 0;
 	tim->core_ms = (1.0 / emulated_rate) * 1000.0;
-	tim->core_us = ((1.0 / emulated_rate) * 1000.0 * 1024.0);
+	tim->core_us = (Uint32)((1.0 / emulated_rate) * 1000.0 * 1024.0);
 	tim->timer_accumulator = 0.0;
 	tim->delay_comp_ms = ((int)tim->core_ms + 1) * 2;
 	tim->timer_event = SDL_RegisterEvents(1);

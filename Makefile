@@ -1,15 +1,27 @@
-CFLAGS := -std=c99 -g3 -fPIE -Wall -Wextra -pipe
-LDLIBS :=
-TARGETS := haiyajan
+# This Makefile is for use with GNU make only.
+# For Windows, set CC to "cl" to compile with MSVC build tools, for everything
+# else, gcc compatible flags will be used.
+USE_BUILDTOOLS := 1
+include ./buildtools/inc.mk
 
-DEBUG ?= 0
+TARGETS := haiyajan
+DEBUG := 0
+
+# Function substitutes variables depending on the value set in $(CC)
+ccparam = $(if $(findstring cl,$(CC)), $(2), $(1))
+
+# Set default flags
+CFLAGS := $(call ccparam, -std=c99 -g3 -fPIE -Wall -Wextra -pipe, /W2)
+LDLIBS :=
+
 ifeq ($(DEBUG),1)
-	CFLAGS += -D DEBUG=1 -D SDL_ASSERT_LEVEL=3
-	OPT ?= -Og
+	CFLAGS += -DDEBUG=1 -DSDL_ASSERT_LEVEL=3
+	OPT := -Og
 else
 	# I don't want any warnings in release builds
-	CFLAGS += -Werror -D SDL_ASSERT_LEVEL=1 -flto
-	OPT ?= -O2
+	CFLAGS += -DSDL_ASSERT_LEVEL=1
+	CFLAGS += $(call ccparam, -Werror -flto, /GL)
+	OPT := -O2
 	TARGETS += haiyajan.sym
 endif
 CFLAGS += $(OPT)
@@ -25,31 +37,22 @@ else
 	PIPE_SINK := /dev/null
 endif
 
-GIT_VERSION := $(shell git rev-parse --short HEAD 2> $(PIPE_SINK))
+GIT_VERSION := $(shell git describe --dirty --always --tags 2> $(PIPE_SINK))
 ifneq ($(GIT_VERSION),)
-	CFLAGS += -D GIT_VERSION=\"$(GIT_VERSION)\"
+	GIT_VERSION := LOCAL
 endif
+CFLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\"
 
 ifeq ($(STATIC),1)
 	STATIC_CFLAG := -static
 	PKGSTC := --static
 endif
 
-ifeq ($(PKGCONFIG),)
-	PKGCONFIG := pkg-config
+ifneq ($(call fn_chklib, SDL2),0)
+	err := $(error Unable to find any of $(subst %,SDL2,$(.LIBPATTERNS) in library paths). SDL2 is required)
 endif
-# Checks if the given library is available for linking. Works with GCC and
-# Clang.
-IS_LIB_AVAIL = $(shell ! $(PKGCONFIG) --exists $(CHECK_LIB) > $(PIPE_SINK); echo $$?)
-PKGLIB = $(shell $(PKGCONFIG) --libs $(PKGSTC) $(CHECK_LIB))
-PKGFLG = $(shell $(PKGCONFIG) --cflags $(CHECK_LIB))
-
-CHECK_LIB := sdl2
-ifneq ($(IS_LIB_AVAIL),1)
-	err := $(error pkg-config could not find SDL2)
-endif
-LDLIBS += $(PKGLIB)
-CFLAGS += $(PKGFLG)
+LDLIBS += $(shell sdl2-config --libs)
+CFLAGS += $(shell sdl2-config --cflags)
 
 # Check if WEBP is available. Otherwise use BMP for screenshots.
 CHECK_LIB := libwebp
@@ -114,7 +117,7 @@ test: haiyajan
 	$(MAKE) -C ./test run
 
 clean:
-	$(RM) $(OBJS) $(SRCS:.c=.gcda)
+	$(RM) $(OBJS) $(SRCS:.c=.gcda) *.obj
 	$(RM) ./haiyajan ./haiyajan.exe ./haiyajan.sym
 	$(MAKE) -C ./test clean
 

@@ -558,7 +558,7 @@ uint_fast8_t play_init_av(struct core_ctx_s *ctx)
 	if(ctx->gl != NULL)
 		gl_reset_context(ctx->gl);
 
-	want.freq = ctx->av_info.timing.sample_rate;
+	want.freq = (int)ctx->av_info.timing.sample_rate;
 	want.format = AUDIO_S16SYS;
 	want.channels = 2;
 	want.samples = 512;

@@ -124,7 +124,8 @@ static void print_help(void)
 			"  -b, --benchmark Benchmark and print average frames"
 			" per second.\n"
 			"  -v, --verbose   Print verbose log messages.\n"
-			"  -V, --video     Video driver to use\n");
+			"  -V, --video     Video driver to use\n"
+			"  -R, --render    Render driver to use\n");
 
 	for(int index = 0; index < num_drivers; index++)
 	{
@@ -178,6 +179,7 @@ static void apply_settings(char **argv, struct core_ctx_s *ctx)
 			{"info",      'I', OPTPARSE_NONE},
 			{"verbose",   'v', OPTPARSE_NONE},
 			{"video",     'V', OPTPARSE_REQUIRED},
+			{"render",    'R', OPTPARSE_REQUIRED},
 			{"version",   1,   OPTPARSE_NONE},
 			{"benchmark", 'b', OPTPARSE_OPTIONAL},
 			{"help",      'h', OPTPARSE_NONE},
@@ -232,6 +234,10 @@ static void apply_settings(char **argv, struct core_ctx_s *ctx)
 				video_init = 1;
 			}
 
+			break;
+
+		case 'R':
+			SDL_SetHint(SDL_HINT_RENDER_DRIVER, options.optarg);
 			break;
 
 		case 1:
@@ -765,6 +771,8 @@ int main(int argc, char *argv[])
 
 	/* Ignore argc being unused warning. */
 	(void)argc;
+
+	SDL_SetMainReady();
 
 #ifdef _WIN32
 	/* Windows (MinGW) does not unbuffer stderr by default. */

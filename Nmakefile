@@ -11,34 +11,29 @@
 !ERROR "SDL2 include folder must be set in SDL_INC"
 !ENDIF
 
-!IFNDEF SDL_LIB
-!ERROR "SDL2 library folder must be set in SDL_LIB"
-!ENDIF
-
 VERSION_MAJOR = 0
 VERSION_MINOR = 1
 
 DEBUG		= 0
 
 !IF "$(DEBUG)" != "0"
-WARN	= 4
-OPT		= /Zi /Od /GS
+WARN	= 3
+OPT		= /Zi /Od /GS /analyze
 !ELSE
 WARN	= 2
-OPT		= /Gw /GL /O2 /GS-
+OPT		= /Gw /GL /O2 /GA /Zo- /GS-
 !ENDIF
 
 CC	= cl /nologo
-CFLAGS	= /W$(WARN) $(OPT) /fp:fast /MT /I inc /I $(SDL_INC) /Drestrict=
-LDLIBS	= $(SDL_LIB)\SDL2.lib $(SDL_LIB)\SDL2main.lib shell32.lib /link \
-	  /VERSION:$(VERSION_MAJOR).$(VERSION_MINOR) /SUBSYSTEM:CONSOLE
-# /NODEFAULTLIB:msvcrtd.lib 
+CFLAGS	= /EHsc /W$(WARN) $(OPT) /utf-8 /fp:fast /I inc /I $(SDL_INC) /Drestrict=""
+LDLIBS	= /link SDL2.lib SDL2main.lib shell32.lib \
+	/VERSION:$(VERSION_MAJOR).$(VERSION_MINOR) /SUBSYSTEM:CONSOLE
 
 all: haiyajan.exe
 
-haiyajan.exe: src\haiyajan.obj src\load.obj src\play.obj src\timer.obj \
-		src\font.obj src\input.obj src\gl.obj src\rec.obj src\util.obj \
-		src\tinflate.obj src\sig.obj
+haiyajan.exe: src/haiyajan.obj src/load.obj src/play.obj src/timer.obj \
+		src/font.obj src/input.obj src/gl.obj src/rec.obj src/util.obj \
+		src/tinflate.obj src/sig.obj
 	$(CC) $(CFLAGS) $(**F) $(LDLIBS)
 
 clean:

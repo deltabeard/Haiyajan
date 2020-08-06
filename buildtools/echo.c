@@ -12,12 +12,17 @@
 
 int main(int argc, char *argv[])
 {
+	unsigned char first_word = 0;
 	(void) argc;
 
 	while(*(++argv) != NULL)
 	{
+		if(first_word != 0)
+			putc(' ', stdout);
+		else
+			first_word = 1;
+
 		fputs(*argv, stdout);
-		putc(' ', stdout);
 	}
 
 	putc('\n', stdout);
