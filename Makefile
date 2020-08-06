@@ -1,11 +1,37 @@
 # This Makefile is for use with GNU make only.
-# For Windows, set CC to "cl" to compile with MSVC build tools, for everything
-# else, gcc compatible flags will be used.
-USE_BUILDTOOLS := 1
-include ./buildtools/inc.mk
+include buildtools.mk
 
 TARGETS := haiyajan
 DEBUG := 0
+STATIC := 0
+
+define help_txt
+Available options and their descriptions when enabled:
+  DEBUG=$(DEBUG)
+          Enables all asserts and reduces optimisation.
+
+  STATIC=$(STATIC)
+          Enables static build.
+
+  ENABLE_WEBP_SCREENSHOTS=$(ENABLE_WEBP_SCREENSHOTS)
+          Uses libwebp to encode screenshots instead of BMP.
+          This option will be enabled automatically if the linker is able to
+          detect the availability of libwebp.
+          If this option is disabled, screenshots will be saved as BMP files.
+
+  ENABLE_VIDEO_RECORDING=$(ENABLE_VIDEO_RECORDING)
+          Enables video recording of gameplay using libx264 and libwavpack.
+          This option will be enabled automatically if the linker is able to
+          detect the availability of libx264 and libwavpack.
+
+  OPT="$(OPT)"   Set custom optimisation options.
+
+  Example: make DEBUG=1 OPT="-Ofast -march=native"
+
+Copyright (C) 2020 Mahyar Koshkouei
+Haiyajan is free software; see the LICENSE file for copying conditions. There is
+NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+endef
 
 # Function substitutes variables depending on the value set in $(CC)
 ccparam = $(if $(findstring cl,$(CC)), $(2), $(1))
@@ -20,91 +46,73 @@ ifeq ($(DEBUG),1)
 else
 	# I don't want any warnings in release builds
 	CFLAGS += -DSDL_ASSERT_LEVEL=1
-	CFLAGS += $(call ccparam, -Werror -flto, /GL)
+	CFLAGS += $(call ccparam, -Werror -flto -ffast-math,\
+		  /GL /utf-8 /fp:fast)
 	OPT := -O2
 	TARGETS += haiyajan.sym
 endif
 CFLAGS += $(OPT)
 
-# Enable static build by default on Windows.
-ifeq ($(OS),Windows_NT)
-	STATIC := 1
-	NEWLN := echo.
-	PIPE_SINK := nul
-else
-	STATIC := 0
-	NEWLN := echo
-	PIPE_SINK := /dev/null
-endif
-
-GIT_VERSION := $(shell git describe --dirty --always --tags 2> $(PIPE_SINK))
-ifneq ($(GIT_VERSION),)
+GIT_VERSION := $(shell git describe --dirty --always --tags 2>$(NULL))
+ifeq ($(GIT_VERSION),)
 	GIT_VERSION := LOCAL
 endif
 CFLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\"
 
-ifeq ($(STATIC),1)
-	STATIC_CFLAG := -static
-	PKGSTC := --static
-endif
-
-ifneq ($(call fn_chklib, SDL2),0)
+ifneq ($(call fn_chklib, SDL2), 0)
 	err := $(error Unable to find any of $(subst %,SDL2,$(.LIBPATTERNS) in library paths). SDL2 is required)
 endif
-LDLIBS += $(shell sdl2-config --libs)
-CFLAGS += $(shell sdl2-config --cflags)
+SDL_LIBS += $(shell sdl2-config --libs)
+SDL_CFLAGS += $(shell sdl2-config --cflags)
 
 # Check if WEBP is available. Otherwise use BMP for screenshots.
-CHECK_LIB := libwebp
-ENABLE_WEBP_SCREENSHOTS := $(IS_LIB_AVAIL)
-ifeq ($(ENABLE_WEBP_SCREENSHOTS),1)
-	LDLIBS += $(PKGLIB)
-	CFLAGS += $(PKGFLG) -D ENABLE_WEBP_SCREENSHOTS=1
+USE_WEBP := $(call fn_chklib, webp)
+ifeq ($(USE_WEBP), 0)
+	ENABLE_WEBP_SCREENSHOTS := 1
+else
+	ENABLE_WEBP_SCREENSHOTS := 0
+endif
+ifeq ($(ENABLE_WEBP_SCREENSHOTS), 0)
+	LDLIBS += -lwebp
+	CFLAGS += -DENABLE_WEBP_SCREENSHOTS=1
 endif
 
-VIDLIBS :=
-VIDFLGS :=
-CHECK_LIB := x264
-USE_X264 := $(IS_LIB_AVAIL)
-ifeq ($(USE_X264),1)
-	VIDLIBS := $(PKGLIB)
-	VIDFLGS := $(PKGFLG)
+USE_X264 := $(call fn_chklib, x264)
+ifeq ($(USE_X264), 0)
+	VIDLIBS := -lx264
 endif
 
-CHECK_LIB := wavpack
-USE_WAVPACK := $(IS_LIB_AVAIL)
-ifeq ($(USE_WAVPACK),1)
-	VIDLIBS += $(PKGLIB)
-	VIDFLGS += $(PKGFLG)
+USE_WAVPACK := $(call fn_chklib, wavpack)
+ifeq ($(USE_WAVPACK), 0)
+	VIDLIBS += -lwavpack
 endif
 
-ifeq ($(USE_X264)$(USE_WAVPACK),11)
+ifeq ($(USE_X264)$(USE_WAVPACK),00)
 	ENABLE_VIDEO_RECORDING := 1
+else
+	ENABLE_VIDEO_RECORDING := 0
 endif
 ifeq ($(ENABLE_VIDEO_RECORDING),1)
 	LDLIBS += $(VIDLIBS)
-	CFLAGS += $(LIBFLGS) -D ENABLE_VIDEO_RECORDING=1
+	CFLAGS += $(LIBFLGS) -DENABLE_VIDEO_RECORDING=1
 endif
 
-SRC_DIR	:= ./src
-INC_DIR	:= ./inc
 SRCS	:= $(wildcard ./src/*.c)
 HDRS	:= $(wildcard ./inc/*.h)
-OBJS	:= $(SRCS:.c=.o)
+OBJS	:= $(SRCS:.c=.$(OBJEXT))
 DEPS	:= Makefile.depend
-override CFLAGS += -I$(INC_DIR) $(STATIC_CFLAG)
+override CFLAGS += -Iinc $(SDL_LIBS) $(SDL_CFLAGS)
 
 .PHONY: test
 
 all: $(TARGETS)
-haiyajan: $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LDLIBS)
+haiyajan: $(OBJS) $(LDLIBS)
+	$(CC) $(CFLAGS) $(EXEOUT) $@ $^ $(LINKCMDS)
 
-$(DEPS): $(SRCS)
-	$(CC) $(CFLAGS) -MM $^ > $(DEPS)
-	@sed -i -E "s/^(.+?).o: ([^ ]+?)\1/\2\1.o: \2\1/g" $(DEPS)
+%.obj: %.c
+	$(CC) $(CFLAGS) /Fo$@ /c $^
 
--include $(DEPS)
+include Makefile.depend
 
 # Saves debug symbols in a separate file, and strips the main executable.
 # To get information from stack trace: `addr2line -e haiyajan.debug addr`
@@ -121,32 +129,6 @@ clean:
 	$(RM) ./haiyajan ./haiyajan.exe ./haiyajan.sym
 	$(MAKE) -C ./test clean
 
-# 80char      |-------------------------------------------------------------------------------|
 help:
-	@echo "Available options and their descriptions when enabled:"
-	@echo "  DEBUG=$(DEBUG)"
-	@echo "          Enables all asserts and reduces optimisation."
-	@$(NEWLN)
-	@echo "  STATIC=$(STATIC)"
-	@echo "          Enables static build."
-	@$(NEWLN)
-	@echo "  ENABLE_WEBP_SCREENSHOTS=$(ENABLE_WEBP_SCREENSHOTS)"
-	@echo "          Uses libwebp to encode screenshots instead of BMP."
-	@echo "          This option will be enabled automatically if the linker is able to"
-	@echo "          detect the availability of libwebp."
-	@echo "          If this option is disabled, screenshots will be saved as BMP files."
-	@$(NEWLN)
-	@echo "  ENABLE_VIDEO_RECORDING=$(ENABLE_VIDEO_RECORDING)"
-	@echo "          Enables video recording of gameplay using libx264 and libwebpack."
-	@echo "          This option will be enabled automatically if the linker is able to"
-	@echo "          detect the availability of libx264 and libwebpack."
-	@$(NEWLN)
-	@echo "  OPT=\"$(OPT)\"   Set custom optimisation options."
-	@$(NEWLN)
-	@echo "  Example: make DEBUG=1 OPT=\"-Ofast -march=native\""
-	@$(NEWLN)
-	@$(NEWLN)
-	@echo "Copyright (C) 2020 Mahyar Koshkouei"
-	@echo "Haiyajan is free software; see the LICENSE file for copying conditions. There is"
-	@echo "NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
-	@$(NEWLN)
+	$(info $(help_txt))
+	@cd
