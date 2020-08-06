@@ -15,16 +15,26 @@ respective content must be downloaded separately. You may find many Libretro
 projects at the [official Libretro repository list](https://github.com/libretro/).
 
 ## Support
-Haiyajan *should* work on any platform supported by SDL2. The only
-platforms that this project will be regularly tested on for major releases are:
+The only platforms that this project will be regularly tested on for
+major releases are:
 
-- Arch Linux (x86_64, Nvidia Pascal/Intel Haswell, glibc)
+- Arch Linux (x86_64, glibc)
 - Alpine Linux (aarch64, Raspberry Pi 2B/Qemu, musl libc)
-- Windows 10 (x86_64, AMD Radeon 500/Kaby Lake R, MSVC)
-- Mac OS X 10.6 (x86_64, Intel Haswell/VirtualBox, glibc)
+- Windows 10 (x86_64, AMD Radeon 500/Kaby Lake R, MSVC 2015)
 
-We welcome bug reports and contributions for all platforms, including those not
-listed above.
+Haiyajan *should* work on any platform supported by SDL2 and has a C99
+compiler. Haiyajan may therefore run on Linux, Unix, Windows
+XP/Vista/7/8/10/RT, Mac OS X 10.5+/macOS, Haiku, iOS 5.1.1+, Android 2.3.3+,
+Emscripten, Nintendo Switch (libnx).
+
+Note:
+- Haiyajan executables built for Windows will require the
+[Visual C++ Redistributable for Visual Studio 2015](https://www.microsoft.com/en-us/download/details.aspx?id=48145).
+- Since the official SDL2 API for the Nintendo Switch is released under an NDA,
+it is not compatible with the AGPL license of Haiyajan. Consider using libnx.
+- Libretro cores may have different system requirements.
+
+We welcome bug reports and contributions for all platforms.
 
 ## License
 Copyright (C) 2020 Mahyar Koshkouei, et al.
@@ -48,15 +58,14 @@ Compared to Semantic Versioning 2.0, the PATCH version is removed in this
 project for brevity.
 
 ## Building
-The following dependencies are recommended for building Haiyajan. Other tools
+The following dependencies are required for building Haiyajan. Other tools
 may be used, but are unsupported by this project.
 - SDL2
-- C99 Compiler (such as GCC or Clang)
-- GNU Make or NMake
+- C99 Compiler (GCC, Clang, MSVC 2015 cl)
+- GNU Make
 
-For Windows builds using NMake, use the `/f` switch to point to the Nmakefile
-file. As in `nmake /f Nmakefile`.
-When using GNU Make, simply execute `make` in the project folder.
+Simply execute GNU make in the Haiyajan project folder to build with
+automatically detected options based on available libraries.
 
 Execute `make help` in order to see various build options. Some options may be
 automatically selected or unsupported for your build platform.
@@ -68,14 +77,14 @@ automatically selected or unsupported for your build platform.
 ## Objectives
 In no particular order.
 
-- Maximum depth of three in menu.
-- Support for software and OpenGL cores.
-- Automatic selection of libretro core given the input file.
-- Compensation for ASCII-only font by reading input file header.
-- Download libretro cores, program updates as required, with user control.
-- Automatic assignment of gamepad mappings.
-- Automatic detection of A/B placement for emulated system.
-- Small number of GUI configuration parameters.
-  - Colours, placement of menu and hotkeys.
-- Automatic DPI scaling.
-  - Font and UI size.
+- [ ] Maximum depth of three in menu.
+- [x] Support for software and OpenGL cores.
+- [ ] Automatic selection of libretro core given the input file.
+- [ ] Compensation for ASCII-only font by reading input file header.
+- [ ] Download libretro cores, program updates as required, with user control.
+- [x] Automatic assignment of gamepad mappings.
+- [ ] Automatic detection of A/B placement for emulated system.
+- [ ]Small number of GUI configuration parameters.
+  - [ ] Colours, placement of menu and hotkeys.
+- [ ] Automatic DPI scaling.
+  - [ ] Font and UI size.
