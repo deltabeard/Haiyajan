@@ -340,7 +340,6 @@ err:
 }
 
 #if ENABLE_VIDEO_RECORDING == 1
-
 void cap_frame(rec_ctx *vid, SDL_Renderer *rend, SDL_Texture *tex,
 	       const SDL_Rect *src, SDL_RendererFlip flip)
 {
@@ -351,7 +350,6 @@ void cap_frame(rec_ctx *vid, SDL_Renderer *rend, SDL_Texture *tex,
 
 	rec_enc_video(vid, surf);
 }
-
 #endif
 
 static void run(struct core_ctx_s *ctx)
@@ -764,6 +762,56 @@ out:
 	FontExit(font);
 }
 
+int haiyajan_get_available_file_types(struct core_ctx_s *ctx)
+{
+	(void) ctx;
+	return 0;
+}
+
+int haiyajan_load_file(struct core_ctx_s *ctx)
+{
+	if(load_libretro_core(ctx->file_core, ctx))
+		goto err;
+
+	/* TODO:
+	 * - Check that input file is supported by core
+	 */
+	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+		    "Libretro core \"%.32s\" loaded successfully.",
+		    ctx->sys_info.library_name);
+
+#if SDL_VERSION_ATLEAST(2, 0, 13)
+	SDL_SetHint(SDL_HINT_AUDIO_DEVICE_STREAM_NAME, ctx->sys_info.library_name);
+#endif
+
+	{
+		char title[MAX_TITLE_LEN];
+		SDL_snprintf(title, MAX_TITLE_LEN, "%s: %s", PROG_NAME,
+			     ctx->sys_info.library_name);
+		SDL_SetWindowTitle(ctx->win, title);
+	}
+
+	play_init_cb(ctx);
+
+	if(load_libretro_file(ctx) != 0)
+		goto err;
+
+	if(play_init_av(ctx) != 0)
+		goto err;
+
+	SDL_SetWindowMinimumSize(ctx->win, ctx->game_max_res.w,
+				 ctx->game_max_res.h);
+	SDL_SetWindowSize(ctx->win, ctx->game_max_res.w, ctx->game_max_res.h);
+	SDL_RenderSetLogicalSize(ctx->disp_rend, ctx->game_max_res.w,
+				 ctx->game_max_res.h);
+
+	run(ctx);
+	return 0;
+
+err:
+	return -1;
+}
+
 int main(int argc, char *argv[])
 {
 	int ret = EXIT_FAILURE;
@@ -838,42 +886,9 @@ int main(int argc, char *argv[])
 	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 		       "Created window and renderer");
 
-	if(load_libretro_core(ctx.file_core, &ctx))
+
+	if(haiyajan_load_file(&ctx) != 0)
 		goto err;
-
-	/* TODO:
-	 * - Check that input file is supported by core
-	 */
-	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-		    "Libretro core \"%.32s\" loaded successfully.",
-		    ctx.sys_info.library_name);
-
-#if SDL_VERSION_ATLEAST(2, 0, 13)
-	SDL_SetHint(SDL_HINT_AUDIO_DEVICE_STREAM_NAME, ctx.sys_info.library_name);
-#endif
-
-	{
-		char title[MAX_TITLE_LEN];
-		SDL_snprintf(title, MAX_TITLE_LEN, "%s: %s", PROG_NAME,
-			     ctx.sys_info.library_name);
-		SDL_SetWindowTitle(ctx.win, title);
-	}
-
-	play_init_cb(&ctx);
-
-	if(load_libretro_file(&ctx) != 0)
-		goto err;
-
-	if(play_init_av(&ctx) != 0)
-		goto err;
-
-	SDL_SetWindowMinimumSize(ctx.win, ctx.game_max_res.w,
-				 ctx.game_max_res.h);
-	SDL_SetWindowSize(ctx.win, ctx.game_max_res.w, ctx.game_max_res.h);
-	SDL_RenderSetLogicalSize(ctx.disp_rend, ctx.game_max_res.w,
-				 ctx.game_max_res.h);
-
-	run(&ctx);
 
 	ret = EXIT_SUCCESS;
 
