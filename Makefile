@@ -34,7 +34,7 @@ NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 endef
 
 # Function substitutes variables depending on the value set in $(CC)
-ccparam = $(if $(findstring cl,$(CC)), $(2), $(1))
+ccparam = $(if $(subst cl,,$(CC)), $(1), $(2))
 
 # Set default flags
 CFLAGS := $(call ccparam, -std=c99 -pedantic -g3 -fPIE -Wall -Wextra -pipe, /W2)

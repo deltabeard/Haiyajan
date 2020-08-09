@@ -889,8 +889,11 @@ int main(int argc, char *argv[])
 #if 0
 	ticks_before = fps_beg = benchmark_beg = SDL_GetTicks();
 #endif
-	while(h.core.env.status.bits.shutdown == 0 || h.quit == 0)
+	while(h.core.env.status.bits.shutdown == 0 && h.quit == 0)
 	{
+		int tim_cmd;
+		Uint32 tim_diff = SDL_GetTicks();
+
 		h.core.env.frames++;
 		process_events(&h);
 		timer_profile_start(&h.core.tim);
@@ -901,11 +904,16 @@ int main(int argc, char *argv[])
 				 &h.core.sdl.game_frame_res, NULL, 0.0, NULL,
 				 h.core.env.flip);
 
-		SDL_RenderPresent(h.rend);
 		timer_profile_end(&h.core.tim);
+		tim_diff = SDL_GetTicks() - tim_diff;
 
-
-		SDL_Delay(15);
+		tim_cmd = timer_get_delay(&h.core.tim, tim_diff);
+		if(tim_cmd == 0)
+			SDL_RenderPresent(h.rend);
+		else if(tim_cmd < 0)
+			continue;
+		else
+			SDL_Delay(tim_cmd);
 	}
 
 	ret = EXIT_SUCCESS;

@@ -32,7 +32,7 @@ struct ui_s {
 
 ui *ui_init(SDL_Renderer *rend)
 {
-	ui *ui = SDL_calloc(1, sizeof(ui));
+	ui *ui = SDL_calloc(1, sizeof(struct ui_s));
 	if(ui == NULL)
 		return NULL;
 
