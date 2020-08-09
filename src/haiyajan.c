@@ -908,6 +908,12 @@ int main(int argc, char *argv[])
 				 &h.core.sdl.game_frame_res, NULL, 0.0, NULL,
 				 h.core.env.flip);
 
+		if(h.core.vid != NULL)
+		{
+			cap_frame(h.core.vid, h.rend, h.core.sdl.core_tex,
+				  &h.core.sdl.game_frame_res, h.core.env.flip);
+		}
+
 		timer_profile_end(&h.core.tim);
 
 		/* Only draw to screen if we're not falling behind. */
@@ -920,6 +926,8 @@ int main(int argc, char *argv[])
 		ticks_before = ticks_next;
 	}
 
+	rec_end(&h.core.vid);
+	util_exit_all();
 	ret = EXIT_SUCCESS;
 
 out:
