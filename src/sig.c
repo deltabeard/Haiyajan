@@ -19,7 +19,7 @@
 #include <haiyajan.h>
 #include <sig.h>
 
-static const struct core_ctx_s *ctx;
+static const struct haiyajan_ctx_s *ctx;
 
 static void log_out(void *ctx, int cat, SDL_LogPriority pri, const char *msg)
 {
@@ -73,13 +73,13 @@ static void sig_handler(int sig)
 	fflush(stderr);
 
 	{
-#define fn_max (sizeof(ctx->fn)/sizeof(uintptr_t))
+#define fn_max (sizeof(ctx->core.fn)/sizeof(uintptr_t))
 		/* Checks if functions are initialised or not. Each function is
 		 * represented by a bit in are_fn_set. */
 		Uint32 are_fn_set = 0;
 		uintptr_t fns[fn_max];
 
-		SDL_memcpy(fns, &ctx->fn, sizeof(fns));
+		SDL_memcpy(fns, &ctx->core.fn, sizeof(fns));
 
 		for(unsigned fn = 0; fn < fn_max; fn++)
 		{
@@ -89,12 +89,15 @@ static void sig_handler(int sig)
 
 		SDL_Log("Haiyajan context trace:\n"
 			"STATUS: 0x%02X%s\n"
-			"FN: 0x%08X\n", ctx->env.status,
-			ctx->env.status_bits.playing == 1 ? " retro_run()" : "",
+			"FN: 0x%08X\n", ctx->core.env.status.all,
+			ctx->core.env.status.bits.playing == 1 ? " retro_run()" : "",
 			are_fn_set);
 
-		if(ctx->env.status_bits.core_init == 1)
-			SDL_Log("CORE: %.10s\n", ctx->core_log_name);
+		if(ctx->core.env.status.bits.core_init == 1)
+		{
+			SDL_Log("CORE: %s %s\n", ctx->core.sys_info.library_name,
+				ctx->core.sys_info.library_version);
+		}
 #undef fn_max
 	}
 
@@ -105,7 +108,7 @@ static void sig_handler(int sig)
 	abort();
 }
 
-void init_sig(struct core_ctx_s *c)
+void init_sig(struct haiyajan_ctx_s *c)
 {
 	ctx = c;
 

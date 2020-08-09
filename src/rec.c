@@ -40,28 +40,26 @@ struct venc_stor_s {
 };
 
 struct rec_s {
-	struct {
-		SDL_RWops *fa;
-		WavpackContext *wpc;
-		void *first_block;
-		Sint32 first_block_sz;
-		Sint32 *samples;
-		Uint64 samples_sz;
-	};
+	/* Audio */
+	SDL_RWops *fa;
+	WavpackContext *wpc;
+	void *first_block;
+	Sint32 first_block_sz;
+	Sint32 *samples;
+	Uint64 samples_sz;
 
-	struct {
-		SDL_RWops *fv;
-		x264_t *h;
-		x264_param_t param;
+	/* Video */
+	SDL_RWops *fv;
+	x264_t *h;
+	x264_param_t param;
 
-		/* Preset value pointing to x264_preset_names[] */
-		Uint8 preset;
-		SDL_Thread *venc_th;
-		SDL_mutex *venc_mtx;
-		SDL_cond *venc_cond;
-		SDL_SpinLock venc_slk;
-		struct venc_stor_s venc_stor;
-	};
+	/* Preset value pointing to x264_preset_names[] */
+	Uint8 preset;
+	SDL_Thread *venc_th;
+	SDL_mutex *venc_mtx;
+	SDL_cond *venc_cond;
+	SDL_SpinLock venc_slk;
+	struct venc_stor_s venc_stor;
 };
 
 /* Max preset is fast. */

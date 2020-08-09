@@ -142,7 +142,7 @@ static SDL_bool input_is_analogue(SDL_GameController *gc)
 }
 
 /* TODO: Change this if-statement mess to use address and pointers. */
-static void input_set_keyboard(struct input_device_s *dev, const SDL_Scancode sc,
+static void input_set_keyboard(input_device_s *dev, const SDL_Scancode sc,
                       const Uint8 state, const Uint32 input_cmd_event)
 {
 
@@ -151,35 +151,35 @@ static void input_set_keyboard(struct input_device_s *dev, const SDL_Scancode sc
 	else if(keymap[sc].cmd_type == INPUT_CMD_INPUT &&
 	                keymap[sc].cmd <= INPUT_JOYPAD_R3)
 	{
-		dev->keyboard.btns.btns = (dev->keyboard.btns.btns & ~(1 << keymap[sc].cmd)) | (state << keymap[sc].cmd);
+		dev->type.keyboard.btns.all = (dev->type.keyboard.btns.all & ~(1 << keymap[sc].cmd)) | (state << keymap[sc].cmd);
 	}
 	else if(keymap[sc].cmd_type == INPUT_CMD_INPUT)
 	{
 		switch(keymap[sc].cmd)
 		{
 		case INPUT_ANALOGUE_LEFT_X_POS:
-			dev->keyboard.left_x = state ? INT16_MAX : 0;
+			dev->type.keyboard.left_x = state ? INT16_MAX : 0;
 			break;
 		case INPUT_ANALOGUE_LEFT_X_NEG:
-			dev->keyboard.left_x = state ? INT16_MIN : 0;
+			dev->type.keyboard.left_x = state ? INT16_MIN : 0;
 			break;
 		case INPUT_ANALOGUE_LEFT_Y_POS:
-			dev->keyboard.left_y = state ? INT16_MAX : 0;
+			dev->type.keyboard.left_y = state ? INT16_MAX : 0;
 			break;
 		case INPUT_ANALOGUE_LEFT_Y_NEG:
-			dev->keyboard.left_y = state ? INT16_MIN : 0;
+			dev->type.keyboard.left_y = state ? INT16_MIN : 0;
 			break;
 		case INPUT_ANALOGUE_RIGHT_X_POS:
-			dev->keyboard.right_x = state ? INT16_MAX : 0;
+			dev->type.keyboard.right_x = state ? INT16_MAX : 0;
 			break;
 		case INPUT_ANALOGUE_RIGHT_X_NEG:
-			dev->keyboard.right_x = state ? INT16_MIN : 0;
+			dev->type.keyboard.right_x = state ? INT16_MIN : 0;
 			break;
 		case INPUT_ANALOGUE_RIGHT_Y_POS:
-			dev->keyboard.right_y = state ? INT16_MAX : 0;
+			dev->type.keyboard.right_y = state ? INT16_MAX : 0;
 			break;
 		case INPUT_ANALOGUE_RIGHT_Y_NEG:
-			dev->keyboard.right_y = state ? INT16_MIN : 0;
+			dev->type.keyboard.right_y = state ? INT16_MIN : 0;
 			break;
 			/* FIXME: INPUT_ANALOGUE_BTN ? */
 		}
@@ -239,7 +239,7 @@ void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev)
 		in_ctx->player[0].hai_type = input_is_analogue(gc) ?
 				RETRO_INPUT_ANALOG : RETRO_INPUT_JOYPAD;
 
-		in_ctx->player[0].pad.ctx = gc;
+		in_ctx->player[0].type.pad.ctx = gc;
 		SDL_GameControllerSetPlayerIndex(gc, 1);
 
 		/* FIXME: assign controller mapping to core. */
@@ -261,7 +261,7 @@ void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev)
 		if(gc_name == NULL)
 			gc_name = gc_no_name;
 
-		if(gc == in_ctx->player[0].pad.ctx)
+		if(gc == in_ctx->player[0].type.pad.ctx)
 		{
 			SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
 				    "Player 1 disconnected");
@@ -273,7 +273,7 @@ void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev)
 
 		/* TODO: Could just zero the struct? */
 		in_ctx->player[0].hai_type = RETRO_INPUT_NONE;
-		in_ctx->player[0].pad.ctx = NULL;
+		in_ctx->player[0].type.pad.ctx = NULL;
 
 		/* Change player 1 to keyboard if no other players/controllers
 		 * are connected. */
@@ -303,7 +303,6 @@ Sint16 input_get(const struct input_ctx_s *const in_ctx,
 				 unsigned port, unsigned device, unsigned index,
 				 unsigned id)
 {
-#if 1
 	static SDL_GameControllerButton lr_to_gcb[] =
 	{
 		SDL_CONTROLLER_BUTTON_B,
@@ -327,7 +326,6 @@ Sint16 input_get(const struct input_ctx_s *const in_ctx,
 		{ SDL_CONTROLLER_AXIS_LEFTX, SDL_CONTROLLER_AXIS_LEFTY },
 		{ SDL_CONTROLLER_AXIS_RIGHTX, SDL_CONTROLLER_AXIS_RIGHTY }
 	};
-#endif
 
 	if(port >= MAX_PLAYERS)
 		return 0;
@@ -335,7 +333,7 @@ Sint16 input_get(const struct input_ctx_s *const in_ctx,
 	if(in_ctx->player[port].hai_type != (input_type_e)device)
 	{
 		static Uint8 log_lim = 0;
-		if(((log_lim >> port) & 0b1) == 0)
+		if(((log_lim >> port) & 1) == 0)
 		{
 			SDL_LogVerbose(SDL_LOG_CATEGORY_INPUT,
 				"Core has misidentified device %s on player %u "
@@ -346,7 +344,7 @@ Sint16 input_get(const struct input_ctx_s *const in_ctx,
 				"This error will no longer appear for player "
 				"%d", port);
 		}
-		log_lim |= 0b1 << port;
+		log_lim |= 1 << port;
 	}
 
 	switch(in_ctx->player[port].hai_type)
@@ -359,22 +357,22 @@ Sint16 input_get(const struct input_ctx_s *const in_ctx,
 			if(id == RETRO_DEVICE_ID_ANALOG_X)
 			{
 				if(index == RETRO_DEVICE_INDEX_ANALOG_LEFT)
-					return in_ctx->player[port].keyboard.left_x;
+					return in_ctx->player[port].type.keyboard.left_x;
 				else if(index == RETRO_DEVICE_INDEX_ANALOG_RIGHT)
-					return in_ctx->player[port].keyboard.right_x;
+					return in_ctx->player[port].type.keyboard.right_x;
 			}
 			else if(id == RETRO_DEVICE_ID_ANALOG_Y)
 			{
 				if(index == RETRO_DEVICE_INDEX_ANALOG_LEFT)
-					return in_ctx->player[port].keyboard.left_y;
+					return in_ctx->player[port].type.keyboard.left_y;
 				else if(index == RETRO_DEVICE_INDEX_ANALOG_RIGHT)
-					return in_ctx->player[port].keyboard.right_y;
+					return in_ctx->player[port].type.keyboard.right_y;
 			}
 
 			return 0;
 		}
 		case RETRO_INPUT_JOYPAD:
-			return (in_ctx->player[port].keyboard.btns.btns >> id) & 1;
+			return (in_ctx->player[port].type.keyboard.btns.all >> id) & 1;
 		}
 		break;
 
@@ -390,7 +388,7 @@ Sint16 input_get(const struct input_ctx_s *const in_ctx,
 
 			if(index < RETRO_DEVICE_INDEX_ANALOG_BUTTON)
 			{
-				return SDL_GameControllerGetAxis(in_ctx->player[port].pad.ctx,
+				return SDL_GameControllerGetAxis(in_ctx->player[port].type.pad.ctx,
 				                                 lr_to_gcax[index][id]);
 			}
 		/* Fall-through */
@@ -398,11 +396,11 @@ Sint16 input_get(const struct input_ctx_s *const in_ctx,
 		{
 			SDL_GameControllerButton btn = lr_to_gcb[id];
 			if(btn != -1)
-				return SDL_GameControllerGetButton(in_ctx->player[port].pad.ctx, btn);
+				return SDL_GameControllerGetButton(in_ctx->player[port].type.pad.ctx, btn);
 			else if(id == RETRO_DEVICE_ID_JOYPAD_L2)
-				return SDL_GameControllerGetAxis(in_ctx->player[port].pad.ctx, SDL_CONTROLLER_AXIS_TRIGGERLEFT);
+				return SDL_GameControllerGetAxis(in_ctx->player[port].type.pad.ctx, SDL_CONTROLLER_AXIS_TRIGGERLEFT);
 			else if(id == RETRO_DEVICE_ID_JOYPAD_R2)
-				return SDL_GameControllerGetAxis(in_ctx->player[port].pad.ctx, SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
+				return SDL_GameControllerGetAxis(in_ctx->player[port].type.pad.ctx, SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
 
 			break;
 		}

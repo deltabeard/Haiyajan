@@ -25,10 +25,10 @@ static void save_sram_file(struct core_ctx_s *ctx)
 	size_t sram_size;
 	void *sram_dat;
 
-	if(ctx->file_content_sram == NULL)
+	if(ctx->sram_filename == NULL)
 		goto out;
 
-	sram_rw = SDL_RWFromFile(ctx->file_content_sram, "wb");
+	sram_rw = SDL_RWFromFile(ctx->sram_filename, "wb");
 	if(sram_rw == NULL)
 		goto out;
 
@@ -41,8 +41,8 @@ static void save_sram_file(struct core_ctx_s *ctx)
 	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION, "Saved SRAM file.");
 
 out:
-	SDL_free(ctx->file_content_sram);
-	ctx->file_content_sram = NULL;
+	SDL_free(ctx->sram_filename);
+	ctx->sram_filename = NULL;
 
 	return;
 }
@@ -55,17 +55,17 @@ static void load_sram_file(struct core_ctx_s *ctx)
 	size_t sram_len;
 	void *sram_dat;
 
-	ctx->file_content_sram = SDL_strdup(ctx->file_content);
-	if(ctx->file_content_sram == NULL)
+	ctx->sram_filename = SDL_strdup(ctx->content_filename);
+	if(ctx->sram_filename == NULL)
 		goto out;
 
-	sram_len = SDL_strlen(ctx->file_content_sram) - 1;
-	*(ctx->file_content_sram + sram_len--) = 'm';
-	*(ctx->file_content_sram + sram_len--) = 'r';
-	*(ctx->file_content_sram + sram_len--) = 's';
-	*(ctx->file_content_sram + sram_len--) = '.';
+	sram_len = SDL_strlen(ctx->sram_filename) - 1;
+	*(ctx->sram_filename + sram_len--) = 'm';
+	*(ctx->sram_filename + sram_len--) = 'r';
+	*(ctx->sram_filename + sram_len--) = 's';
+	*(ctx->sram_filename + sram_len--) = '.';
 
-	sram_rw = SDL_RWFromFile(ctx->file_content_sram, "rb");
+	sram_rw = SDL_RWFromFile(ctx->sram_filename, "rb");
 	if(sram_rw == NULL)
 	{
 		SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
@@ -100,15 +100,15 @@ uint_fast8_t load_libretro_file(struct core_ctx_s *restrict ctx)
 	 * memory.
 	 */
 	struct retro_game_info game = {
-		.path = ctx->file_content, .meta = NULL
+		.path = ctx->content_filename, .meta = NULL
 	};
 
 	SDL_assert_paranoid(ctx != NULL);
-	SDL_assert(ctx->env.status_bits.core_init == 1);
+	SDL_assert(ctx->env.status.bits.core_init == 1);
 
 	if(ctx->sys_info.need_fullpath == true)
 	{
-		ctx->game_data = NULL;
+		ctx->sdl.game_data = NULL;
 		game.data = NULL;
 	}
 	else
@@ -116,27 +116,27 @@ uint_fast8_t load_libretro_file(struct core_ctx_s *restrict ctx)
 		/* Read file to memory. */
 		SDL_RWops *game_file;
 
-		game_file = SDL_RWFromFile(ctx->file_content, "rb");
+		game_file = SDL_RWFromFile(ctx->content_filename, "rb");
 
 		if(game_file == NULL)
 			return 1;
 
 		game.size = SDL_RWsize(game_file);
-		ctx->game_data = malloc(game.size);
+		ctx->sdl.game_data = malloc(game.size);
 
-		if(ctx->game_data == NULL)
+		if(ctx->sdl.game_data == NULL)
 		{
 			SDL_SetError("Unable to allocate memory for game.");
 			return 1;
 		}
 
-		if(SDL_RWread(game_file, ctx->game_data, game.size, 1) == 0)
+		if(SDL_RWread(game_file, ctx->sdl.game_data, game.size, 1) == 0)
 		{
-			free(ctx->game_data);
+			free(ctx->sdl.game_data);
 			return 1;
 		}
 
-		game.data = ctx->game_data;
+		game.data = ctx->sdl.game_data;
 		SDL_RWclose(game_file);
 	}
 
@@ -145,8 +145,8 @@ uint_fast8_t load_libretro_file(struct core_ctx_s *restrict ctx)
 
 	load_sram_file(ctx);
 
-	ctx->env.status_bits.game_loaded = 1;
-	ctx->env.status_bits.shutdown = 0;
+	ctx->env.status.bits.game_loaded = 1;
+	ctx->env.status.bits.shutdown = 0;
 
 	return 0;
 }
@@ -233,22 +233,22 @@ uint_fast8_t load_libretro_core(const char *restrict so_file,
 		/* clang-format on */
 	};
 
-	ctx->handle = SDL_LoadObject(so_file);
+	ctx->sdl.handle = SDL_LoadObject(so_file);
 
-	if(ctx->handle == NULL)
+	if(ctx->sdl.handle == NULL)
 		return 1;
 
 	for(uint_fast8_t i = 0; i < SDL_arraysize(fn_links); i++)
 	{
 		*fn_links[i].fn_ptr.sdl_fn =
-			SDL_LoadFunction(ctx->handle, fn_links[i].fn_str);
+			SDL_LoadFunction(ctx->sdl.handle, fn_links[i].fn_str);
 
 		if(*fn_links[i].fn_ptr.sdl_fn == NULL)
 		{
-			if(ctx->handle != NULL)
-				SDL_UnloadObject(&ctx->handle);
+			if(ctx->sdl.handle != NULL)
+				SDL_UnloadObject(&ctx->sdl.handle);
 
-			ctx->handle = NULL;
+			ctx->sdl.handle = NULL;
 			return 2;
 		}
 	}
@@ -263,26 +263,8 @@ uint_fast8_t load_libretro_core(const char *restrict so_file,
 	ctx->fn.retro_get_system_info(&ctx->sys_info);
 
 	/* Initialise ctx status information to zero. */
-	ctx->env.status = 0;
+	ctx->env.status.all = 0;
 
-	/* Get path separator used for current platform. */
-	{
-		char *base_path;
-		size_t base_path_len;
-
-		/* Get path separator for current platform. */
-		base_path = SDL_GetBasePath();
-		if(base_path == NULL)
-			goto ret;
-
-		base_path_len = SDL_strlen(base_path);
-		/* SDL2 guarantees that this string ends with a path separator.
-		 */
-		ctx->path_sep = *(base_path + base_path_len - 1);
-		SDL_free(base_path);
-	}
-
-ret:
 	return 0;
 }
 
@@ -290,29 +272,29 @@ void unload_libretro_file(struct core_ctx_s *restrict ctx)
 {
 	save_sram_file(ctx);
 
-	if(ctx->game_data != NULL)
+	if(ctx->sdl.game_data != NULL)
 	{
-		free(ctx->game_data);
-		ctx->game_data = NULL;
+		free(ctx->sdl.game_data);
+		ctx->sdl.game_data = NULL;
 	}
 
-	ctx->env.status_bits.game_loaded = 0;
+	ctx->env.status.bits.game_loaded = 0;
 }
 
 void unload_libretro_core(struct core_ctx_s *restrict ctx)
 {
-	if(ctx->env.status_bits.game_loaded)
+	if(ctx->env.status.bits.game_loaded)
 		unload_libretro_file(ctx);
 
 	if(ctx->fn.retro_deinit != NULL)
 		ctx->fn.retro_deinit();
 
-	ctx->env.status_bits.core_init = 0;
+	ctx->env.status.bits.core_init = 0;
 
-	if(ctx->handle != NULL)
+	if(ctx->sdl.handle != NULL)
 	{
-		SDL_UnloadObject(ctx->handle);
-		ctx->handle = NULL;
+		SDL_UnloadObject(ctx->sdl.handle);
+		ctx->sdl.handle = NULL;
 	}
 
 	SDL_zero(ctx->fn);

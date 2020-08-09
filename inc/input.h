@@ -85,34 +85,33 @@ typedef enum {
 	INPUT_ANALOGUE_BTN
 } input_cmd_input_e;
 
-struct input_joypad_btns_s
+typedef union input_joypad_btns input_joypad_btns_u;
+union input_joypad_btns
 {
-	union
+	Uint16 all;
+	struct
 	{
-		Uint16 btns;
-		struct
-		{
-			unsigned input_joypad_btns_b : 1;
-			unsigned input_joypad_btns_y : 1;
-			unsigned input_joypad_btns_select : 1;
-			unsigned input_joypad_btns_start : 1;
-			unsigned input_joypad_btns_up : 1;
-			unsigned input_joypad_btns_down : 1;
-			unsigned input_joypad_btns_left : 1;
-			unsigned input_joypad_btns_right : 1;
-			unsigned input_joypad_btns_a : 1;
-			unsigned input_joypad_btns_x : 1;
-			unsigned input_joypad_btns_l : 1;
-			unsigned input_joypad_btns_r : 1;
-			unsigned input_joypad_btns_l2 : 1;
-			unsigned input_joypad_btns_r2 : 1;
-			unsigned input_joypad_btns_l3 : 1;
-			unsigned input_joypad_btns_r3 : 1;
-		} btns_bits;
-	};
+		unsigned input_joypad_btns_b : 1;
+		unsigned input_joypad_btns_y : 1;
+		unsigned input_joypad_btns_select : 1;
+		unsigned input_joypad_btns_start : 1;
+		unsigned input_joypad_btns_up : 1;
+		unsigned input_joypad_btns_down : 1;
+		unsigned input_joypad_btns_left : 1;
+		unsigned input_joypad_btns_right : 1;
+		unsigned input_joypad_btns_a : 1;
+		unsigned input_joypad_btns_x : 1;
+		unsigned input_joypad_btns_l : 1;
+		unsigned input_joypad_btns_r : 1;
+		unsigned input_joypad_btns_l2 : 1;
+		unsigned input_joypad_btns_r2 : 1;
+		unsigned input_joypad_btns_l3 : 1;
+		unsigned input_joypad_btns_r3 : 1;
+	} bits;
 };
 
-struct input_device_s {
+typedef struct input_device input_device_s;
+struct input_device {
 	/* Type of device connected to Haiyajan. */
 	input_type_e hai_type;
 
@@ -134,17 +133,17 @@ struct input_device_s {
 	union {
 		struct {
 			SDL_GameController *ctx;
-			struct input_joypad_btns_s btns;
+			input_joypad_btns_u btns;
 			Sint16 left_x, left_y;
 			Sint16 right_x, right_y;
 			Sint16 l2_x, r2_x;
 		} pad;
 		struct {
-			struct input_joypad_btns_s btns;
+			input_joypad_btns_u btns;
 			Sint16 x, y;
 		} mouse;
 		struct {
-			struct input_joypad_btns_s btns;
+			input_joypad_btns_u btns;
 			Sint16 left_x, left_y;
 			Sint16 right_x, right_y;
 		} keyboard;
@@ -173,13 +172,13 @@ struct input_device_s {
 				Sint16 x, y;
 			} *touch_coords;
 		} pointer;
-	};
+	} type;
 };
 
 struct input_ctx_s
 {
 	Uint32 input_cmd_event;
-	struct input_device_s player[MAX_PLAYERS];
+	input_device_s player[MAX_PLAYERS];
 };
 
 /**

@@ -37,7 +37,7 @@ endef
 ccparam = $(if $(findstring cl,$(CC)), $(2), $(1))
 
 # Set default flags
-CFLAGS := $(call ccparam, -std=c99 -g3 -fPIE -Wall -Wextra -pipe, /W2)
+CFLAGS := $(call ccparam, -std=c99 -pedantic -g3 -fPIE -Wall -Wextra -pipe, /W2)
 LDLIBS :=
 
 ifeq ($(DEBUG),1)

@@ -6,10 +6,15 @@
 typedef struct gl_ctx_s gl_ctx;
 
 /**
+ * Allocate OpenGL context.
+ */
+gl_ctx *gl_prepare(SDL_Renderer *rend);
+
+/**
  * Initialise OpenGL context for the given texture.
  */
-gl_ctx *gl_init(SDL_Renderer *rend, SDL_Texture **tex,
-	       struct retro_hw_render_callback *lrhw);
+int gl_init(gl_ctx *ctx, SDL_Texture **tex,
+	    struct retro_hw_render_callback *lrhw);
 
 /**
  * Resets the OpenGL context.
