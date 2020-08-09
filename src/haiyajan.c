@@ -889,14 +889,18 @@ int main(int argc, char *argv[])
 #if 0
 	ticks_before = fps_beg = benchmark_beg = SDL_GetTicks();
 #endif
+	Uint32 ticks_before = 0, ticks_next = 0, delta_ticks = 0;
+	int tim_cmd = 0;
+
 	while(h.core.env.status.bits.shutdown == 0 && h.quit == 0)
 	{
-		int tim_cmd;
-		Uint32 tim_diff = SDL_GetTicks();
+		if(tim_cmd > 0)
+			SDL_Delay(tim_cmd);
+
+		timer_profile_start(&h.core.tim);
 
 		h.core.env.frames++;
 		process_events(&h);
-		timer_profile_start(&h.core.tim);
 		SDL_SetRenderDrawColor(h.rend, 0x00, 0x00, 0x00, 0x00);
 		SDL_RenderClear(h.rend);
 		play_frame(&h.core);
@@ -905,15 +909,15 @@ int main(int argc, char *argv[])
 				 h.core.env.flip);
 
 		timer_profile_end(&h.core.tim);
-		tim_diff = SDL_GetTicks() - tim_diff;
 
-		tim_cmd = timer_get_delay(&h.core.tim, tim_diff);
-		if(tim_cmd == 0)
+		/* Only draw to screen if we're not falling behind. */
+		if(tim_cmd >= 0)
 			SDL_RenderPresent(h.rend);
-		else if(tim_cmd < 0)
-			continue;
-		else
-			SDL_Delay(tim_cmd);
+
+		ticks_next = SDL_GetTicks();
+		delta_ticks = ticks_next - ticks_before;
+		tim_cmd = timer_get_delay(&h.core.tim, delta_ticks);
+		ticks_before = ticks_next;
 	}
 
 	ret = EXIT_SUCCESS;
