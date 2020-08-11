@@ -7,6 +7,9 @@ only on the SDL2 library and the Libretro cores you wish to use.
 Haiyajan is a new project and is therefore not ready for regular use. The first
 stable version will be released as version "1.0".
 
+Join the community on Matrix at [#haiyajan:deltabeard.com](https://matrix.to/#/#haiyajan:deltabeard.com)
+or on Reddit at [/r/Haiyajan/](https://www.reddit.com/r/Haiyajan/).
+
 ## Libretro
 Haiyajan uses the Libretro API to provide various capabilities, such as game
 emulation and multimedia. [RetroArch](https://github.com/libretro/RetroArch) is
