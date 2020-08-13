@@ -47,16 +47,13 @@ else
 	# I don't want any warnings in release builds
 	CFLAGS += -DSDL_ASSERT_LEVEL=1
 	CFLAGS += $(call ccparam, -Werror -flto -ffast-math,\
-		  /GL /utf-8 /fp:fast)
+		  /nologo /GL /fp:fast)
 	OPT := -O2
 	TARGETS += haiyajan.sym
 endif
 CFLAGS += $(OPT)
 
-GIT_VERSION := $(shell git describe --dirty --always --tags 2>$(NULL))
-ifeq ($(GIT_VERSION),)
 	GIT_VERSION := LOCAL
-endif
 CFLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\"
 
 ifneq ($(call fn_chklib, SDL2), 0)

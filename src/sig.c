@@ -78,10 +78,11 @@ static void sig_handler(int sig)
 		 * represented by a bit in are_fn_set. */
 		Uint32 are_fn_set = 0;
 		uintptr_t fns[fn_max];
+		unsigned fn;
 
 		SDL_memcpy(fns, &ctx->core.fn, sizeof(fns));
 
-		for(unsigned fn = 0; fn < fn_max; fn++)
+		for(fn = 0; fn < fn_max; fn++)
 		{
 			Uint32 set = fns[fn] != 0 ? 1 : 0;
 			are_fn_set |= (set << fn);

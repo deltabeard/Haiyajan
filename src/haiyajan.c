@@ -91,8 +91,9 @@ static void print_info(void)
 		{SDL_HasSSE42,   "SSE42"}
 	};
 	char str_feat[128] = "\0";
+	unsigned i;
 
-	for(size_t i = 0; i < SDL_arraysize(cpu_features); i++)
+	for(i = 0; i < SDL_arraysize(cpu_features); i++)
 	{
 		if(cpu_features[i].get_cpu_feat() == SDL_FALSE)
 			continue;
@@ -114,6 +115,7 @@ static void print_help(void)
 	const int num_drivers = SDL_GetNumVideoDrivers();
 	const int num_rends = SDL_GetNumRenderDrivers();
 	const int num_audio = SDL_GetNumAudioDrivers();
+	unsigned i;
 
 	fprintf(stderr, "\n"
 			"Usage: haiyajan [OPTIONS] -L CORE FILE\n"
@@ -127,27 +129,27 @@ static void print_help(void)
 			"  -V, --video     Video driver to use\n"
 			"  -R, --render    Render driver to use\n");
 
-	for(int index = 0; index < num_drivers; index++)
+	for(i = 0; i < num_drivers; i++)
 	{
-		fprintf(stderr, "%s%s", index != 0 ?
+		fprintf(stderr, "%s%s", i != 0 ?
 					", " : "\nAvailable video drivers: ",
-			SDL_GetVideoDriver(index));
+			SDL_GetVideoDriver(i));
 	}
 
-	for(int index = 0; index < num_rends; index++)
+	for(i = 0; i < num_rends; i++)
 	{
 		SDL_RendererInfo info;
-		SDL_GetRenderDriverInfo(index, &info);
-		fprintf(stderr, "%s%s", index != 0 ?
+		SDL_GetRenderDriverInfo(i, &info);
+		fprintf(stderr, "%s%s", i != 0 ?
 					", " : "\nAvailable render drivers: ",
 			info.name);
 	}
 
-	for(int index = 0; index < num_audio; index++)
+	for(i = 0; i < num_audio; i++)
 	{
-		fprintf(stderr, "%s%s", index != 0 ?
+		fprintf(stderr, "%s%s", i != 0 ?
 					", " : "\nAvailable audio drivers: ",
-			SDL_GetAudioDriver(index));
+			SDL_GetAudioDriver(i));
 	}
 
 	fprintf(stderr, "\nThe following environment variables may be used to "
@@ -889,11 +891,12 @@ int main(int argc, char *argv[])
 #if 0
 	ticks_before = fps_beg = benchmark_beg = SDL_GetTicks();
 #endif
-	Uint32 ticks_before = 0, ticks_next = 0, delta_ticks = 0;
-	int tim_cmd = 0;
 
 	while(h.core.env.status.bits.shutdown == 0 && h.quit == 0)
 	{
+		static Uint32 ticks_before = 0, ticks_next = 0, delta_ticks = 0;
+		static int tim_cmd = 0;
+		
 		if(tim_cmd > 0)
 			SDL_Delay(tim_cmd);
 
@@ -908,11 +911,13 @@ int main(int argc, char *argv[])
 				 &h.core.sdl.game_frame_res, NULL, 0.0, NULL,
 				 h.core.env.flip);
 
+#if ENABLE_VIDEO_RECORDING == 1
 		if(h.core.vid != NULL)
 		{
 			cap_frame(h.core.vid, h.rend, h.core.sdl.core_tex,
 				  &h.core.sdl.game_frame_res, h.core.env.flip);
 		}
+#endif
 
 		timer_profile_end(&h.core.tim);
 
@@ -926,7 +931,9 @@ int main(int argc, char *argv[])
 		ticks_before = ticks_next;
 	}
 
+#if ENABLE_VIDEO_RECORDING == 1
 	rec_end(&h.core.vid);
+#endif
 	util_exit_all();
 	ret = EXIT_SUCCESS;
 

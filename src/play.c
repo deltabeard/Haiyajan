@@ -164,13 +164,14 @@ bool cb_retro_environment(unsigned cmd, void *data)
 	case RETRO_ENVIRONMENT_SET_HW_RENDER:
 	{
 		struct retro_hw_render_callback *hw_cb = data;
-		SDL_assert(ctx_retro->env.status.bits.game_loaded == 0);
 		const char *const ctx_type[] =
 		{
 			"None", "OpenGL 2.x", "OpenGL ES 2",
 			"OpenGL Specific", "OpenGL ES 3",
 			"OpenGL ES Specific", "Vulkan", "Direct3D"
 		};
+		
+		SDL_assert(ctx_retro->env.status.bits.game_loaded == 0);
 
 		switch(hw_cb->context_type)
 		{
@@ -306,7 +307,8 @@ bool cb_retro_environment(unsigned cmd, void *data)
 	{
 		const struct retro_controller_info *info = data;
 		do {
-			for(unsigned port = 0; port < info->num_types; port++)
+			unsigned port;
+			for(port = 0; port < info->num_types; port++)
 			{
 				input_add_controller(&ctx_retro->inp, port, info->types[port].id);
 			}
@@ -470,7 +472,7 @@ int16_t cb_retro_input_state(unsigned port, unsigned device, unsigned index,
 }
 
 /* TODO: Initialise texture to max width/height. */
-static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
+static int play_reinit_texture(struct core_ctx_s *ctx,
 					SDL_Renderer *rend,
 	const Uint32 *req_format,
 	const unsigned int *new_max_width,
@@ -518,7 +520,7 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 	return 0;
 }
 
-uint_fast8_t play_init_av(struct core_ctx_s *ctx, SDL_Renderer *rend)
+int play_init_av(struct core_ctx_s *ctx, SDL_Renderer *rend)
 {
 	SDL_AudioSpec want = { 0 };
 

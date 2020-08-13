@@ -100,19 +100,19 @@ SDL_Texture *ui_render_overlays(ui *ui, SDL_Texture *tex)
 {
 	const SDL_Colour c[4] = {
 		/* White */
-		{ .r = 0xFF, .g = 0xFF, .b = 0xFF, .a = SDL_ALPHA_OPAQUE },
+		{ 0xFF, 0xFF, 0xFF, SDL_ALPHA_OPAQUE },
 		/* Green */
-		{ .r = 0x00, .g = 0xA5, .b = 0x68, .a = SDL_ALPHA_OPAQUE },
+		{ 0x00, 0xA5, 0x68, SDL_ALPHA_OPAQUE },
 		/* Red */
-		{ .r = 0xC5, .g = 0x00, .b = 0x30, .a = SDL_ALPHA_OPAQUE },
+		{ 0xC5, 0x00, 0x30, SDL_ALPHA_OPAQUE },
 		/* Yellow */
-		{ .r = 0xFF, .g = 0xD4, .b = 0x00, .a = SDL_ALPHA_OPAQUE }
+		{ 0xFF, 0xD4, 0x00, SDL_ALPHA_OPAQUE }
 	};
 	SDL_Rect r[4] = {
-		{ .x = 0, .y = 0 },
-		{         .y = 0 },
-		{ .x =-1, .y =-1 },
-		{ .x = 0         }
+		{ 0 },
+		{ 0 },
+		{ 0 },
+		{ 0 }
 	};
 	int w, h;
 	struct ui_overlay_item *iter = ui->list;
@@ -224,13 +224,14 @@ SDL_Texture *ui_render_overlays(ui *ui, SDL_Texture *tex)
 
 void draw_menu(ui *ui, menu_ctx *menu)
 {
-	SDL_Rect bg = { .x = 10, .y = 10, .w = 110, .h = 62 };
-	SDL_Rect txtloc = { .x = 17, .y = 13, .w = 2, .h = 2 };
+	SDL_Rect bg = { 10, 10, 110, 62 };
+	SDL_Rect txtloc = { 17, 13, 2, 2 };
+	unsigned i;
 
 	SDL_SetRenderDrawColor(ui->rend, 51, 138, 224, SDL_ALPHA_OPAQUE);
 	SDL_RenderDrawRect(ui->rend, &bg);
 
-	for(unsigned long i = 0; i < menu->items_nmemb; i++)
+	for(i = 0; i < menu->items_nmemb; i++)
 	{
 		/* Set font colour. */
 		if(i == menu->item_selected)

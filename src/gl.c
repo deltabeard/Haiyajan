@@ -175,8 +175,9 @@ static int gl_init_fn(gl_ctx *ctx)
 		{"glDrawArrays",              (void **)&ctx->fn.glDrawArrays}
 	};
 	int ret = 0;
+	unsigned i = 0;
 
-	for(size_t i = 0; i < SDL_arraysize(fngen); i++)
+	for(i = 0; i < SDL_arraysize(fngen); i++)
 	{
 		*fngen[i].fn = SDL_GL_GetProcAddress(fngen[i].fn_str);
 		if(*fngen[i].fn == NULL)
@@ -194,11 +195,11 @@ static int gl_init_fn(gl_ctx *ctx)
 static GLuint compile_shader(struct gl_fn *fn, GLenum type, GLsizei count,
 			     const char *const *strings)
 {
+	GLint status;
+	
 	GLuint shader = fn->glCreateShader(type);
 	fn->glShaderSource(shader, count, strings, NULL);
 	fn->glCompileShader(shader);
-
-	GLint status;
 	fn->glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
 
 	if(status == GL_FALSE)
@@ -273,9 +274,6 @@ static void refresh_vertex_data(const gl_ctx *ctx, int w, int h)
 {
 	int tex_w, tex_h;
 
-	if(SDL_QueryTexture(*ctx->tex, NULL, NULL, &tex_w, &tex_h) != 0)
-		return;
-
 	const float bottom = (float)h / tex_h;
 	const float right = (float)w / tex_w;
 
@@ -286,6 +284,9 @@ static void refresh_vertex_data(const gl_ctx *ctx, int w, int h)
 		1.0f, -1.0f, right, bottom,// right-bottom
 		1.0f, 1.0f, right, 0.0f,  // right-top
 	};
+	
+	if(SDL_QueryTexture(*ctx->tex, NULL, NULL, &tex_w, &tex_h) != 0)
+		return;
 
 	ctx->fn.glBindVertexArray(ctx->gl_sh.vao);
 

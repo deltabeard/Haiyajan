@@ -3,11 +3,11 @@
 #              Unix           Mac OS     Windows
 .LIBPATTERNS = lib%.a lib%.so lib%.dylib %.lib
 
-ifneq ($(OS),Windows_NT)
-	NULL := /dev/null
-else
+ifeq ($(SHELL),cmd)
 	NULL := nul
 	RM := del
+else
+	NULL := /dev/null
 endif
 
 ifeq ($(CC),cl)

@@ -13,7 +13,6 @@
  */
 
 #include <SDL.h>
-#include <stdint.h>
 
 #include <haiyajan.h>
 #include <libretro.h>
@@ -88,7 +87,7 @@ out:
 	return;
 }
 
-uint_fast8_t load_libretro_file(struct core_ctx_s *restrict ctx)
+int load_libretro_file(struct core_ctx_s *restrict ctx)
 {
 	/* TODO:
 	 * - Check whether file must be loaded into RAM, or is read straight
@@ -99,9 +98,10 @@ uint_fast8_t load_libretro_file(struct core_ctx_s *restrict ctx)
 	 * ROM into memory. If false, then Haiyajan must load the ROM image into
 	 * memory.
 	 */
-	struct retro_game_info game = {
-		.path = ctx->content_filename, .meta = NULL
-	};
+	struct retro_game_info game;
+	
+	game.path = ctx->content_filename;
+	game.meta = NULL;
 
 	SDL_assert_paranoid(ctx != NULL);
 	SDL_assert(ctx->env.status.bits.core_init == 1);
@@ -151,85 +151,48 @@ uint_fast8_t load_libretro_file(struct core_ctx_s *restrict ctx)
 	return 0;
 }
 
-uint_fast8_t load_libretro_core(const char *restrict so_file,
+int load_libretro_core(const char *restrict so_file,
 	struct core_ctx_s *restrict ctx)
 {
+	unsigned i;
 	struct fn_links_s
 	{
 		/* clang-format off */
 		/* Name of libretro core function. */
 		const char *fn_str;
-
-		/* The following is a lot of bloat to appease a compiler warning
-		 * about assigning void pointers to function pointers. */
-		union
-		{
-			void **sdl_fn;
-
-			void (**retro_init)(void);
-			void (**retro_deinit)(void);
-			unsigned (**retro_api_version)(void);
-
-			void (**retro_set_environment)(retro_environment_t);
-			void (**retro_set_video_refresh)(retro_video_refresh_t);
-			void (**retro_set_audio_sample)(retro_audio_sample_t);
-			void (**retro_set_audio_sample_batch)(retro_audio_sample_batch_t);
-			void (**retro_set_input_poll)(retro_input_poll_t);
-			void (**retro_set_input_state)(retro_input_state_t);
-
-			void (**retro_get_system_info)(struct retro_system_info *info);
-			void (**retro_get_system_av_info)(struct retro_system_av_info *info);
-			void (**retro_set_controller_port_device)(unsigned port, unsigned device);
-
-			void (**retro_reset)(void);
-			void (**retro_run)(void);
-			size_t (**retro_serialize_size)(void);
-			bool (**retro_serialize)(void *data, size_t size);
-			bool (**retro_unserialize)(const void *data, size_t size);
-
-			void (**retro_cheat_reset)(void);
-			void (**retro_cheat_set)(unsigned index, bool enabled, const char *code);
-			bool (**retro_load_game)(const struct retro_game_info *game);
-			bool (**retro_load_game_special)(unsigned game_type,
-				const struct retro_game_info *info, size_t num_info);
-			void (**retro_unload_game)(void);
-			unsigned (**retro_get_region)(void);
-
-			void *(**retro_get_memory_data)(unsigned id);
-			size_t (**retro_get_memory_size)(unsigned id);
-		} fn_ptr;
+		void **fn_ptr;
 	} const fn_links[] =
 	{
-		{ "retro_init",			{ .retro_init = &ctx->fn.retro_init } },
-		{ "retro_deinit",		{ .retro_init = &ctx->fn.retro_deinit } },
-		{ "retro_api_version",		{ .retro_api_version = &ctx->fn.retro_api_version } },
+		{ "retro_init",			{ (void **)&ctx->fn.retro_init } },
+		{ "retro_deinit",		{ (void **)&ctx->fn.retro_deinit } },
+		{ "retro_api_version",		{ (void **)&ctx->fn.retro_api_version } },
 
-		{ "retro_set_environment",	{ .retro_set_environment = &ctx->fn.retro_set_environment } },
-		{ "retro_set_video_refresh",	{ .retro_set_video_refresh = &ctx->fn.retro_set_video_refresh } },
-		{ "retro_set_audio_sample",	{ .retro_set_audio_sample = &ctx->fn.retro_set_audio_sample } },
-		{ "retro_set_audio_sample_batch", { .retro_set_audio_sample_batch = &ctx->fn.retro_set_audio_sample_batch } },
-		{ "retro_set_input_poll",	{ .retro_set_input_poll = &ctx->fn.retro_set_input_poll } },
-		{ "retro_set_input_state",	{ .retro_set_input_state = &ctx->fn.retro_set_input_state } },
+		{ "retro_set_environment",	{ (void **)&ctx->fn.retro_set_environment } },
+		{ "retro_set_video_refresh",	{ (void **)&ctx->fn.retro_set_video_refresh } },
+		{ "retro_set_audio_sample",	{ (void **)&ctx->fn.retro_set_audio_sample } },
+		{ "retro_set_audio_sample_batch", { (void **)&ctx->fn.retro_set_audio_sample_batch } },
+		{ "retro_set_input_poll",	{ (void **)&ctx->fn.retro_set_input_poll } },
+		{ "retro_set_input_state",	{ (void **)&ctx->fn.retro_set_input_state } },
 
-		{ "retro_get_system_info",	{ .retro_get_system_info = &ctx->fn.retro_get_system_info } },
-		{ "retro_get_system_av_info",	{ .retro_get_system_av_info = &ctx->fn.retro_get_system_av_info } },
-		{ "retro_set_controller_port_device", { .retro_set_controller_port_device = &ctx->fn.retro_set_controller_port_device } },
+		{ "retro_get_system_info",	{ (void **)&ctx->fn.retro_get_system_info } },
+		{ "retro_get_system_av_info",	{ (void **)&ctx->fn.retro_get_system_av_info } },
+		{ "retro_set_controller_port_device", { (void **)&ctx->fn.retro_set_controller_port_device } },
 
-		{ "retro_reset",		{ .retro_reset = &ctx->fn.retro_reset } },
-		{ "retro_run",			{ .retro_run = &ctx->fn.retro_run } },
-		{ "retro_serialize_size",	{ .retro_serialize_size = &ctx->fn.retro_serialize_size } },
-		{ "retro_serialize",		{ .retro_serialize = &ctx->fn.retro_serialize } },
-		{ "retro_unserialize",		{ .retro_unserialize = &ctx->fn.retro_unserialize } },
+		{ "retro_reset",		{ (void **)&ctx->fn.retro_reset } },
+		{ "retro_run",			{ (void **)&ctx->fn.retro_run } },
+		{ "retro_serialize_size",	{ (void **)&ctx->fn.retro_serialize_size } },
+		{ "retro_serialize",		{ (void **)&ctx->fn.retro_serialize } },
+		{ "retro_unserialize",		{ (void **)&ctx->fn.retro_unserialize } },
 
-		{ "retro_cheat_reset",		{ .retro_cheat_reset = &ctx->fn.retro_cheat_reset } },
-		{ "retro_cheat_set",		{ .retro_cheat_set = &ctx->fn.retro_cheat_set } },
-		{ "retro_load_game",		{ .retro_load_game = &ctx->fn.retro_load_game } },
-		{ "retro_load_game_special",	{ .retro_load_game_special = &ctx->fn.retro_load_game_special } },
-		{ "retro_unload_game",		{ .retro_unload_game = &ctx->fn.retro_unload_game } },
-		{ "retro_get_region",		{ .retro_get_region = &ctx->fn.retro_get_region } },
+		{ "retro_cheat_reset",		{ (void **)&ctx->fn.retro_cheat_reset } },
+		{ "retro_cheat_set",		{ (void **)&ctx->fn.retro_cheat_set } },
+		{ "retro_load_game",		{ (void **)&ctx->fn.retro_load_game } },
+		{ "retro_load_game_special",	{ (void **)&ctx->fn.retro_load_game_special } },
+		{ "retro_unload_game",		{ (void **)&ctx->fn.retro_unload_game } },
+		{ "retro_get_region",		{ (void **)&ctx->fn.retro_get_region } },
 
-		{ "retro_get_memory_data",	{ .retro_get_memory_data = &ctx->fn.retro_get_memory_data } },
-		{ "retro_get_memory_size",	{ .retro_get_memory_size = &ctx->fn.retro_get_memory_size } }
+		{ "retro_get_memory_data",	{ (void **)&ctx->fn.retro_get_memory_data } },
+		{ "retro_get_memory_size",	{ (void **)&ctx->fn.retro_get_memory_size } }
 		/* clang-format on */
 	};
 
@@ -238,12 +201,12 @@ uint_fast8_t load_libretro_core(const char *restrict so_file,
 	if(ctx->sdl.handle == NULL)
 		return 1;
 
-	for(uint_fast8_t i = 0; i < SDL_arraysize(fn_links); i++)
+	for(i = 0; i < SDL_arraysize(fn_links); i++)
 	{
-		*fn_links[i].fn_ptr.sdl_fn =
+		*fn_links[i].fn_ptr =
 			SDL_LoadFunction(ctx->sdl.handle, fn_links[i].fn_str);
 
-		if(*fn_links[i].fn_ptr.sdl_fn == NULL)
+		if(*fn_links[i].fn_ptr== NULL)
 		{
 			if(ctx->sdl.handle != NULL)
 				SDL_UnloadObject(&ctx->sdl.handle);

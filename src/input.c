@@ -83,6 +83,7 @@ void input_init(struct input_ctx_s *restrict in_ctx)
 		{ SDL_SCANCODE_P,	{ INPUT_CMD_EVENT, INPUT_EVENT_TAKE_SCREENSHOT }},
 		{ SDL_SCANCODE_V,	{ INPUT_CMD_EVENT, INPUT_EVENT_RECORD_VIDEO_TOGGLE }}
 	};
+	unsigned i;
 
 	SDL_zerop(in_ctx);
 
@@ -109,7 +110,7 @@ void input_init(struct input_ctx_s *restrict in_ctx)
 
 	in_ctx->player[0].hai_type = RETRO_INPUT_KEYBOARD;
 
-	for(unsigned i = 0; i < SDL_arraysize(keymap_defaults); i++)
+	for(i = 0; i < SDL_arraysize(keymap_defaults); i++)
 		keymap[keymap_defaults[i].sc] = keymap_defaults[i].map;
 
 	SDL_LogVerbose(SDL_LOG_CATEGORY_INPUT, "Initialised keyboard input");
@@ -158,28 +159,28 @@ static void input_set_keyboard(input_device_s *dev, const SDL_Scancode sc,
 		switch(keymap[sc].cmd)
 		{
 		case INPUT_ANALOGUE_LEFT_X_POS:
-			dev->type.keyboard.left_x = state ? INT16_MAX : 0;
+			dev->type.keyboard.left_x = state ? SDL_MAX_SINT16 : 0;
 			break;
 		case INPUT_ANALOGUE_LEFT_X_NEG:
-			dev->type.keyboard.left_x = state ? INT16_MIN : 0;
+			dev->type.keyboard.left_x = state ? SDL_MIN_SINT16 : 0;
 			break;
 		case INPUT_ANALOGUE_LEFT_Y_POS:
-			dev->type.keyboard.left_y = state ? INT16_MAX : 0;
+			dev->type.keyboard.left_y = state ? SDL_MAX_SINT16 : 0;
 			break;
 		case INPUT_ANALOGUE_LEFT_Y_NEG:
-			dev->type.keyboard.left_y = state ? INT16_MIN : 0;
+			dev->type.keyboard.left_y = state ? SDL_MIN_SINT16 : 0;
 			break;
 		case INPUT_ANALOGUE_RIGHT_X_POS:
-			dev->type.keyboard.right_x = state ? INT16_MAX : 0;
+			dev->type.keyboard.right_x = state ? SDL_MAX_SINT16 : 0;
 			break;
 		case INPUT_ANALOGUE_RIGHT_X_NEG:
-			dev->type.keyboard.right_x = state ? INT16_MIN : 0;
+			dev->type.keyboard.right_x = state ? SDL_MIN_SINT16 : 0;
 			break;
 		case INPUT_ANALOGUE_RIGHT_Y_POS:
-			dev->type.keyboard.right_y = state ? INT16_MAX : 0;
+			dev->type.keyboard.right_y = state ? SDL_MAX_SINT16 : 0;
 			break;
 		case INPUT_ANALOGUE_RIGHT_Y_NEG:
-			dev->type.keyboard.right_y = state ? INT16_MIN : 0;
+			dev->type.keyboard.right_y = state ? SDL_MIN_SINT16 : 0;
 			break;
 			/* FIXME: INPUT_ANALOGUE_BTN ? */
 		}

@@ -42,13 +42,15 @@ void timer_profile_start(struct timer_ctx_s *const tim)
 void timer_profile_end(struct timer_ctx_s *const tim)
 {
 	enum timer_status_e status;
+	Uint64 busy_acu_us;
+	
 	tim->busy_acu_ms += SDL_GetTicks() - tim->profile_start_ms;
 	tim->busy_samples++;
 
 	if(tim->busy_samples < 32)
 		return;
 
-	Uint64 busy_acu_us = tim->busy_acu_ms * 1024;
+	busy_acu_us = tim->busy_acu_ms * 1024;
 	busy_acu_us /= 32;
 	tim->busy_acu_ms = 0;
 	tim->busy_samples = 0;
