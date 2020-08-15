@@ -69,7 +69,7 @@ int FontPrintToRenderer(font_ctx *const ctx, const char *text,
  * \param w		Pointer to store expected width.
  * \param h		Pointer to store expected height.
  */
-void FontDrawSize(const size_t text_len, int *w, int *h);
+void FontDrawSize(const unsigned text_len, unsigned *w, unsigned *h);
 
 /**
  * Deletes font context.

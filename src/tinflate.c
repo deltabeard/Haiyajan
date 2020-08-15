@@ -59,7 +59,8 @@ static tinf_error_code tinf_build_tree(struct tinf_tree *t,
 		const unsigned char *lengths, unsigned num)
 {
 	unsigned short offs[16];
-	unsigned long i, num_codes, available;
+	unsigned long i, available;
+	unsigned short num_codes;
 
 	assert(num <= 288);
 
@@ -81,7 +82,7 @@ static tinf_error_code tinf_build_tree(struct tinf_tree *t,
 
 	/* Compute offset table for distribution sort */
 	for (available = 1, num_codes = 0, i = 0; i < 16; ++i) {
-		unsigned long used = t->counts[i];
+		unsigned short used = t->counts[i];
 
 		/* Check length contains no more codes than available */
 		if (used > available) {
@@ -105,7 +106,7 @@ static tinf_error_code tinf_build_tree(struct tinf_tree *t,
 	/* Fill in symbols sorted by code */
 	for (i = 0; i < num; ++i) {
 		if (lengths[i]) {
-			t->symbols[offs[lengths[i]]++] = i;
+			t->symbols[offs[lengths[i]]++] = (unsigned short)i;
 		}
 	}
 
@@ -254,7 +255,7 @@ static tinf_error_code tinf_decode_trees(struct tinf_data *d,
 	/* Read code lengths for code length alphabet */
 	for (i = 0; i < hclen; ++i) {
 		/* Get 3 bits code length (0-7) */
-		unsigned long clen = tinf_getbits(d, 3);
+		unsigned char clen = (unsigned char)tinf_getbits(d, 3);
 
 		lengths[clcidx[i]] = clen;
 	}
@@ -446,8 +447,8 @@ static tinf_error_code tinf_inflate_dynamic_block(struct tinf_data *d)
 /* -- Public functions -- */
 
 /* Inflate stream from source to dest */
-tinf_error_code tinf_uncompress(void *dest, size_t *destLen,
-		const void *source, size_t sourceLen)
+tinf_error_code tinf_uncompress(void *dest, unsigned long *destLen,
+		const void *source, unsigned long sourceLen)
 {
 	struct tinf_data d;
 	unsigned long bfinal;

@@ -421,7 +421,7 @@ void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 	if(ctx_retro->env.status.bits.opengl_required)
 		return;
 
-	if(SDL_UpdateTexture(ctx_retro->sdl.core_tex, &ctx_retro->sdl.game_frame_res, data, pitch) != 0)
+	if(SDL_UpdateTexture(ctx_retro->sdl.core_tex, &ctx_retro->sdl.game_frame_res, data, (int)pitch) != 0)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
 			"Texture could not updated: %s",
@@ -454,7 +454,7 @@ size_t cb_retro_audio_sample_batch(const int16_t *data, size_t frames)
 	}
 #endif
 
-	SDL_QueueAudio(ctx_retro->sdl.audio_dev, data, frames * sizeof(Uint16) * 2);
+	SDL_QueueAudio(ctx_retro->sdl.audio_dev, data, (Uint32)frames * sizeof(Uint16) * 2);
 
 out:
 	return frames;

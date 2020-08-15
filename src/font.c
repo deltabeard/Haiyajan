@@ -228,7 +228,7 @@ err:
 	goto out;
 }
 
-void FontDrawSize(const size_t text_len, int *w, int *h)
+void FontDrawSize(const unsigned text_len, unsigned *w, unsigned *h)
 {
 	*w = text_len * FONT_CHAR_WIDTH;
 	*h = FONT_CHAR_HEIGHT;

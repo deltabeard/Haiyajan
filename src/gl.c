@@ -274,28 +274,30 @@ static void refresh_vertex_data(const gl_ctx *ctx, int w, int h)
 {
 	int tex_w, tex_h;
 
-	const float bottom = (float)h / tex_h;
-	const float right = (float)w / tex_w;
-
-	const float vertex_data[] = {
-		// pos, coord
-		-1.0f, -1.0f, 0.0f, bottom, // left-bottom
-		-1.0f, 1.0f, 0.0f, 0.0f,   // left-top
-		1.0f, -1.0f, right, bottom,// right-bottom
-		1.0f, 1.0f, right, 0.0f,  // right-top
-	};
-	
-	if(SDL_QueryTexture(*ctx->tex, NULL, NULL, &tex_w, &tex_h) != 0)
+	if (SDL_QueryTexture(*ctx->tex, NULL, NULL, &tex_w, &tex_h) != 0)
 		return;
 
-	ctx->fn.glBindVertexArray(ctx->gl_sh.vao);
+	{
+		const float bottom = (float)h / tex_h;
+		const float right = (float)w / tex_w;
 
-	ctx->fn.glBindBuffer(GL_ARRAY_BUFFER, ctx->gl_sh.vbo);
-	ctx->fn.glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data,
-			     GL_STREAM_DRAW);
+		const float vertex_data[] = {
+			// pos, coord
+			-1.0f, -1.0f, 0.0f, bottom, // left-bottom
+			-1.0f, 1.0f, 0.0f, 0.0f,   // left-top
+			1.0f, -1.0f, right, bottom,// right-bottom
+			1.0f, 1.0f, right, 0.0f,  // right-top
+		};
 
-	ctx->fn.glBindVertexArray(0);
-	ctx->fn.glBindBuffer(GL_ARRAY_BUFFER, 0);
+		ctx->fn.glBindVertexArray(ctx->gl_sh.vao);
+
+		ctx->fn.glBindBuffer(GL_ARRAY_BUFFER, ctx->gl_sh.vbo);
+		ctx->fn.glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data,
+			GL_STREAM_DRAW);
+
+		ctx->fn.glBindVertexArray(0);
+		ctx->fn.glBindBuffer(GL_ARRAY_BUFFER, 0);
+	}
 }
 
 gl_ctx *gl_prepare(SDL_Renderer *rend)

@@ -55,8 +55,8 @@ typedef enum {
  * @param sourceLen size of compressed data
  * @return `TINF_OK` on success, error code on error
  */
-tinf_error_code tinf_uncompress(void *dest, size_t *destLen,
-		const void *source, size_t sourceLen);
+tinf_error_code tinf_uncompress(void *dest, unsigned long *destLen,
+		const void *source, unsigned long sourceLen);
 
 #ifdef __cplusplus
 } /* extern "C" */

@@ -3,17 +3,22 @@
 #              Unix           Mac OS     Windows
 .LIBPATTERNS = lib%.a lib%.so lib%.dylib %.lib
 
-ifeq ($(SHELL),cmd)
+# Check if we're running in a Windows NT command prompt, but not in a MINGW
+# terminal.
+ifeq ($(OS)$(MSYSTEM),Windows_NT)
+	SHELL := cmd
 	NULL := nul
 	RM := del
+	CC := cl
 else
+	SHELL := sh
 	NULL := /dev/null
+	CC := cc
 endif
 
 ifeq ($(CC),cl)
 	OBJEXT := obj
 	EXEOUT := /Fe
-	LINKCMDS := /link /SUBSYSTEM:CONSOLE
 else
 	OBJEXT := o
 	EXEOUT := -o

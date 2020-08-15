@@ -44,7 +44,7 @@ void input_init(struct input_ctx_s *restrict in_ctx)
 #endif
 	SDL_RWops *gcdb_rw;
 	Uint8 *gcdb_txt;
-	size_t gcdb_txt_len_act = gcdb_txt_len;
+	unsigned long gcdb_txt_len_act = gcdb_txt_len;
 	tinf_error_code tinf;
 	static const struct
 	{

@@ -115,7 +115,7 @@ static void print_help(void)
 	const int num_drivers = SDL_GetNumVideoDrivers();
 	const int num_rends = SDL_GetNumRenderDrivers();
 	const int num_audio = SDL_GetNumAudioDrivers();
-	unsigned i;
+	int i;
 
 	fprintf(stderr, "\n"
 			"Usage: haiyajan [OPTIONS] -L CORE FILE\n"
@@ -806,7 +806,7 @@ int main(int argc, char *argv[])
 
 #ifdef _WIN32
 	/* Windows (MinGW) does not unbuffer stderr by default. */
-	setbuf(stderr, NULL);
+	setvbuf(stderr, NULL, _IOLBF, BUFSIZ);
 #endif
 
 	SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO);

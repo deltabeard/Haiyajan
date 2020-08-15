@@ -174,7 +174,7 @@ SDL_Texture *ui_render_overlays(ui *ui, SDL_Texture *tex)
 		/* Recreate overlay. */
 		if(iter->tex == NULL)
 		{
-			int ov_sz_w, ov_sz_h;
+			unsigned ov_sz_w, ov_sz_h;
 			FontDrawSize(strlen(iter->conf->text),
 					&ov_sz_w, &ov_sz_h);
 

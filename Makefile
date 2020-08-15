@@ -24,7 +24,8 @@ Available options and their descriptions when enabled:
           This option will be enabled automatically if the linker is able to
           detect the availability of libx264 and libwavpack.
 
-  OPT="$(OPT)"   Set custom optimisation options.
+  OPT="$(OPT)"
+          Set custom optimisation options.
 
   Example: make DEBUG=1 OPT="-Ofast -march=native"
 
@@ -34,33 +35,37 @@ NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 endef
 
 # Function substitutes variables depending on the value set in $(CC)
-ccparam = $(if $(subst cl,,$(CC)), $(1), $(2))
+ccparam = $(if $(subst cl,,$(CC)),$(1),$(2))
 
 # Set default flags
-CFLAGS := $(call ccparam, -std=c99 -pedantic -g3 -fPIE -Wall -Wextra -pipe, /W2)
-LDLIBS :=
+CFLAGS := $(call ccparam, -std=c99 -pedantic -g3 -fPIE -Wall -Wextra -pipe, /W3)
+LDLIBS := -lSDL2 -lSDL2main
 
 ifeq ($(DEBUG),1)
 	CFLAGS += -DDEBUG=1 -DSDL_ASSERT_LEVEL=3
 	OPT := -Og
 else
 	# I don't want any warnings in release builds
-	CFLAGS += -DSDL_ASSERT_LEVEL=1
-	CFLAGS += $(call ccparam, -Werror -flto -ffast-math,\
-		  /nologo /GL /fp:fast)
-	OPT := -O2
-	TARGETS += haiyajan.sym
+	CFLAGS += -DSDL_ASSERT_LEVEL=1 $(call ccparam, -Werror, /nologo /Drestrict=  )
+	OPT := $(call ccparam,-O2 -flto -ffast-math,/O2 /Ob2 /fp:fast /GL /GS- /Zc:inline)
+	TARGETS +=$(call ccparam, haiyajan.sym,)
 endif
 CFLAGS += $(OPT)
 
-	GIT_VERSION := LOCAL
+GIT_VERSION := LOCAL
 CFLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\"
 
 ifneq ($(call fn_chklib, SDL2), 0)
 	err := $(error Unable to find any of $(subst %,SDL2,$(.LIBPATTERNS) in library paths). SDL2 is required)
 endif
-SDL_LIBS += $(shell sdl2-config --libs)
-SDL_CFLAGS += $(shell sdl2-config --cflags)
+
+ifeq ($(CC),cl)
+	LDFLAGS += /link /LTCG /NODEFAULTLIB:MSVCRT /SUBSYSTEM:WINDOWS user32.lib gdi32.lib winmm.lib imm32.lib ole32.lib oleaut32.lib version.lib uuid.lib advapi32.lib setupapi.lib shell32.lib dinput8.lib
+	SDL_LIBS = $(error SDL_LIBS must be defined to the location of the SDL2 include folder)
+else
+	SDL_LIBS = $(shell sdl2-config --libs)
+	SDL_CFLAGS = $(shell sdl2-config --cflags)
+endif
 
 # Check if WEBP is available. Otherwise use BMP for screenshots.
 USE_WEBP := $(call fn_chklib, webp)
@@ -94,9 +99,9 @@ ifeq ($(ENABLE_VIDEO_RECORDING),1)
 	CFLAGS += $(LIBFLGS) -DENABLE_VIDEO_RECORDING=1
 endif
 
-SRCS	:= $(wildcard ./src/*.c)
-HDRS	:= $(wildcard ./inc/*.h)
-OBJS	:= $(SRCS:.c=.$(OBJEXT))
+SRCS	:= $(wildcard src/*.c)
+HDRS	:= $(wildcard inc/*.h)
+OBJS	:= $(SRCS:.c=.$(OBJEXT)) meta/Haiyajan.res
 DEPS	:= Makefile.depend
 override CFLAGS += -Iinc $(SDL_LIBS) $(SDL_CFLAGS)
 
@@ -104,10 +109,16 @@ override CFLAGS += -Iinc $(SDL_LIBS) $(SDL_CFLAGS)
 
 all: $(TARGETS)
 haiyajan: $(OBJS) $(LDLIBS)
-	$(CC) $(CFLAGS) $(EXEOUT)$@ $^ $(LINKCMDS)
+	$(info LINK $@ $^)
+	@$(CC) $(CFLAGS) $(EXEOUT)$@ $^ $(LDFLAGS) 1>$(NULL)
 
 %.obj: %.c
-	$(CC) $(CFLAGS) /Fo$@ /c $^
+	$(info CC $^)
+	@$(CC) $(CFLAGS) /Fo$@ /c /TC $^ 1>$(NULL)
+	
+%.res: %.rc
+	$(info RC $^)
+	@rc /nologo /c65001 $^
 
 include Makefile.depend
 
@@ -128,4 +139,4 @@ clean:
 
 help:
 	$(info $(help_txt))
-	@cd
+	@cd 1>$(NULL)
