@@ -894,13 +894,11 @@ int main(int argc, char *argv[])
 
 	while(h.core.env.status.bits.shutdown == 0 && h.quit == 0)
 	{
-		static Uint32 ticks_before = 0, ticks_next = 0, delta_ticks = 0;
 		static int tim_cmd = 0;
-		
-		if(tim_cmd > 0)
-			SDL_Delay(tim_cmd);
 
 		timer_profile_start(&h.core.tim);
+		if(tim_cmd > 0)
+			SDL_Delay(tim_cmd);
 
 		h.core.env.frames++;
 		process_events(&h);
@@ -919,16 +917,13 @@ int main(int argc, char *argv[])
 		}
 #endif
 
-		timer_profile_end(&h.core.tim);
-
 		/* Only draw to screen if we're not falling behind. */
 		if(tim_cmd >= 0)
 			SDL_RenderPresent(h.rend);
 
-		ticks_next = SDL_GetTicks();
-		delta_ticks = ticks_next - ticks_before;
-		tim_cmd = timer_get_delay(&h.core.tim, delta_ticks);
-		ticks_before = ticks_next;
+		tim_cmd = timer_profile_end(&h.core.tim);
+
+		SDL_LogVerbose(SDL_LOG_CATEGORY_SYSTEM, "Timer: %d", tim_cmd);
 	}
 
 #if ENABLE_VIDEO_RECORDING == 1

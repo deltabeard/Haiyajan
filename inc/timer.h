@@ -44,6 +44,13 @@ struct timer_ctx_s
 int timer_init(struct timer_ctx_s *const tim, double emulated_rate);
 
 /**
+ * Profiles the run loop and checks to make sure that VSYNC won't be missed. If
+ * the busy loop is taking too long, an event is triggered to speed up
+ * non-essential processes.
+ */
+void timer_profile_start(struct timer_ctx_s *const tim);
+
+/**
  * Returns weather the current frame should be shown or not. A frame may be
  * skipped if the content refresh rate is faster than the display refresh rate.
  * If the content is running too fast, this function will execute an internal
@@ -51,12 +58,4 @@ int timer_init(struct timer_ctx_s *const tim, double emulated_rate);
  *
  * \returns	Negative for skip frame, 0 for no delay, else time to delay for.
  */
-int timer_get_delay(struct timer_ctx_s *const tim, Uint32 elapsed_ms);
-
-/**
- * Profiles the run loop and checks to make sure that VSYNC won't be missed. If
- * the busy loop is taking too long, an event is triggered to speed up
- * non-essential processes.
- */
-void timer_profile_start(struct timer_ctx_s *const tim);
-void timer_profile_end(struct timer_ctx_s *const tim);
+int timer_profile_end(struct timer_ctx_s *const tim);
