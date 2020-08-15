@@ -84,7 +84,7 @@ In no particular order.
 - [ ] Download libretro cores, program updates as required, with user control.
 - [x] Automatic assignment of gamepad mappings.
 - [ ] Automatic detection of A/B placement for emulated system.
-- [ ]Small number of GUI configuration parameters.
+- [ ] Small number of GUI configuration parameters.
   - [ ] Colours, placement of menu and hotkeys.
 - [ ] Automatic DPI scaling.
   - [ ] Font and UI size.
