@@ -113,15 +113,15 @@ override CFLAGS += -Iinc $(SDL_LIBS) $(SDL_CFLAGS)
 all: $(TARGETS)
 haiyajan: $(OBJS) $(LDLIBS)
 	$(info LINK $@ $^)
-	@$(CC) $(CFLAGS) $(EXEOUT)$@ $^ $(LDFLAGS) 1>$(NULL)
+	@$(CC) $(CFLAGS) $(EXEOUT)$@ $^ $(LDFLAGS)
 
 %.obj: %.c
 	$(info CC $^)
-	@$(CC) $(CFLAGS) /Fo$@ /c /TC $^ 1>$(NULL)
+	@$(CC) $(CFLAGS) /Fo$@ /c /TC $^
 
 %.res: %.rc
 	$(info RC $^)
-	@rc /nologo /c65001 $^
+	@rc /c65001 $^
 
 include Makefile.depend
 
