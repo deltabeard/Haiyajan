@@ -48,11 +48,14 @@ else
 	# I don't want any warnings in release builds
 	CFLAGS += -DSDL_ASSERT_LEVEL=1 $(call ccparam, -Werror, /nologo /Drestrict=  )
 	OPT := $(call ccparam,-O2 -flto -ffast-math,/O2 /Ob2 /fp:fast /GL /GS- /Zc:inline)
-	TARGETS +=$(call ccparam, haiyajan.sym,)
+	TARGETS += $(call ccparam, haiyajan.sym,)
 endif
 CFLAGS += $(OPT)
 
-GIT_VERSION := LOCAL
+GIT_VERSION := $(shell git describe --dirty --always --tags 2>$(NULL))
+ifeq ($(GIT_VERSION),)
+	GIT_VERSION := LOCAL
+endif
 CFLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\"
 
 ifneq ($(call fn_chklib, SDL2), 0)
@@ -101,7 +104,7 @@ endif
 
 SRCS	:= $(wildcard src/*.c)
 HDRS	:= $(wildcard inc/*.h)
-OBJS	:= $(SRCS:.c=.$(OBJEXT)) meta/Haiyajan.res
+OBJS	:= $(SRCS:.c=.$(OBJEXT)) $(call ccparam,,meta/Haiyajan.res)
 DEPS	:= Makefile.depend
 override CFLAGS += -Iinc $(SDL_LIBS) $(SDL_CFLAGS)
 
@@ -115,7 +118,7 @@ haiyajan: $(OBJS) $(LDLIBS)
 %.obj: %.c
 	$(info CC $^)
 	@$(CC) $(CFLAGS) /Fo$@ /c /TC $^ 1>$(NULL)
-	
+
 %.res: %.rc
 	$(info RC $^)
 	@rc /nologo /c65001 $^
