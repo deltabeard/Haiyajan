@@ -1,6 +1,32 @@
+# Compiler output
+*.s
+
+# Object files
 *.obj
 *.o
 *.so
+*.dll
+*.lib
+
+# Executables and symbols
+haiyajan
 *.exe
 *.sym
-haiyajan
+
+# Debugging
+*.gcda
+callgrind.out*
+.gdb*
+
+# Media files created by Haiyajan
+*.webp
+*.bmp
+*.h264
+*.wv
+
+# Hidden folders
+.*/*
+
+# IDE files
+*.kdev*
+*.json
