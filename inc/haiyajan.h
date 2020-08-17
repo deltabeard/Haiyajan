@@ -170,6 +170,7 @@ struct haiyajan_ctx_s
 
 	/* User interface context. */
 	ui *ui;
+	ui_overlay_ctx *ui_overlay;
 
 	/* Font */
 	font_ctx *font;

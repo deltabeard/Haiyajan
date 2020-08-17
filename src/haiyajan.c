@@ -401,9 +401,14 @@ static void process_events(struct haiyajan_ctx_s *ctx)
 				break;
 
 			case INPUT_EVENT_TAKE_SCREENSHOT:
+			{
+				SDL_Colour c = { 0, 0xFF, 0, 0xFF };
 				take_screenshot(ctx->rend, &ctx->core);
+				ui_add_overlay(&ctx->ui_overlay, c,
+						ui_overlay_top_right,
+						"SCREENSHOT", 255, NULL, NULL);
 				break;
-
+			}
 #if ENABLE_VIDEO_RECORDING == 1
 			case INPUT_EVENT_RECORD_VIDEO_TOGGLE:
 			{
@@ -824,7 +829,6 @@ int main(int argc, char *argv[])
 {
 	int ret = EXIT_FAILURE;
 	struct haiyajan_ctx_s h = {0};
-	ui_overlay_ctx *ui_olctx = NULL;
 
 	/* Ignore argc being unused warning. */
 	(void)argc;
@@ -948,7 +952,7 @@ int main(int argc, char *argv[])
 		}
 #endif
 		SDL_SetRenderTarget(h.rend, NULL);
-		ui_overlay_render(ui_olctx, h.rend, h.font);
+		ui_overlay_render(&h.ui_overlay, h.rend, h.font);
 
 		/* Only draw to screen if we're not falling behind. */
 		if(tim_cmd >= 0)
@@ -970,7 +974,7 @@ int main(int argc, char *argv[])
 			if(benchmark_beg == 0)
 			{
 				SDL_Colour c = { 0xFF, 0x00, 0x00, SDL_ALPHA_OPAQUE };
-				ui_add_overlay(&ui_olctx, c, ui_overlay_top_right, NULL,
+				ui_add_overlay(&h.ui_overlay, c, ui_overlay_top_right, NULL,
 						0, get_benchmark_txt,
 						&btxt);
 				benchmark_beg = SDL_GetTicks();

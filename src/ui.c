@@ -100,6 +100,8 @@ ui_overlay_item_s *ui_add_overlay(ui_overlay_ctx **ctx, SDL_Colour text_colour,
 		list = *ctx;
 		if(list == NULL)
 			goto err;
+
+		list->prev = NULL;
 	}
 
 	list->text_colour = text_colour;
@@ -116,8 +118,15 @@ err:
 	return NULL;
 }
 
-void ui_overlay_delete(ui_overlay_item_s *item)
+void ui_overlay_delete(ui_overlay_ctx **p, ui_overlay_item_s *item)
 {
+	/* If this is the tip of the linked list, then delete the list. */
+	if(item->next == NULL && item->prev == NULL)
+		*p = NULL;
+
+	if(item->next != NULL)
+		item->next->prev = item->prev;
+
 	if(item->prev != NULL)
 		item->prev->next = item->next;
 
@@ -130,11 +139,12 @@ void ui_overlay_delete(ui_overlay_item_s *item)
  *
  * \return	0 on success, else failure.
  */
-int ui_overlay_render(ui_overlay_ctx *ctx, SDL_Renderer *rend, font_ctx *font)
+int ui_overlay_render(ui_overlay_ctx **p, SDL_Renderer *rend, font_ctx *font)
 {
 	int w, h;
 	int ret = 0;
 	Uint8 corner_use[4] = { 0 };
+	ui_overlay_ctx *ctx = *p;
 
 	SDL_RenderGetLogicalSize(rend, &w, &h);
 
@@ -152,7 +162,7 @@ int ui_overlay_render(ui_overlay_ctx *ctx, SDL_Renderer *rend, font_ctx *font)
 			ctx->disp_count--;
 			if(ctx->disp_count == 0)
 			{
-				ui_overlay_delete(ctx);
+				ui_overlay_delete(p, ctx);
 				ctx = next;
 				continue;
 			}
