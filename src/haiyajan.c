@@ -178,7 +178,6 @@ static void apply_settings(char **argv, struct settings_s *cfg)
 {
 	const struct optparse_long longopts[] = {
 			{"libretro",  'L', OPTPARSE_REQUIRED},
-			{"info",      'I', OPTPARSE_NONE},
 			{"verbose",   'v', OPTPARSE_NONE},
 			{"video",     'V', OPTPARSE_REQUIRED},
 			{"render",    'R', OPTPARSE_REQUIRED},
