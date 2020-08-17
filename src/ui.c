@@ -154,6 +154,8 @@ int ui_overlay_render(ui_overlay_ctx **p, SDL_Renderer *rend, font_ctx *font)
 		ui_overlay_item_s *next = ctx->next;
 		SDL_Colour c = ctx->text_colour;
 		unsigned txth, txtw;
+		const unsigned margin = 2;
+		const unsigned padding = 2;
 		SDL_Rect dst;
 
 		/* Check if timer has triggered. If zero, the overlay is not
@@ -182,9 +184,13 @@ int ui_overlay_render(ui_overlay_ctx **p, SDL_Renderer *rend, font_ctx *font)
 		}
 
 		FontDrawSize(strlen(ctx->text), &txtw, &txth);
+		txtw += margin;
+		txth += margin;
+
 		if(ctx->tex == NULL)
 		{
 			SDL_Texture *prev_targ = SDL_GetRenderTarget(rend);
+			SDL_Rect txt_dst = { margin, margin, 1, 1 };
 
 			/* TODO: Add return checks. */
 			/* If a new string isn't required, and a texture has
@@ -199,7 +205,7 @@ int ui_overlay_render(ui_overlay_ctx **p, SDL_Renderer *rend, font_ctx *font)
 			SDL_RenderClear(rend);
 
 			SDL_SetRenderDrawColor(rend, c.r, c.g, c.b, c.a);
-			FontPrintToRenderer(font, ctx->text, NULL);
+			FontPrintToRenderer(font, ctx->text, &txt_dst);
 			SDL_SetRenderTarget(rend, prev_targ);
 		}
 
@@ -209,7 +215,7 @@ int ui_overlay_render(ui_overlay_ctx **p, SDL_Renderer *rend, font_ctx *font)
 
 		/* Add one pixel space between overlays. */
 		if(corner_use[ctx->corner] != 0)
-			txth += 1;
+			txth += padding;
 
 		switch(ctx->corner)
 		{
