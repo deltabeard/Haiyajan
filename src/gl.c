@@ -322,10 +322,16 @@ int gl_init(gl_ctx *ctx, SDL_Texture **tex,
 	int major, minor;
 
 	if(ctx == NULL)
+	{
+		SDL_SetError("GL context was not initialised");
 		return SDL_FALSE;
+	}
 
 	if(SDL_GetRendererInfo(ctx->rend, &info) != 0)
+	{
+		SDL_SetError("Unable to obtain renderer information");
 		return SDL_FALSE;
+	}
 
 	if(SDL_strncmp(info.name, "opengl", 6) != 0)
 	{

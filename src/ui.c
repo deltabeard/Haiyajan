@@ -170,8 +170,14 @@ int ui_overlay_render(ui_overlay_ctx **p, SDL_Renderer *rend, font_ctx *font)
 
 		/* Get new string if requested. */
 		if(ctx->get_new_str != NULL)
-		{
 			ctx->text = ctx->get_new_str(ctx->priv);
+
+		/* If text is NULL, then delete overlay. */
+		if(ctx->text == NULL)
+		{
+			ui_overlay_delete(p, ctx);
+			ctx = next;
+			continue;
 		}
 
 		FontDrawSize(strlen(ctx->text), &txtw, &txth);

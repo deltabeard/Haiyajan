@@ -311,6 +311,51 @@ err:
 	exit(EXIT_FAILURE);
 }
 
+#if ENABLE_VIDEO_RECORDING == 1
+struct rec_txt_priv {
+	rec_ctx *vid;
+	char str[32];
+};
+char *get_rec_txt(void *priv)
+{
+	struct rec_txt_priv *rtxt = priv;
+	struct {
+		Sint64 (*get_size)(rec_ctx *);
+	} sz_map[2] = {
+		{rec_video_size},
+		{rec_audio_size}
+	};
+	/* Technically MiB and GiB. */
+	const char prefix_str[5][3] = {
+		" B", "KB", "MB", "GB", "TB"
+	};
+	Uint64 sz = 0;
+	Uint8 prefix = 0;
+	unsigned i;
+
+	/* If recording has finished, free memory and delete overlay. */
+	if(rtxt->vid == NULL)
+	{
+		SDL_free(priv);
+		return NULL;
+	}
+
+	for(i = 0; i < (Uint8)SDL_arraysize(sz_map); i++)
+		sz += sz_map[i].get_size(rtxt->vid);
+
+	while(sz > 1 * 1024)
+	{
+		sz >>= (Uint8)10;
+		prefix++;
+	}
+
+	SDL_snprintf(rtxt->str, sizeof(rtxt->str), "REC %5" SDL_PRIu64 " %.2s",
+			sz, prefix_str[prefix]);
+
+	return rtxt->str;
+}
+#endif
+
 static SDL_atomic_t screenshot_timeout;
 static void take_screenshot(SDL_Renderer *rend, struct core_ctx_s *const ctx)
 {
@@ -353,6 +398,57 @@ void cap_frame(rec_ctx *vid, SDL_Renderer *rend, SDL_Texture *tex,
 	rec_enc_video(vid, surf);
 }
 #endif
+
+static void handle_rec_toggle(struct haiyajan_ctx_s *ctx)
+{
+	if(ctx->core.vid == NULL &&
+			ctx->core.env.status.bits.valid_frame)
+	{
+		char vidfile[64];
+		SDL_Colour c = { 0x00, 0xFF, 0x00, SDL_ALPHA_OPAQUE };
+		struct rec_txt_priv *rtxt;
+		gen_filename(vidfile, ctx->core.core_short_name, "h264");
+
+		/* FIXME: add double to Sint32 sample
+		 * compensation should the sample rate
+		 * not be an integer. */
+		ctx->core.vid = rec_init(vidfile,
+				ctx->core.sdl.game_frame_res.w,
+				ctx->core.sdl.game_frame_res.h,
+				ctx->core.av_info.timing.fps,
+				SDL_ceil(ctx->core.av_info.timing.sample_rate));
+		if(ctx->core.vid == NULL)
+		{
+			SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO,
+					"Unable to initialise libx264: %s",
+					SDL_GetError());
+			c.r = 0xFF;
+			c.g = 0x00;
+			c.b = 0x00;
+			ui_add_overlay(&ctx->ui_overlay, c,
+					ui_overlay_bot_right,
+					"Unable to start recording: libx264 failure",
+					127, NULL, NULL);
+			return;
+		}
+
+		SDL_LogInfo(SDL_LOG_CATEGORY_VIDEO, "Video recording started");
+		rtxt = SDL_malloc(sizeof(struct rec_txt_priv));
+		if(rtxt == NULL)
+			goto out;
+
+		rtxt->vid = ctx->core.vid;
+		ui_add_overlay(&ctx->ui_overlay, c, ui_overlay_bot_right, NULL,
+				0, get_rec_txt, rtxt);
+	}
+	else if(ctx->core.vid != NULL)
+	{
+		rec_end(&ctx->core.vid);
+	}
+
+out:
+	return;
+}
 
 static void process_events(struct haiyajan_ctx_s *ctx)
 {
@@ -411,40 +507,8 @@ static void process_events(struct haiyajan_ctx_s *ctx)
 			}
 #if ENABLE_VIDEO_RECORDING == 1
 			case INPUT_EVENT_RECORD_VIDEO_TOGGLE:
-			{
-				if(ctx->core.vid == NULL &&
-						ctx->core.env.status.bits.valid_frame)
-				{
-					char vidfile[64];
-					gen_filename(vidfile,
-							ctx->core.core_short_name,
-							"h264");
-
-					/* FIXME: add double to Sint32 sample
-					 * compensation should the sample rate
-					 * not be an integer. */
-					ctx->core.vid = rec_init(vidfile,
-							ctx->core.sdl.game_frame_res.w,
-							ctx->core.sdl.game_frame_res.h,
-							ctx->core.av_info.timing.fps,
-							SDL_ceil(ctx->core.av_info.timing.sample_rate));
-					if(ctx->core.vid == NULL)
-					{
-						SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO,
-								"Unable to initialise libx264: %s",
-								SDL_GetError());
-						break;
-					}
-
-					SDL_LogInfo(SDL_LOG_CATEGORY_VIDEO,
-							"Video recording started");
-				}
-				else if(ctx->core.vid != NULL)
-				{
-					rec_end(&ctx->core.vid);
-				}
+				handle_rec_toggle(ctx);
 				break;
-			}
 #endif
 		}
 		}
@@ -755,19 +819,6 @@ out:
 }
 #endif
 
-char *get_new_str(void *priv)
-{
-	char buf[32];
-	char *out;
-	int out_sz;
-	(void) priv;
-
-	out_sz = snprintf(buf, sizeof(buf), "Ticks: %d", SDL_GetTicks());
-	out = SDL_malloc(out_sz);
-	SDL_strlcpy(out, buf, out_sz);
-	return out;
-}
-
 struct benchmark_txt_priv {
 	Uint32 fps;
 	char str[64];
@@ -811,13 +862,13 @@ static int haiyajan_init_core(struct haiyajan_ctx_s *h,
 
 	play_init_cb(ctx);
 
+	ctx->sdl.gl = gl_prepare(h->rend);
+
 	if(load_libretro_file(ctx) != 0)
 		goto err;
 
 	if(play_init_av(ctx, h->rend) != 0)
 		goto err;
-
-	ctx->sdl.gl = gl_prepare(h->rend);
 
 	return 0;
 
