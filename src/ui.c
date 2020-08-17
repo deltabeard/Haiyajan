@@ -135,6 +135,12 @@ void ui_overlay_delete(ui_overlay_ctx **p, ui_overlay_item_s *item)
 	return;
 }
 
+void ui_overlay_delete_all(ui_overlay_ctx **p)
+{
+	while(*p != NULL)
+		ui_overlay_delete(p, *p);
+}
+
 /**
  * Render the overlays added to the list to the current renderer.
  *

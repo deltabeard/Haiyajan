@@ -304,6 +304,7 @@ static void apply_settings(char **argv, struct settings_s *cfg)
 		goto err;
 	}
 
+	cfg->frameskip_limit = 4;
 	return;
 
 err:
@@ -558,278 +559,6 @@ static void process_events(struct haiyajan_ctx_s *ctx)
 	}
 }
 
-#if 0
-static void run(SDL_Renderer *rend, struct core_ctx_s *ctx)
-{
-	Uint32 ticks_before, ticks_next, delta_ticks;
-	int tim_cmd;
-	float fps = 0.0F;
-	Uint32 fps_beg;
-	const uint_fast8_t fps_calc_frame_dur = 64;
-	uint_fast8_t fps_curr_frame_dur = fps_calc_frame_dur;
-	Uint32 benchmark_beg;
-	const Uint8 frame_skip_max = 4;
-	Uint8 frame_skip_count = 4;
-
-#if 0
-	{
-		Uint32 lim = SDL_GetTicks();
-		while(ctx->env.status.bits.valid_frame == 0)
-		{
-			play_frame(ctx);
-
-			/* If the first frame isn't drawn within two seconds,
-			 * break and begin showing screen anyway. */
-			if(SDL_GetTicks() - lim > 2000U)
-				break;
-		}
-	}
-#endif
-
-	while(ctx->env.status.bits.shutdown == 0)
-	{
-		/* If in benchmark mode, run as fast as possible. */
-		if(ctx->stngs.benchmark)
-			tim_cmd = 0;
-
-#if ENABLE_VIDEO_RECORDING == 1
-		if(tim_cmd < 0 && ctx->vid == NULL)
-#else
-			if(tim_cmd < 0)
-#endif
-		{
-			/* Disable video for the skipped frame to improve
-			 * performance. But only when we're not recording a
-			 * video. */
-			ctx->env.status.bits.video_disabled = 1;
-
-		}
-		else if(tim_cmd > 0)
-			SDL_Delay(tim_cmd);
-
-		timer_profile_start(&tim);
-		SDL_SetRenderDrawColor(rend, 0x00, 0x00, 0x00, 0x00);
-		SDL_RenderClear(rend);
-		play_frame(ctx);
-		SDL_RenderCopyEx(rend, ctx->sdl.core_tex,
-				 &ctx->sdl.game_frame_res, NULL, 0.0, NULL,
-				 ctx->env.flip);
-
-		if(ctx->stngs.vid_info)
-		{
-			static char busy_str[10] = {'\0'};
-			static char fps_str[10] = {'\0'};
-			static char acc_str[10] = {'\0'};
-			static char aud_str[10] = {'\0'};
-			static char frames_str[10] = {'\0'};
-			const SDL_Rect font_bg =
-				{
-					.w = 10 * FONT_CHAR_WIDTH,
-					.h = 5 * (FONT_CHAR_HEIGHT + 1),
-					.x = 0,
-					.y = 0
-				};
-			SDL_Rect dim = {.w = 1, .h = 1, .x = 0, .y = 0};
-			Uint32 ticks_busy = SDL_GetTicks();
-			Uint32 busy_diff = ticks_busy - ticks_before;
-
-			/* Only update every five frames to make values
-			 * readable. */
-			if(fps_curr_frame_dur % 5 == 0)
-			{
-				SDL_snprintf(busy_str, 10, "%6u ms", busy_diff);
-				SDL_snprintf(acc_str, 10, "%6.2f ms",
-					     tim.timer_accumulator);
-				SDL_snprintf(aud_str, 10, "%6u",
-					     (unsigned)(
-						     SDL_GetQueuedAudioSize(
-							     ctx->sdl.audio_dev)
-						     /
-						     sizeof(Uint16)
-						     / 2U));
-				SDL_snprintf(frames_str, 10, "%6u", frames);
-			}
-
-			/* Update only after FPS has been recalculated. */
-			if(fps_curr_frame_dur == fps_calc_frame_dur)
-				SDL_snprintf(fps_str, 10, "%6.2f Hz", fps);
-
-			SDL_SetRenderDrawColor(rend,
-					       0x00, 0x00, 0x00, 0x40);
-			SDL_RenderFillRect(rend, &font_bg);
-
-			SDL_SetRenderDrawColor(rend,
-					       0xFF, 0xFF, 0xFF, 0xFF);
-			FontPrintToRenderer(font, busy_str, &dim);
-
-			dim.y += FONT_CHAR_HEIGHT + 1;
-			FontPrintToRenderer(font, fps_str, &dim);
-
-			dim.y += FONT_CHAR_HEIGHT + 1;
-			FontPrintToRenderer(font, acc_str, &dim);
-
-			dim.y += FONT_CHAR_HEIGHT + 1;
-			FontPrintToRenderer(font, aud_str, &dim);
-
-			dim.y += FONT_CHAR_HEIGHT + 1;
-			FontPrintToRenderer(font, frames_str, &dim);
-
-			SDL_SetRenderDrawColor(rend,
-					       0x00, 0x00, 0x00, 0x00);
-		}
-
-#if ENABLE_VIDEO_RECORDING == 1
-		while(ctx->vid != NULL)
-		{
-			SDL_Rect loc =
-				{
-					.x = 0,
-					.y = FONT_CHAR_WIDTH * 2,
-					.w = 2,
-					.h = 2
-				};
-			struct {
-				Sint64 (*get_size)(rec_ctx *);
-
-				char str[16];
-			} sz_map[2] =
-				{
-					{rec_video_size, ""},
-					{rec_audio_size, ""}
-				};
-
-			SDL_RenderGetLogicalSize(rend, &loc.x, NULL);
-			if(loc.x < 320)
-				break;
-
-			cap_frame(ctx->vid, rend, ctx->sdl.core_tex,
-				  &ctx->sdl.game_frame_res, ctx->env.flip);
-
-			SDL_SetRenderDrawColor(rend, UINT8_MAX, 0, 0,
-					       SDL_ALPHA_OPAQUE);
-
-			loc.x -= FONT_CHAR_WIDTH * loc.h * 5;
-			FontPrintToRenderer(font, " REC", &loc);
-
-			/* Print output file sizes so far. */
-			loc.y += FONT_CHAR_HEIGHT * 2;
-			loc.w = 1;
-			loc.h = 1;
-
-			for(uint_fast8_t i = 0;
-			    i < (uint_fast8_t)SDL_arraysize(sz_map); i++)
-			{
-				/* Technically MiB and GiB. */
-				const char prefix[5][3] =
-					{
-						" B", "KB", "MB", "GB", "TB"
-					};
-				Uint64 sz = sz_map[i].get_size(ctx->vid);
-				Uint8 p = 0;
-
-				while(sz > 1 * 1024)
-				{
-					sz >>= (Uint8)10;
-					p++;
-				}
-
-				SDL_snprintf(sz_map[i].str,
-					     SDL_arraysize(sz_map[0].str),
-					     "%5" PRIu64 " %.2s",
-					     sz, prefix[p]);
-			}
-
-			FontPrintToRenderer(font, sz_map[0].str, &loc);
-			loc.y += FONT_CHAR_HEIGHT;
-			FontPrintToRenderer(font, sz_map[1].str, &loc);
-
-			SDL_SetRenderDrawColor(rend,
-					       0x00, 0x00, 0x00, 0x00);
-			break;
-		}
-#endif
-
-		/* If the user took a screen capture within the last second,
-		 * respond in the interface. */
-		if(SDL_AtomicGet(&screenshot_timeout) != 0)
-		{
-			SDL_Rect loc =
-				{
-					.x = 0,
-					.y = FONT_CHAR_WIDTH * 2,
-					.w = 2,
-					.h = 2
-				};
-			SDL_SetRenderDrawColor(rend, UINT8_MAX,
-					       UINT8_MAX, 0, SDL_ALPHA_OPAQUE);
-			SDL_RenderGetLogicalSize(rend, &loc.x, NULL);
-			loc.x -= FONT_CHAR_WIDTH * loc.h * 8;
-			FontPrintToRenderer(font, "CAP", &loc);
-			SDL_SetRenderDrawColor(rend,
-					       0x00, 0x00, 0x00, 0x00);
-		}
-
-		timer_profile_end(&tim);
-
-		/* Only draw to screen if we're not falling behind. */
-		if(tim_cmd >= 0 || frame_skip_count == 0)
-		{
-			SDL_RenderPresent(rend);
-			frame_skip_count = frame_skip_max;
-		}
-		else
-			frame_skip_count--;
-
-		/* Reset video_disabled for next frame. */
-		ctx->env.status.bits.video_disabled = 0;
-
-		ticks_next = SDL_GetTicks();
-		delta_ticks = ticks_next - ticks_before;
-		tim_cmd = timer_get_delay(&tim, delta_ticks);
-		ticks_before = ticks_next;
-
-		if(ctx->stngs.vid_info)
-			fps_curr_frame_dur--;
-
-		if(ctx->stngs.vid_info && fps_curr_frame_dur == 0)
-		{
-			Uint32 fps_delta;
-			Uint32 fps_end = SDL_GetTicks();
-			fps_delta = fps_end - fps_beg;
-			fps = 1000.0F / ((float)fps_delta
-					 / (float)fps_calc_frame_dur);
-			fps_curr_frame_dur = fps_calc_frame_dur;
-			fps_beg = fps_end;
-		}
-
-		while(ctx->stngs.benchmark)
-		{
-			uint_fast32_t elapsed;
-			float bench_fps;
-			static Uint32 bench_frames = 0;
-
-			bench_frames++;
-			elapsed = SDL_GetTicks() - benchmark_beg;
-			if(elapsed < ctx->stngs.benchmark_dur * 1000)
-				break;
-
-			bench_fps = (float)bench_frames /
-				    ((float)elapsed / 1000.0F);
-			SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-				    "Benchmark: %.2f FPS", bench_fps);
-			goto out;
-		}
-	}
-
-out:
-	util_exit_all();
-#if ENABLE_VIDEO_RECORDING == 1
-	rec_end(&ctx->vid);
-#endif
-	FontExit(font);
-}
-#endif
-
 struct benchmark_txt_priv {
 	Uint32 fps;
 	char str[64];
@@ -980,24 +709,38 @@ int main(int argc, char *argv[])
 	}
 
 	input_init(&h.core.inp);
-
 	/* TODO: Add return check. */
 	timer_init(&h.core.tim, h.core.av_info.timing.fps);
-#if 0
-	ticks_before = fps_beg = benchmark_beg = SDL_GetTicks();
-#endif
-
-	SDL_SetRenderDrawBlendMode(h.rend, SDL_BLENDMODE_BLEND);
-
 	h.font = FontStartup(h.rend);
 
 	while(h.core.env.status.bits.shutdown == 0 && h.quit == 0)
 	{
 		static int tim_cmd = 0;
+		static Uint8 frames_skipped = 0;
 
 		timer_profile_start(&h.core.tim);
 		if(tim_cmd > 0)
+		{
 			SDL_Delay(tim_cmd);
+			h.core.env.status.bits.video_disabled = 0;
+		}
+		else if(tim_cmd < 0 && frames_skipped > 0
+#if ENABLE_VIDEO_RECORDING == 1
+				&& h.core.vid == NULL
+#endif
+		       )
+		{
+			/* Disable video for the skipped frame to improve
+			 * performance. But only when we're not recording a
+			 * video. */
+			h.core.env.status.bits.video_disabled = 1;
+			frames_skipped--;
+		}
+		else
+		{
+			h.core.env.status.bits.video_disabled = 0;
+			frames_skipped = h.stngs.frameskip_limit;
+		}
 
 		h.core.env.frames++;
 		process_events(&h);
@@ -1019,7 +762,7 @@ int main(int argc, char *argv[])
 		ui_overlay_render(&h.ui_overlay, h.rend, h.font);
 
 		/* Only draw to screen if we're not falling behind. */
-		if(tim_cmd >= 0)
+		if(tim_cmd >= 0 || frames_skipped == 0)
 			SDL_RenderPresent(h.rend);
 
 		tim_cmd = timer_profile_end(&h.core.tim);
@@ -1027,7 +770,6 @@ int main(int argc, char *argv[])
 		if(h.stngs.benchmark)
 		{
 			Uint32 elapsed;
-			float bench_fps;
 			static Uint32 bench_frames = 0;
 			static Uint32 benchmark_beg = 0;
 			static struct benchmark_txt_priv btxt;
@@ -1049,18 +791,12 @@ int main(int argc, char *argv[])
 			if(elapsed == 0)
 				continue;
 
+			btxt.fps = (bench_frames * 1024) / elapsed;
+			if(elapsed >= h.stngs.benchmark_dur * 1024)
 			{
-				Uint64 bfe4 = bench_frames * 1024;
-				btxt.fps = bfe4 / elapsed;
-			}
-
-			if(elapsed >= h.stngs.benchmark_dur * 1000)
-			{
-				bench_fps = (float)bench_frames /
-					((float)elapsed / 1000.0F);
 				SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-						"Benchmark: %.2f FPS",
-						bench_fps);
+						"Benchmark: %u FPS",
+						btxt.fps);
 				break;
 			}
 		}
@@ -1069,7 +805,11 @@ int main(int argc, char *argv[])
 #if ENABLE_VIDEO_RECORDING == 1
 	rec_end(&h.core.vid);
 #endif
+	while(h.ui_overlay != NULL)
+		ui_overlay_delete_all(&h.ui_overlay);
+
 	util_exit_all();
+	FontExit(h.font);
 	ret = EXIT_SUCCESS;
 
 out:

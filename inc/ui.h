@@ -35,6 +35,8 @@ ui_overlay_item_s *ui_add_overlay(ui_overlay_ctx **ctx, SDL_Colour text_colour,
 		ui_overlay_corner_e corner, char *text, Uint8 disp_count,
 		char *(*get_new_str)(void *priv), void *priv);
 int ui_overlay_render(ui_overlay_ctx **ctx, SDL_Renderer *rend, font_ctx *font);
+void ui_overlay_delete(ui_overlay_ctx **p, ui_overlay_item_s *item);
+void ui_overlay_delete_all(ui_overlay_ctx **p);
 
 typedef struct ui_s	ui;
 ui *ui_init(SDL_Renderer *rend);

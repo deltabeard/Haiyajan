@@ -34,6 +34,7 @@ struct settings_s
 	unsigned benchmark : 1;
 	unsigned start_core : 1;
 	Uint32 benchmark_dur;
+	Uint8 frameskip_limit;
 	char *core_filename;
 	char *content_filename;
 };
