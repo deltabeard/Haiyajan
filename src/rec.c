@@ -510,7 +510,7 @@ static int rec_single_img_thread(void *param)
 
 #if ENABLE_WEBP_SCREENSHOTS == 1
 	outsz = WebPEncodeRGB(surf->pixels, surf->w, surf->h, surf->pitch,
-			      95, &webp);
+			      99, &webp);
 	if(outsz == 0)
 		goto out;
 

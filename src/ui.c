@@ -20,8 +20,6 @@
 struct ui_s {
 	font_ctx *font;
 	SDL_Renderer *rend;
-//	Uint32 last_ticks;
-//	struct ui_overlay_item *list;
 };
 
 /**
@@ -60,16 +58,19 @@ struct ui_overlay_item {
  * \param ui_overlay_ctx Private overlay context. Must be initialised to NULL.
  * \param text_colour	The text colour.
  * \param corner	The corner in which to display the overlay. The overlay
- * 		will be displayed from the corner selected to the vertical
- * 		center of the screen.
- * \param timer_func	The type of timer function.
- * \param text		Static text to render or NULL if dynamic text.
+ * 			will be displayed from the corner selected to the
+ * 			vertical center of the screen.
+ * \param text		Static text to render or NULL if dynamic text where the
+ * 			function get_new_str will be called to obtain the
+ * 			string.
  * \param disp_count	Number of times this overlay is to be displayed before
- * 		being deleted automatically. Set to 0 for no automatic deletion.
+ * 			being deleted automatically. Set to 0 for no automatic
+ * 			deletion.
  * \param get_new_str	The function to call if the timer is to refresh the
- * 		text on timeout. Unused if timer_func is ui_overlay_timeout.
+ * 			text on timeout. Unused if timer_func is
+ * 			ui_overlay_timeout.
  * \param priv		Private point to supply to function. Unused if
- * 		timer_func is ui_overlay_timeout.
+ * 			timer_func is ui_overlay_timeout.
  * \return		Context for specific overlay.
  */
 ui_overlay_item_s *ui_add_overlay(ui_overlay_ctx **ctx, SDL_Colour text_colour,
