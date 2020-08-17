@@ -45,7 +45,6 @@ struct ui_overlay_item {
 	ui_overlay_corner_e corner;
 
 	char *text;
-	void (*free)(void *);
 
 	Uint8 disp_count;
 	char *(*get_new_str)(void *priv);
@@ -64,9 +63,7 @@ struct ui_overlay_item {
  * 		will be displayed from the corner selected to the vertical
  * 		center of the screen.
  * \param timer_func	The type of timer function.
- * \param text		Initial text to render.
- * \param free		Function called to free text. Set to NULL for stack
- * 		allocated text.
+ * \param text		Static text to render or NULL if dynamic text.
  * \param disp_count	Number of times this overlay is to be displayed before
  * 		being deleted automatically. Set to 0 for no automatic deletion.
  * \param get_new_str	The function to call if the timer is to refresh the
@@ -76,8 +73,7 @@ struct ui_overlay_item {
  * \return		Context for specific overlay.
  */
 ui_overlay_item_s *ui_add_overlay(ui_overlay_ctx **ctx, SDL_Colour text_colour,
-		ui_overlay_corner_e corner, char *text,
-		void (*free_text)(void *), Uint8 disp_count,
+		ui_overlay_corner_e corner, char *text, Uint8 disp_count,
 		char *(*get_new_str)(void *priv), void *priv)
 {
 	ui_overlay_item_s *list = *ctx;
@@ -109,7 +105,6 @@ ui_overlay_item_s *ui_add_overlay(ui_overlay_ctx **ctx, SDL_Colour text_colour,
 	list->text_colour = text_colour;
 	list->corner = corner;
 	list->text = text;
-	list->free = free_text;
 	list->disp_count = disp_count;
 	list->get_new_str = get_new_str;
 	list->priv = priv;
@@ -125,9 +120,6 @@ void ui_overlay_delete(ui_overlay_item_s *item)
 {
 	if(item->prev != NULL)
 		item->prev->next = item->next;
-
-	if(item->free != NULL)
-		item->free(item->text);
 
 	free(item);
 	return;
@@ -169,9 +161,6 @@ int ui_overlay_render(ui_overlay_ctx *ctx, SDL_Renderer *rend, font_ctx *font)
 		/* Get new string if requested. */
 		if(ctx->get_new_str != NULL)
 		{
-			if(ctx->free != NULL)
-				ctx->free(ctx->text);
-
 			ctx->text = ctx->get_new_str(ctx->priv);
 		}
 

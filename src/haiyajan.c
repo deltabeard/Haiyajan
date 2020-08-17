@@ -763,6 +763,18 @@ char *get_new_str(void *priv)
 	return out;
 }
 
+struct benchmark_txt_priv {
+	Uint32 fps;
+	char str[64];
+};
+char *get_benchmark_txt(void *priv)
+{
+	struct benchmark_txt_priv *btxt = priv;
+	SDL_snprintf(btxt->str, sizeof(btxt->str), "Benchmark: %u FPS",
+			btxt->fps);
+	return btxt->str;
+}
+
 int haiyajan_get_available_file_types(struct core_ctx_s *ctx)
 {
 	(void) ctx;
@@ -910,19 +922,6 @@ int main(int argc, char *argv[])
 	SDL_SetRenderDrawBlendMode(h.rend, SDL_BLENDMODE_BLEND);
 
 	h.font = FontStartup(h.rend);
-	{
-		SDL_Colour c = { 0xFF, 0, 0, SDL_ALPHA_OPAQUE };
-		ui_add_overlay(&ui_olctx, c, ui_overlay_top_right, "Top Right",
-				NULL, 0, NULL, NULL);
-		ui_add_overlay(&ui_olctx, c, ui_overlay_top_right, "TOP KEK",
-				NULL, 255, NULL, NULL);
-		ui_add_overlay(&ui_olctx, c, ui_overlay_top_left, "Top Left",
-				NULL, 0, NULL, NULL);
-		ui_add_overlay(&ui_olctx, c, ui_overlay_bot_right, "Bottom Right",
-				NULL, 0, NULL, NULL);
-		ui_add_overlay(&ui_olctx, c, ui_overlay_bot_left, NULL,
-				SDL_free, 0, get_new_str, NULL);
-	}
 
 	while(h.core.env.status.bits.shutdown == 0 && h.quit == 0)
 	{
@@ -956,6 +955,47 @@ int main(int argc, char *argv[])
 			SDL_RenderPresent(h.rend);
 
 		tim_cmd = timer_profile_end(&h.core.tim);
+
+		if(h.stngs.benchmark)
+		{
+			Uint32 elapsed;
+			float bench_fps;
+			static Uint32 bench_frames = 0;
+			static Uint32 benchmark_beg = 0;
+			static struct benchmark_txt_priv btxt;
+
+			/* Run as fast as possible. */
+			tim_cmd = 0;
+
+			if(benchmark_beg == 0)
+			{
+				SDL_Colour c = { 0xFF, 0x00, 0x00, SDL_ALPHA_OPAQUE };
+				ui_add_overlay(&ui_olctx, c, ui_overlay_top_right, NULL,
+						0, get_benchmark_txt,
+						&btxt);
+				benchmark_beg = SDL_GetTicks();
+			}
+
+			bench_frames++;
+			elapsed = SDL_GetTicks() - benchmark_beg;
+			if(elapsed == 0)
+				continue;
+
+			{
+				Uint64 bfe4 = bench_frames * 1024;
+				btxt.fps = bfe4 / elapsed;
+			}
+
+			if(elapsed >= h.stngs.benchmark_dur * 1000)
+			{
+				bench_fps = (float)bench_frames /
+					((float)elapsed / 1000.0F);
+				SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+						"Benchmark: %.2f FPS",
+						bench_fps);
+				break;
+			}
+		}
 	}
 
 #if ENABLE_VIDEO_RECORDING == 1
