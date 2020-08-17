@@ -123,7 +123,6 @@ static void print_help(void)
 			"  -h, --help      Show this help message.\n"
 			"      --version   Print version information.\n"
 			"  -L, --libretro  Path to libretro core.\n"
-			"  -I, --info      Print statistics onscreen.\n"
 			"  -b, --benchmark Benchmark and print average frames"
 			" per second.\n"
 			"  -v, --verbose   Print verbose log messages.\n"
@@ -201,10 +200,6 @@ static void apply_settings(char **argv, struct settings_s *cfg)
 		{
 		case 'L':
 			cfg->core_filename = SDL_strdup(options.optarg);
-			break;
-
-		case 'I':
-			cfg->vid_info = 1;
 			break;
 
 		case 'v':
@@ -480,21 +475,6 @@ static void process_events(struct haiyajan_ctx_s *ctx)
 		{
 			switch(ev.user.code)
 			{
-#if 0
-			case INPUT_EVENT_TOGGLE_INFO:
-				ctx->stngs.vid_info = !ctx->stngs.vid_info;
-				SDL_SetRenderDrawBlendMode(ctx->rend,
-						ctx->stngs.vid_info ?
-						SDL_BLENDMODE_BLEND :
-						SDL_BLENDMODE_NONE);
-				if(!ctx->stngs.vid_info)
-					break;
-
-				/* Reset FPS counter. */
-				fps_beg = SDL_GetTicks();
-				fps_curr_frame_dur = fps_calc_frame_dur;
-				break;
-#endif
 			case INPUT_EVENT_TOGGLE_FULLSCREEN:
 				ctx->stngs.fullscreen = !ctx->stngs.fullscreen;
 				if(ctx->stngs.fullscreen)
@@ -680,11 +660,6 @@ int main(int argc, char *argv[])
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 #endif
-
-	/* Allows for transparency on information display. */
-	if(h.stngs.vid_info)
-		SDL_SetRenderDrawBlendMode(h.rend, SDL_BLENDMODE_BLEND);
-
 	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 		       "Created window and renderer");
 
