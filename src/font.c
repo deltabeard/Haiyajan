@@ -171,8 +171,8 @@ static const unsigned char bitmap_font[FONT_BITMAP_SIZE] = {
 font_ctx *FontStartup(SDL_Renderer *renderer)
 {
 	const SDL_Colour colours[2] = {
-		{ 0x00, 0x00, 0x00, 0x00}, // BG
-		{ 0xFF, 0xFF, 0xFF, 0xFF}  // FG
+		{ 0x00, 0x00, 0x00, 0x00}, /* BG */
+		{ 0xFF, 0xFF, 0xFF, 0xFF}  /* FG */
 	};
 	SDL_Surface *bmp_surf;
 	font_ctx *ctx = SDL_malloc(sizeof(font_ctx));

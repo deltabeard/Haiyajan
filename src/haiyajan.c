@@ -23,15 +23,16 @@
 #define OPTPARSE_API static
 #include <optparse.h>
 
+#include <haiyajan.h>
 #include <font.h>
 #include <input.h>
 #include <load.h>
 #include <play.h>
 #include <rec.h>
-#include <timer.h>
-#include <util.h>
 #include <sig.h>
+#include <timer.h>
 #include <ui.h>
+#include <util.h>
 
 #define PROG_NAME       "Haiyajan"
 #define MAX_TITLE_LEN   56
@@ -653,7 +654,6 @@ int main(int argc, char *argv[])
 		goto err;
 
 #if 1
-	//SDL_SetHint(SDL_HINT_RENDER_OPENGL_SHADERS, "0");
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
 			    SDL_GL_CONTEXT_PROFILE_CORE);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);

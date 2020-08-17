@@ -191,7 +191,7 @@ struct input_ctx_s
  *
  * \param in_ctx	Input structure context to initialise.
  */
-void input_init(struct input_ctx_s *restrict in_ctx);
+void input_init(struct input_ctx_s *in_ctx);
 
 /**
  * Set compatible controller information.

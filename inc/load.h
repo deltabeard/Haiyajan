@@ -23,7 +23,7 @@
  * \param ctx	Libretro core context.
  * \return	0 on success, else failure. Use SDL_GetError().
  */
-int load_libretro_file(struct core_ctx_s *restrict ctx);
+int load_libretro_file(struct core_ctx_s *ctx);
 
 /**
  * Loads a libretro core and assigns its functions to the given libretro
@@ -33,15 +33,14 @@ int load_libretro_file(struct core_ctx_s *restrict ctx);
  * \param ctx		Libretro core context to initialise.
  * \return		0 on success, else failure. Use SDL_GetError().
  */
-int load_libretro_core(const char *restrict so_file,
-	struct core_ctx_s *restrict ctx);
+int load_libretro_core(const char *so_file, struct core_ctx_s *ctx);
 
 /**
  * Unloads any file that was opened for the libretro core.
  *
  * \param ctx	Libretro core context.
  */
-void unload_libretro_file(struct core_ctx_s *restrict ctx);
+void unload_libretro_file(struct core_ctx_s *ctx);
 
 /**
  * Unloads a libretro core.
@@ -50,4 +49,4 @@ void unload_libretro_file(struct core_ctx_s *restrict ctx);
  *
  * \param ctx Libretro core context to unload.
  */
-void unload_libretro_core(struct core_ctx_s *restrict ctx);
+void unload_libretro_core(struct core_ctx_s *ctx);

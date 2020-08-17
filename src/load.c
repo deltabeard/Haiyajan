@@ -99,7 +99,7 @@ int load_libretro_file(struct core_ctx_s *restrict ctx)
 	 * memory.
 	 */
 	struct retro_game_info game;
-	
+
 	game.path = ctx->content_filename;
 	game.meta = NULL;
 

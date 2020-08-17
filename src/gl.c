@@ -114,9 +114,9 @@ struct gl_fn {
 
 struct gl_ctx_s {
 	/* Set by core. */
-	unsigned char depth : 1;
-	unsigned char stencil : 1;
-	unsigned char bottom_left_origin : 1;
+	unsigned depth : 1;
+	unsigned stencil : 1;
+	unsigned bottom_left_origin : 1;
 	retro_hw_context_reset_t context_reset;
 	retro_hw_context_reset_t context_destroy;
 
