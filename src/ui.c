@@ -22,20 +22,6 @@ struct ui_s {
 	SDL_Renderer *rend;
 };
 
-/**
- * Process of using overlay system:
- *  - Define new overlay.
- *  	The library will render this overlay into a cached texture.
- *  - Submit overlay to display with timer settings
- *  	The overlay is added to a linked list, and is removed on timeout or
- *  	from a user request.
- *  - Render the overlays
- *  	Timed overlays are updated and removed if they have timed out.
- *  	Render each overlay individually in their own texture if they must
- *  	be updated, or if they do not have a texture cached.
- *  	All overlays in the list are rendered to the current renderer.
- */
-
 struct ui_overlay_item {
 	struct ui_overlay_item *prev;
 
@@ -52,27 +38,6 @@ struct ui_overlay_item {
 	struct ui_overlay_item *next;
 };
 
-/**
- * Add a new overlay.
- *
- * \param ui_overlay_ctx Private overlay context. Must be initialised to NULL.
- * \param text_colour	The text colour.
- * \param corner	The corner in which to display the overlay. The overlay
- * 			will be displayed from the corner selected to the
- * 			vertical center of the screen.
- * \param text		Static text to render or NULL if dynamic text where the
- * 			function get_new_str will be called to obtain the
- * 			string.
- * \param disp_count	Number of times this overlay is to be displayed before
- * 			being deleted automatically. Set to 0 for no automatic
- * 			deletion.
- * \param get_new_str	The function to call if the timer is to refresh the
- * 			text on timeout. Unused if timer_func is
- * 			ui_overlay_timeout.
- * \param priv		Private point to supply to function. Unused if
- * 			timer_func is ui_overlay_timeout.
- * \return		Context for specific overlay.
- */
 ui_overlay_item_s *ui_add_overlay(ui_overlay_ctx **ctx, SDL_Colour text_colour,
 		ui_overlay_corner_e corner, char *text, Uint8 disp_count,
 		char *(*get_new_str)(void *priv), void *priv)
@@ -142,11 +107,6 @@ void ui_overlay_delete_all(ui_overlay_ctx **p)
 		ui_overlay_delete(p, *p);
 }
 
-/**
- * Render the overlays added to the list to the current renderer.
- *
- * \return	0 on success, else failure.
- */
 int ui_overlay_render(ui_overlay_ctx **p, SDL_Renderer *rend, font_ctx *font)
 {
 	int w, h;
