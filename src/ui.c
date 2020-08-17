@@ -17,33 +17,233 @@
 #include <ui.h>
 #include <SDL.h>
 
+struct ui_s {
+	font_ctx *font;
+	SDL_Renderer *rend;
+//	Uint32 last_ticks;
+//	struct ui_overlay_item *list;
+};
+
+/**
+ * Process of using overlay system:
+ *  - Define new overlay.
+ *  	The library will render this overlay into a cached texture.
+ *  - Submit overlay to display with timer settings
+ *  	The overlay is added to a linked list, and is removed on timeout or
+ *  	from a user request.
+ *  - Render the overlays
+ *  	Timed overlays are updated and removed if they have timed out.
+ *  	Render each overlay individually in their own texture if they must
+ *  	be updated, or if they do not have a texture cached.
+ *  	All overlays in the list are rendered to the current renderer.
+ */
+
 struct ui_overlay_item {
-	struct ui_overlay_s *conf;
+	struct ui_overlay_item *prev;
+
+	SDL_Colour text_colour;
+	ui_overlay_corner_e corner;
+
+	char *text;
+	void (*free)(void *);
+
+	Uint8 disp_count;
+	char *(*get_new_str)(void *priv);
+	void *priv;
+
 	SDL_Texture *tex;
 	struct ui_overlay_item *next;
 };
 
-struct ui_s {
-	font_ctx *font;
-	SDL_Renderer *rend;
-	Uint32 last_ticks;
-	struct ui_overlay_item *list;
-};
-
-ui *ui_init(SDL_Renderer *rend)
+/**
+ * Add a new overlay.
+ *
+ * \param ui_overlay_ctx Private overlay context. Must be initialised to NULL.
+ * \param text_colour	The text colour.
+ * \param corner	The corner in which to display the overlay. The overlay
+ * 		will be displayed from the corner selected to the vertical
+ * 		center of the screen.
+ * \param timer_func	The type of timer function.
+ * \param text		Initial text to render.
+ * \param free		Function called to free text. Set to NULL for stack
+ * 		allocated text.
+ * \param disp_count	Number of times this overlay is to be displayed before
+ * 		being deleted automatically. Set to 0 for no automatic deletion.
+ * \param get_new_str	The function to call if the timer is to refresh the
+ * 		text on timeout. Unused if timer_func is ui_overlay_timeout.
+ * \param priv		Private point to supply to function. Unused if
+ * 		timer_func is ui_overlay_timeout.
+ * \return		Context for specific overlay.
+ */
+ui_overlay_item_s *ui_add_overlay(ui_overlay_ctx **ctx, SDL_Colour text_colour,
+		ui_overlay_corner_e corner, char *text,
+		void (*free_text)(void *), Uint8 disp_count,
+		char *(*get_new_str)(void *priv), void *priv)
 {
-	ui *ui = SDL_calloc(1, sizeof(struct ui_s));
-	if(ui == NULL)
-		return NULL;
+	ui_overlay_item_s *list = *ctx;
 
-	ui->font = FontStartup(rend);
-	if(ui->font == NULL)
-		return NULL;
+	/* Obtain the last item in the linked list. */
+	while(list != NULL && list->next != NULL)
+		list = list->next;
 
-	ui->last_ticks = SDL_GetTicks();
-	ui->rend = rend;
-	return ui;
+	if(list != NULL)
+	{
+		/* Create a new overlay. */
+		list->next = SDL_malloc(sizeof(ui_overlay_item_s));
+		if(list->next == NULL)
+			goto err;
+
+		list->next->prev = list;
+		list = list->next;
+	}
+	else
+	{
+		/* If no overlay exists yet, create the first overlay and set
+		 * the context to the first item. */
+		*ctx = SDL_malloc(sizeof(ui_overlay_item_s));
+		list = *ctx;
+		if(list == NULL)
+			goto err;
+	}
+
+	list->text_colour = text_colour;
+	list->corner = corner;
+	list->text = text;
+	list->free = free_text;
+	list->disp_count = disp_count;
+	list->get_new_str = get_new_str;
+	list->priv = priv;
+	list->tex = NULL;
+	list->next = NULL;
+	return list;
+
+err:
+	return NULL;
 }
+
+void ui_overlay_delete(ui_overlay_item_s *item)
+{
+	if(item->prev != NULL)
+		item->prev->next = item->next;
+
+	if(item->free != NULL)
+		item->free(item->text);
+
+	free(item);
+	return;
+}
+
+/**
+ * Render the overlays added to the list to the current renderer.
+ *
+ * \return	0 on success, else failure.
+ */
+int ui_overlay_render(ui_overlay_ctx *ctx, SDL_Renderer *rend, font_ctx *font)
+{
+	int w, h;
+	int ret = 0;
+	Uint8 corner_use[4] = { 0 };
+
+	SDL_RenderGetLogicalSize(rend, &w, &h);
+
+	while(ctx != NULL)
+	{
+		ui_overlay_item_s *next = ctx->next;
+		SDL_Colour c = ctx->text_colour;
+		unsigned txth, txtw;
+		SDL_Rect dst;
+
+		/* Check if timer has triggered. If zero, the overlay is not
+		 * deleted on timeout. */
+		if(ctx->disp_count > 0)
+		{
+			ctx->disp_count--;
+			if(ctx->disp_count == 0)
+			{
+				ui_overlay_delete(ctx);
+				ctx = next;
+				continue;
+			}
+		}
+
+		/* Get new string if requested. */
+		if(ctx->get_new_str != NULL)
+		{
+			if(ctx->free != NULL)
+				ctx->free(ctx->text);
+
+			ctx->text = ctx->get_new_str(ctx->priv);
+		}
+
+		FontDrawSize(strlen(ctx->text), &txtw, &txth);
+		if(ctx->tex == NULL)
+		{
+			SDL_Texture *prev_targ = SDL_GetRenderTarget(rend);
+
+			/* TODO: Add return checks. */
+			/* If a new string isn't required, and a texture has
+			 * not already been cached, create a texture and cache
+			 * it. */
+			ctx->tex = SDL_CreateTexture(rend,
+					SDL_PIXELFORMAT_RGBA8888,
+					SDL_TEXTUREACCESS_TARGET, txtw, txth);
+			SDL_SetTextureBlendMode(ctx->tex, SDL_BLENDMODE_BLEND);
+			SDL_SetRenderTarget(rend, ctx->tex);
+			SDL_SetRenderDrawColor(rend, 0x00, 0x00, 0x00, 0x40);
+			SDL_RenderClear(rend);
+
+			SDL_SetRenderDrawColor(rend, c.r, c.g, c.b, c.a);
+			FontPrintToRenderer(font, ctx->text, NULL);
+			SDL_SetRenderTarget(rend, prev_targ);
+		}
+
+		/* Render text */
+		dst.w = txtw;
+		dst.h = txth;
+
+		/* Add one pixel space between overlays. */
+		if(corner_use[ctx->corner] != 0)
+			txth += 1;
+
+		switch(ctx->corner)
+		{
+		case ui_overlay_top_left:
+			dst.x = 0;
+			dst.y = txth * corner_use[ctx->corner];
+			break;
+
+		case ui_overlay_top_right:
+			dst.x = w - txtw;
+			dst.y = txth * corner_use[ctx->corner];
+			break;
+
+		case ui_overlay_bot_left:
+			dst.x = 0;
+			dst.y = h - (txth * (corner_use[ctx->corner] + 1));
+			break;
+
+		case ui_overlay_bot_right:
+			dst.x = w - txtw;
+			dst.y = h - (txth * (corner_use[ctx->corner] + 1));
+			break;
+		}
+
+		corner_use[ctx->corner]++;
+		SDL_RenderCopy(rend, ctx->tex, NULL, &dst);
+
+		if(ctx->get_new_str != NULL)
+		{
+			SDL_DestroyTexture(ctx->tex);
+			ctx->tex = NULL;
+		}
+
+		ctx = next;
+	}
+
+	return ret;
+}
+
+#if 0
 
 void *ui_add_overlay(ui *ui, struct ui_overlay_s *conf)
 {
@@ -81,6 +281,7 @@ void ui_del_overlay(ui *ui, void *id)
 		{
 			prev = iter;
 			iter = iter->next;
+			continue;
 		}
 
 		if(prev != NULL)
@@ -220,6 +421,24 @@ SDL_Texture *ui_render_overlays(ui *ui, SDL_Texture *tex)
 
 	ui->last_ticks = SDL_GetTicks();
 	return tex;
+}
+#endif
+
+ui *ui_init(SDL_Renderer *rend)
+{
+	ui *ui = SDL_calloc(1, sizeof(struct ui_s));
+	if(ui == NULL)
+		return NULL;
+
+	ui->font = FontStartup(rend);
+	if(ui->font == NULL)
+	{
+		free(ui);
+		return NULL;
+	}
+
+	ui->rend = rend;
+	return ui;
 }
 
 void draw_menu(ui *ui, menu_ctx *menu)

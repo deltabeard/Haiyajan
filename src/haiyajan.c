@@ -31,6 +31,7 @@
 #include <timer.h>
 #include <util.h>
 #include <sig.h>
+#include <ui.h>
 
 #define PROG_NAME       "Haiyajan"
 #define MAX_TITLE_LEN   56
@@ -749,6 +750,19 @@ out:
 }
 #endif
 
+char *get_new_str(void *priv)
+{
+	char buf[32];
+	char *out;
+	int out_sz;
+	(void) priv;
+
+	out_sz = snprintf(buf, sizeof(buf), "Ticks: %d", SDL_GetTicks());
+	out = SDL_malloc(out_sz);
+	SDL_strlcpy(out, buf, out_sz);
+	return out;
+}
+
 int haiyajan_get_available_file_types(struct core_ctx_s *ctx)
 {
 	(void) ctx;
@@ -798,6 +812,7 @@ int main(int argc, char *argv[])
 {
 	int ret = EXIT_FAILURE;
 	struct haiyajan_ctx_s h = {0};
+	ui_overlay_ctx *ui_olctx = NULL;
 
 	/* Ignore argc being unused warning. */
 	(void)argc;
@@ -892,6 +907,23 @@ int main(int argc, char *argv[])
 	ticks_before = fps_beg = benchmark_beg = SDL_GetTicks();
 #endif
 
+	SDL_SetRenderDrawBlendMode(h.rend, SDL_BLENDMODE_BLEND);
+
+	h.font = FontStartup(h.rend);
+	{
+		SDL_Colour c = { 0xFF, 0, 0, SDL_ALPHA_OPAQUE };
+		ui_add_overlay(&ui_olctx, c, ui_overlay_top_right, "Top Right",
+				NULL, 0, NULL, NULL);
+		ui_add_overlay(&ui_olctx, c, ui_overlay_top_right, "TOP KEK",
+				NULL, 255, NULL, NULL);
+		ui_add_overlay(&ui_olctx, c, ui_overlay_top_left, "Top Left",
+				NULL, 0, NULL, NULL);
+		ui_add_overlay(&ui_olctx, c, ui_overlay_bot_right, "Bottom Right",
+				NULL, 0, NULL, NULL);
+		ui_add_overlay(&ui_olctx, c, ui_overlay_bot_left, NULL,
+				SDL_free, 0, get_new_str, NULL);
+	}
+
 	while(h.core.env.status.bits.shutdown == 0 && h.quit == 0)
 	{
 		static int tim_cmd = 0;
@@ -916,14 +948,14 @@ int main(int argc, char *argv[])
 				  &h.core.sdl.game_frame_res, h.core.env.flip);
 		}
 #endif
+		SDL_SetRenderTarget(h.rend, NULL);
+		ui_overlay_render(ui_olctx, h.rend, h.font);
 
 		/* Only draw to screen if we're not falling behind. */
 		if(tim_cmd >= 0)
 			SDL_RenderPresent(h.rend);
 
 		tim_cmd = timer_profile_end(&h.core.tim);
-
-		SDL_LogVerbose(SDL_LOG_CATEGORY_SYSTEM, "Timer: %d", tim_cmd);
 	}
 
 #if ENABLE_VIDEO_RECORDING == 1

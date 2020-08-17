@@ -16,6 +16,7 @@
 
 #include <SDL.h>
 
+#include <font.h>
 #include <gl.h>
 #include <input.h>
 #include <libretro.h>
@@ -169,6 +170,9 @@ struct haiyajan_ctx_s
 
 	/* User interface context. */
 	ui *ui;
+
+	/* Font */
+	font_ctx *font;
 
 	unsigned quit : 1;
 };
