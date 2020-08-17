@@ -170,7 +170,7 @@ bool cb_retro_environment(unsigned cmd, void *data)
 			"OpenGL Specific", "OpenGL ES 3",
 			"OpenGL ES Specific", "Vulkan", "Direct3D"
 		};
-		
+
 		SDL_assert(ctx_retro->env.status.bits.game_loaded == 0);
 
 		switch(hw_cb->context_type)
@@ -180,7 +180,16 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		case RETRO_HW_CONTEXT_OPENGLES2:
 		case RETRO_HW_CONTEXT_OPENGLES3:
 		{
-			int gl_ret = gl_init(ctx_retro->sdl.gl,
+			int gl_ret;
+			if(ctx_retro->sdl.gl == NULL)
+			{
+				SDL_LogWarn(SDL_LOG_CATEGORY_RENDER,
+					"GL context was not prepared before "
+					"the core requested it");
+				return false;
+			}
+
+		       	gl_ret = gl_init(ctx_retro->sdl.gl,
 						&ctx_retro->sdl.core_tex, hw_cb);
 			if(gl_ret == SDL_FALSE)
 			{
@@ -545,16 +554,12 @@ int play_init_av(struct core_ctx_s *ctx, SDL_Renderer *rend)
 		&ctx->av_info.geometry.max_width,
 		&ctx->av_info.geometry.max_height) != 0)
 	{
-		SDL_SetError("Unable to create texture: %s",
-					 SDL_GetError());
+		SDL_SetError("Unable to create texture: %s", SDL_GetError());
 		return 1;
 	}
 
 	if(ctx->env.pixel_fmt == 0)
 		ctx->env.pixel_fmt = SDL_PIXELFORMAT_RGB888;
-
-	if(ctx->sdl.gl != NULL)
-		gl_reset_context(ctx->sdl.gl);
 
 	want.freq = (int)ctx->av_info.timing.sample_rate;
 	want.format = AUDIO_S16SYS;

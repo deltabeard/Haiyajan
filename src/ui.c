@@ -120,9 +120,10 @@ err:
 
 void ui_overlay_delete(ui_overlay_ctx **p, ui_overlay_item_s *item)
 {
-	/* If this is the tip of the linked list, then delete the list. */
-	if(item->next == NULL && item->prev == NULL)
-		*p = NULL;
+	/* If this is the tip of the linked list, then set the next item as the
+	 * tip. If there is no next item, then the tip is set to NULL. */
+	if(*p == item)
+		*p = item->next;
 
 	if(item->next != NULL)
 		item->next->prev = item->prev;

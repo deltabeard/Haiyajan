@@ -341,7 +341,15 @@ char *get_rec_txt(void *priv)
 	}
 
 	for(i = 0; i < (Uint8)SDL_arraysize(sz_map); i++)
-		sz += sz_map[i].get_size(rtxt->vid);
+	{
+		Sint64 szret = sz_map[i].get_size(rtxt->vid);
+		if(szret < 0)
+		{
+			SDL_free(priv);
+			return NULL;
+		}
+		sz += szret;
+	}
 
 	while(sz > 1 * 1024)
 	{
@@ -349,7 +357,7 @@ char *get_rec_txt(void *priv)
 		prefix++;
 	}
 
-	SDL_snprintf(rtxt->str, sizeof(rtxt->str), "REC %5" SDL_PRIu64 " %.2s",
+	SDL_snprintf(rtxt->str, sizeof(rtxt->str), "REC %2" SDL_PRIu64 " %.2s",
 			sz, prefix_str[prefix]);
 
 	return rtxt->str;
@@ -401,11 +409,12 @@ void cap_frame(rec_ctx *vid, SDL_Renderer *rend, SDL_Texture *tex,
 
 static void handle_rec_toggle(struct haiyajan_ctx_s *ctx)
 {
+	SDL_Colour c = { 0x00, 0xFF, 0x00, SDL_ALPHA_OPAQUE };
+
 	if(ctx->core.vid == NULL &&
 			ctx->core.env.status.bits.valid_frame)
 	{
 		char vidfile[64];
-		SDL_Colour c = { 0x00, 0xFF, 0x00, SDL_ALPHA_OPAQUE };
 		struct rec_txt_priv *rtxt;
 		gen_filename(vidfile, ctx->core.core_short_name, "h264");
 
@@ -444,6 +453,8 @@ static void handle_rec_toggle(struct haiyajan_ctx_s *ctx)
 	else if(ctx->core.vid != NULL)
 	{
 		rec_end(&ctx->core.vid);
+		ui_add_overlay(&ctx->ui_overlay, c, ui_overlay_bot_right,
+				"Recording Saved", 127, NULL, NULL);
 	}
 
 out:
@@ -861,7 +872,6 @@ static int haiyajan_init_core(struct haiyajan_ctx_s *h,
 #endif
 
 	play_init_cb(ctx);
-
 	ctx->sdl.gl = gl_prepare(h->rend);
 
 	if(load_libretro_file(ctx) != 0)
@@ -869,6 +879,9 @@ static int haiyajan_init_core(struct haiyajan_ctx_s *h,
 
 	if(play_init_av(ctx, h->rend) != 0)
 		goto err;
+
+	if(ctx->env.status.bits.opengl_required)
+		gl_reset_context(ctx->sdl.gl);
 
 	return 0;
 

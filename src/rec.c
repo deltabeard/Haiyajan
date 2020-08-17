@@ -446,16 +446,16 @@ void rec_enc_audio(rec_ctx *ctx, const Sint16 *data, uint32_t frames)
 
 Sint64 rec_video_size(rec_ctx *ctx)
 {
-	if(ctx == NULL)
-		return 0;
+	if(ctx == NULL || ctx->venc_stor.cmd == VID_CMD_ENCODE_FINISH)
+		return -1;
 
 	return SDL_RWtell(ctx->fv);
 }
 
 Sint64 rec_audio_size(rec_ctx *ctx)
 {
-	if(ctx == NULL)
-		return 0;
+	if(ctx == NULL || ctx->venc_stor.cmd == VID_CMD_ENCODE_FINISH)
+		return -1;
 
 	return SDL_RWtell(ctx->fa);
 }
