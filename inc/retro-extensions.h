@@ -74,7 +74,7 @@ struct license_info_s {
  * Obtain license information from the core.
  * May be called by the frontend at any time.
  */
-void re_core_get_license_info(struct license_info *);
+const struct license_info_s *re_core_get_license_info(void);
 
 /**
  * If a core does not use framerate for timing purposes, it might not be able to
@@ -82,5 +82,7 @@ void re_core_get_license_info(struct license_info *);
  * This function may be used for the front end to specifically pause and play
  * the libretro core as required. This function may be called by the front end
  * any time between the first call to retro_run() and before retro_deinit().
+ *
+ * \param pause	Set to 1 to pause the core, or 0 to play.
  */
-void re_core_set_pause(unsigned char pause);
+void re_core_set_pause(int pause);

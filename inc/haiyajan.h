@@ -20,6 +20,7 @@
 #include <gl.h>
 #include <input.h>
 #include <libretro.h>
+#include <retro-extensions.h>
 #include <rec.h>
 #include <timer.h>
 #include <ui.h>
@@ -79,8 +80,16 @@ struct core_ctx_s
 
 		void *(*retro_get_memory_data)(unsigned id);
 		size_t (*retro_get_memory_size)(unsigned id);
+
 		/* clang-format on */
 	} fn;
+
+	/* Retro extension functions are not mandatory. When not used,
+	 * they are set to NULL. */
+	struct {
+		const struct license_info_s *(*re_core_get_license_info)(void);
+		void (*re_core_set_pause)(int pause);
+	} ext_fn;
 
 	/* SDL2 handles. */
 	struct

@@ -68,7 +68,8 @@ typedef struct ui_overlay_item ui_overlay_ctx;
  */
 ui_overlay_item_s *ui_add_overlay(ui_overlay_ctx **ctx, SDL_Colour text_colour,
 		ui_overlay_corner_e corner, char *text, Uint8 disp_count,
-		char *(*get_new_str)(void *priv), void *priv);
+		char *(*get_new_str)(void *priv), void *priv,
+		Uint8 free_text);
 
 /**
  * Render the overlays added to the list to the current renderer.

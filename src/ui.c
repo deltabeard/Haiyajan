@@ -29,6 +29,7 @@ struct ui_overlay_item {
 	ui_overlay_corner_e corner;
 
 	char *text;
+	Uint8 free_text;
 
 	Uint8 disp_count;
 	char *(*get_new_str)(void *priv);
@@ -40,7 +41,8 @@ struct ui_overlay_item {
 
 ui_overlay_item_s *ui_add_overlay(ui_overlay_ctx **ctx, SDL_Colour text_colour,
 		ui_overlay_corner_e corner, char *text, Uint8 disp_count,
-		char *(*get_new_str)(void *priv), void *priv)
+		char *(*get_new_str)(void *priv), void *priv,
+		Uint8 free_text)
 {
 	ui_overlay_item_s *list = *ctx;
 
@@ -73,6 +75,7 @@ ui_overlay_item_s *ui_add_overlay(ui_overlay_ctx **ctx, SDL_Colour text_colour,
 	list->text_colour = text_colour;
 	list->corner = corner;
 	list->text = text;
+	list->free_text = free_text;
 	list->disp_count = disp_count;
 	list->get_new_str = get_new_str;
 	list->priv = priv;
@@ -86,6 +89,9 @@ err:
 
 void ui_overlay_delete(ui_overlay_ctx **p, ui_overlay_item_s *item)
 {
+	if(item->free_text)
+		SDL_free(item->text);
+
 	/* If this is the tip of the linked list, then set the next item as the
 	 * tip. If there is no next item, then the tip is set to NULL. */
 	if(*p == item)

@@ -161,7 +161,8 @@ int load_libretro_core(const char *restrict so_file,
 		/* Name of libretro core function. */
 		const char *fn_str;
 		void **fn_ptr;
-	} const fn_links[] =
+	};
+	const struct fn_links_s fn_links[] =
 	{
 		{ "retro_init",			(void **)&ctx->fn.retro_init },
 		{ "retro_deinit",		(void **)&ctx->fn.retro_deinit },
@@ -195,6 +196,10 @@ int load_libretro_core(const char *restrict so_file,
 		{ "retro_get_memory_size",	(void **)&ctx->fn.retro_get_memory_size }
 		/* clang-format on */
 	};
+	const struct fn_links_s ext_fn_links[] = {
+		{ "re_core_get_license_info",	(void **)&ctx->ext_fn.re_core_get_license_info},
+		{ "re_core_set_pause",		(void **)&ctx->ext_fn.re_core_set_pause}
+	};
 
 	ctx->sdl.handle = SDL_LoadObject(so_file);
 
@@ -214,6 +219,12 @@ int load_libretro_core(const char *restrict so_file,
 			ctx->sdl.handle = NULL;
 			return 2;
 		}
+	}
+
+	for(i = 0; i < SDL_arraysize(ext_fn_links); i++)
+	{
+		*ext_fn_links[i].fn_ptr =
+			SDL_LoadFunction(ctx->sdl.handle, ext_fn_links[i].fn_str);
 	}
 
 	if(ctx->fn.retro_api_version() != RETRO_API_VERSION)

@@ -433,7 +433,7 @@ static void handle_rec_toggle(struct haiyajan_ctx_s *ctx)
 			ui_add_overlay(&ctx->ui_overlay, c,
 					ui_overlay_bot_right,
 					"Unable to start recording: libx264 failure",
-					127, NULL, NULL);
+					127, NULL, NULL, 0);
 			return;
 		}
 
@@ -444,13 +444,13 @@ static void handle_rec_toggle(struct haiyajan_ctx_s *ctx)
 
 		rtxt->vid = ctx->core.vid;
 		ui_add_overlay(&ctx->ui_overlay, c, ui_overlay_bot_right, NULL,
-				0, get_rec_txt, rtxt);
+				0, get_rec_txt, rtxt, 0);
 	}
 	else if(ctx->core.vid != NULL)
 	{
 		rec_end(&ctx->core.vid);
 		ui_add_overlay(&ctx->ui_overlay, c, ui_overlay_bot_right,
-				"Recording Saved", 127, NULL, NULL);
+				"Recording Saved", 127, NULL, NULL, 0);
 	}
 
 out:
@@ -494,7 +494,7 @@ static void process_events(struct haiyajan_ctx_s *ctx)
 				take_screenshot(ctx->rend, &ctx->core);
 				ui_add_overlay(&ctx->ui_overlay, c,
 						ui_overlay_top_right,
-						"SCREENSHOT", 255, NULL, NULL);
+						"SCREENSHOT", 255, NULL, NULL, 0);
 				break;
 			}
 #if ENABLE_VIDEO_RECORDING == 1
@@ -562,6 +562,7 @@ static int haiyajan_init_core(struct haiyajan_ctx_s *h,
 		char *content_filename)
 {
 	struct core_ctx_s *ctx = &h->core;
+	SDL_Colour c = { 0xF3, 0x9C, 0x12, SDL_ALPHA_OPAQUE };
 
 	ctx->core_filename = core_filename;
 	ctx->content_filename = content_filename;
@@ -591,6 +592,38 @@ static int haiyajan_init_core(struct haiyajan_ctx_s *h,
 
 	if(ctx->env.status.bits.opengl_required)
 		gl_reset_context(ctx->sdl.gl);
+
+	do {
+		char *buf = SDL_malloc(64);
+		if(buf == NULL)
+			break;
+
+		SDL_snprintf(buf, 64, "Playing with %s",
+				h->core.sys_info.library_name);
+		ui_add_overlay(&h->ui_overlay, c, ui_overlay_bot_left,
+				buf, 128, NULL, NULL, 1);
+	} while(0);
+
+	do
+	{
+		const struct license_info_s *l;
+		char *buf;
+
+		if(h->core.ext_fn.re_core_get_license_info == NULL)
+			break;
+
+		l = h->core.ext_fn.re_core_get_license_info();
+		if(l->license_fullname == NULL)
+			break;
+
+		buf = SDL_malloc(96);
+		if(buf == NULL)
+			break;
+
+		SDL_snprintf(buf, 96, "Released under the %s", l->license_fullname);
+		ui_add_overlay(&h->ui_overlay, c, ui_overlay_bot_left,
+				buf, 128, NULL, NULL, 1);
+	} while(0);
 
 	return 0;
 
@@ -756,7 +789,7 @@ int main(int argc, char *argv[])
 				SDL_Colour c = { 0xFF, 0x00, 0x00, SDL_ALPHA_OPAQUE };
 				ui_add_overlay(&h.ui_overlay, c, ui_overlay_top_right, NULL,
 						0, get_benchmark_txt,
-						&btxt);
+						&btxt, 0);
 				benchmark_beg = SDL_GetTicks();
 			}
 
