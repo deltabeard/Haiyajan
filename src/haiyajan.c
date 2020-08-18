@@ -616,11 +616,12 @@ static int haiyajan_init_core(struct haiyajan_ctx_s *h,
 		if(l->license_fullname == NULL)
 			break;
 
-		buf = SDL_malloc(96);
+		buf = SDL_malloc(128);
 		if(buf == NULL)
 			break;
 
-		SDL_snprintf(buf, 96, "Released under the %s", l->license_fullname);
+		SDL_snprintf(buf, 128, "Released under the %s",
+				l->license_fullname);
 		ui_add_overlay(&h->ui_overlay, c, ui_overlay_bot_left,
 				buf, 128, NULL, NULL, 1);
 	} while(0);
