@@ -36,11 +36,6 @@ typedef enum {
 	ui_overlay_bot_right = 3
 } ui_overlay_corner_e;
 
-typedef enum {
-	ui_overlay_timeout = 0,
-	ui_overlay_refresh = 1
-} ui_overlay_timer_e;
-
 /* Private structures. */
 typedef struct ui_overlay_item ui_overlay_item_s;
 typedef struct ui_overlay_item ui_overlay_ctx;
@@ -56,9 +51,8 @@ typedef struct ui_overlay_item ui_overlay_ctx;
  * \param text		Static text to render or NULL if dynamic text where the
  * 			function get_new_str will be called to obtain the
  * 			string.
- * \param disp_count	Number of times this overlay is to be displayed before
- * 			being deleted automatically. Set to 0 for no automatic
- * 			deletion.
+ * \param timeout_ms	Number of milliseconds to show the overlay for. Set to
+ * 			0 for no automatic deletion.
  * \param get_new_str	The function to call if the timer is to refresh the
  * 			text on timeout. Unused if timer_func is
  * 			ui_overlay_timeout.
@@ -67,7 +61,7 @@ typedef struct ui_overlay_item ui_overlay_ctx;
  * \return		Context for specific overlay.
  */
 ui_overlay_item_s *ui_add_overlay(ui_overlay_ctx **ctx, SDL_Colour text_colour,
-		ui_overlay_corner_e corner, char *text, Uint8 disp_count,
+		ui_overlay_corner_e corner, char *text, Uint32 timeout_ms,
 		char *(*get_new_str)(void *priv), void *priv,
 		Uint8 free_text);
 

@@ -22,6 +22,13 @@ struct ui_s {
 	SDL_Renderer *rend;
 };
 
+static SDL_SpinLock overlay_lock = { 0 };
+struct ui_overlay_tip {
+	ui_overlay_ctx **p;
+	ui_overlay_item_s *item;
+};
+static Uint32 ui_overlay_timeout(Uint32 interval, void *param);
+
 struct ui_overlay_item {
 	struct ui_overlay_item *prev;
 
@@ -31,7 +38,6 @@ struct ui_overlay_item {
 	char *text;
 	Uint8 free_text;
 
-	Uint8 disp_count;
 	char *(*get_new_str)(void *priv);
 	void *priv;
 
@@ -40,11 +46,20 @@ struct ui_overlay_item {
 };
 
 ui_overlay_item_s *ui_add_overlay(ui_overlay_ctx **ctx, SDL_Colour text_colour,
-		ui_overlay_corner_e corner, char *text, Uint8 disp_count,
+		ui_overlay_corner_e corner, char *text, Uint32 timeout_ms,
 		char *(*get_new_str)(void *priv), void *priv,
 		Uint8 free_text)
 {
-	ui_overlay_item_s *list = *ctx;
+	ui_overlay_item_s *list;
+	ui_overlay_item_s *new = SDL_malloc(sizeof(ui_overlay_item_s));
+	struct ui_overlay_tip *tim = SDL_malloc(sizeof(struct ui_overlay_tip));
+
+	/* Allocate new item. */
+	if(new == NULL || tim == NULL)
+		return NULL;
+
+	SDL_AtomicLock(&overlay_lock);
+	list = *ctx;
 
 	/* Obtain the last item in the linked list. */
 	while(list != NULL && list->next != NULL)
@@ -53,7 +68,7 @@ ui_overlay_item_s *ui_add_overlay(ui_overlay_ctx **ctx, SDL_Colour text_colour,
 	if(list != NULL)
 	{
 		/* Create a new overlay. */
-		list->next = SDL_malloc(sizeof(ui_overlay_item_s));
+		list->next = new;
 		if(list->next == NULL)
 			goto err;
 
@@ -64,7 +79,7 @@ ui_overlay_item_s *ui_add_overlay(ui_overlay_ctx **ctx, SDL_Colour text_colour,
 	{
 		/* If no overlay exists yet, create the first overlay and set
 		 * the context to the first item. */
-		*ctx = SDL_malloc(sizeof(ui_overlay_item_s));
+		*ctx = new;
 		list = *ctx;
 		if(list == NULL)
 			goto err;
@@ -76,15 +91,25 @@ ui_overlay_item_s *ui_add_overlay(ui_overlay_ctx **ctx, SDL_Colour text_colour,
 	list->corner = corner;
 	list->text = text;
 	list->free_text = free_text;
-	list->disp_count = disp_count;
 	list->get_new_str = get_new_str;
 	list->priv = priv;
 	list->tex = NULL;
 	list->next = NULL;
+
+	if(timeout_ms != 0)
+	{
+		tim->p = ctx;
+		tim->item = list;
+		SDL_AddTimer(timeout_ms, ui_overlay_timeout, tim);
+	}
+
+out:
+	SDL_AtomicUnlock(&overlay_lock);
 	return list;
 
 err:
-	return NULL;
+	list = NULL;
+	goto out;
 }
 
 void ui_overlay_delete(ui_overlay_ctx **p, ui_overlay_item_s *item)
@@ -103,7 +128,7 @@ void ui_overlay_delete(ui_overlay_ctx **p, ui_overlay_item_s *item)
 	if(item->prev != NULL)
 		item->prev->next = item->next;
 
-	free(item);
+	SDL_free(item);
 	return;
 }
 
@@ -111,6 +136,18 @@ void ui_overlay_delete_all(ui_overlay_ctx **p)
 {
 	while(*p != NULL)
 		ui_overlay_delete(p, *p);
+}
+
+Uint32 ui_overlay_timeout(Uint32 interval, void *param)
+{
+	struct ui_overlay_tip *tim = param;
+	(void) interval;
+
+	SDL_AtomicLock(&overlay_lock);
+	ui_overlay_delete(tim->p, tim->item);
+	SDL_AtomicUnlock(&overlay_lock);
+	SDL_free(param);
+	return 0;
 }
 
 int ui_overlay_render(ui_overlay_ctx **p, SDL_Renderer *rend, font_ctx *font)
@@ -130,19 +167,6 @@ int ui_overlay_render(ui_overlay_ctx **p, SDL_Renderer *rend, font_ctx *font)
 		const unsigned margin = 2;
 		const unsigned padding = 2;
 		SDL_Rect dst;
-
-		/* Check if timer has triggered. If zero, the overlay is not
-		 * deleted on timeout. */
-		if(ctx->disp_count > 0)
-		{
-			ctx->disp_count--;
-			if(ctx->disp_count == 0)
-			{
-				ui_overlay_delete(p, ctx);
-				ctx = next;
-				continue;
-			}
-		}
 
 		/* Get new string if requested. */
 		if(ctx->get_new_str != NULL)

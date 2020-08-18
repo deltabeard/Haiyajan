@@ -41,6 +41,8 @@
 #define GIT_VERSION     "NONE"
 #endif
 
+#define NOTIF_TIMEOUT_MS	1000 * 4
+
 static void prerun_checks(void)
 {
 	SDL_version compiled;
@@ -433,7 +435,7 @@ static void handle_rec_toggle(struct haiyajan_ctx_s *ctx)
 			ui_add_overlay(&ctx->ui_overlay, c,
 					ui_overlay_bot_right,
 					"Unable to start recording: libx264 failure",
-					127, NULL, NULL, 0);
+					NOTIF_TIMEOUT_MS, NULL, NULL, 0);
 			return;
 		}
 
@@ -450,7 +452,8 @@ static void handle_rec_toggle(struct haiyajan_ctx_s *ctx)
 	{
 		rec_end(&ctx->core.vid);
 		ui_add_overlay(&ctx->ui_overlay, c, ui_overlay_bot_right,
-				"Recording Saved", 127, NULL, NULL, 0);
+				"Recording Saved",
+				NOTIF_TIMEOUT_MS, NULL, NULL, 0);
 	}
 
 out:
@@ -494,7 +497,8 @@ static void process_events(struct haiyajan_ctx_s *ctx)
 				take_screenshot(ctx->rend, &ctx->core);
 				ui_add_overlay(&ctx->ui_overlay, c,
 						ui_overlay_top_right,
-						"SCREENSHOT", 255, NULL, NULL, 0);
+						"SCREENSHOT", NOTIF_TIMEOUT_MS,
+						NULL, NULL, 0);
 				break;
 			}
 #if ENABLE_VIDEO_RECORDING == 1
@@ -601,7 +605,7 @@ static int haiyajan_init_core(struct haiyajan_ctx_s *h,
 		SDL_snprintf(buf, 64, "Playing with %s",
 				h->core.sys_info.library_name);
 		ui_add_overlay(&h->ui_overlay, c, ui_overlay_bot_left,
-				buf, 128, NULL, NULL, 1);
+				buf, NOTIF_TIMEOUT_MS, NULL, NULL, 1);
 	} while(0);
 
 	do
@@ -623,7 +627,7 @@ static int haiyajan_init_core(struct haiyajan_ctx_s *h,
 		SDL_snprintf(buf, 128, "Released under the %s",
 				l->license_fullname);
 		ui_add_overlay(&h->ui_overlay, c, ui_overlay_bot_left,
-				buf, 128, NULL, NULL, 1);
+				buf, NOTIF_TIMEOUT_MS, NULL, NULL, 1);
 	} while(0);
 
 	return 0;
