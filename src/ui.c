@@ -17,6 +17,8 @@
 #include <ui.h>
 #include <SDL.h>
 
+#define UI_OVERLAY_BG_ALPHA	0x40
+
 struct ui_s {
 	font_ctx *font;
 	SDL_Renderer *rend;
@@ -189,16 +191,19 @@ int ui_overlay_render(ui_overlay_ctx **p, SDL_Renderer *rend, font_ctx *font)
 			SDL_Texture *prev_targ = SDL_GetRenderTarget(rend);
 			SDL_Rect txt_dst = { margin, margin, 1, 1 };
 
-			/* TODO: Add return checks. */
 			/* If a new string isn't required, and a texture has
 			 * not already been cached, create a texture and cache
 			 * it. */
 			ctx->tex = SDL_CreateTexture(rend,
 					SDL_PIXELFORMAT_RGBA8888,
 					SDL_TEXTUREACCESS_TARGET, txtw, txth);
+			if(ctx->tex == NULL)
+				continue;
+
 			SDL_SetTextureBlendMode(ctx->tex, SDL_BLENDMODE_BLEND);
 			SDL_SetRenderTarget(rend, ctx->tex);
-			SDL_SetRenderDrawColor(rend, 0x00, 0x00, 0x00, 0x40);
+			SDL_SetRenderDrawColor(rend, 0x00, 0x00, 0x00,
+					UI_OVERLAY_BG_ALPHA);
 			SDL_RenderClear(rend);
 
 			SDL_SetRenderDrawColor(rend, c.r, c.g, c.b, c.a);
@@ -253,185 +258,6 @@ int ui_overlay_render(ui_overlay_ctx **p, SDL_Renderer *rend, font_ctx *font)
 }
 
 #if 0
-
-void *ui_add_overlay(ui *ui, struct ui_overlay_s *conf)
-{
-	struct ui_overlay_item *iter = ui->list;
-
-	while(iter != NULL)
-		iter = iter->next;
-
-       	iter = SDL_malloc(sizeof(struct ui_overlay_item));
-	if(iter == NULL)
-		goto out;
-
-	iter->conf = SDL_malloc(sizeof(struct ui_overlay_s));
-	if(iter->conf == NULL)
-	{
-		free(iter);
-		iter = NULL;
-		goto out;
-	}
-
-	memcpy(iter->conf, conf, sizeof(struct ui_overlay_s));
-
-out:
-	return iter;
-}
-
-void ui_del_overlay(ui *ui, void *id)
-{
-	struct ui_overlay_item *iter = ui->list;
-	struct ui_overlay_item *prev = NULL;
-
-	while(iter != NULL)
-	{
-		if(iter != id)
-		{
-			prev = iter;
-			iter = iter->next;
-			continue;
-		}
-
-		if(prev != NULL)
-			prev->next = iter->next;
-
-		free(iter->conf->text);
-		free(iter->conf);
-		free(iter);
-		return;
-	}
-
-	/* Invalid ID or overlay already timed out. */
-	return;
-}
-
-SDL_Texture *ui_render_overlays(ui *ui, SDL_Texture *tex)
-{
-	const SDL_Colour c[4] = {
-		/* White */
-		{ 0xFF, 0xFF, 0xFF, SDL_ALPHA_OPAQUE },
-		/* Green */
-		{ 0x00, 0xA5, 0x68, SDL_ALPHA_OPAQUE },
-		/* Red */
-		{ 0xC5, 0x00, 0x30, SDL_ALPHA_OPAQUE },
-		/* Yellow */
-		{ 0xFF, 0xD4, 0x00, SDL_ALPHA_OPAQUE }
-	};
-	SDL_Rect r[4] = {
-		{ 0 },
-		{ 0 },
-		{ 0 },
-		{ 0 }
-	};
-	int w, h;
-	struct ui_overlay_item *iter = ui->list;
-	Uint32 delta = 1;
-
-	/* TODO: add checks. */
-	if(tex == NULL)
-	{
-		SDL_GetRendererOutputSize(ui->rend, &w, &h);
-		tex = SDL_CreateTexture(ui->rend, SDL_PIXELFORMAT_RGBA32,
-				SDL_TEXTUREACCESS_TARGET, w, h);
-	}
-	else
-	{
-		SDL_QueryTexture(tex, NULL, NULL, &w, &h);
-		SDL_SetRenderTarget(ui->rend, tex);
-		SDL_SetRenderDrawColor(ui->rend, 0, 0, 0, 0);
-		SDL_RenderClear(ui->rend);
-	}
-
-	/* Resolve origin coordinates for the four corners. */
-	r[UI_OVERLAY_TOP_RIGHT].x = w;
-	r[UI_OVERLAY_BOTTOM_RIGHT].x = w;
-	r[UI_OVERLAY_BOTTOM_RIGHT].y = h;
-	r[UI_OVERLAY_TOP_RIGHT].y = h;
-
-	if(SDL_GetTicks() > ui->last_ticks)
-		delta = SDL_GetTicks() - ui->last_ticks;
-
-	while(iter != NULL)
-	{
-		SDL_Rect *dst = &r[iter->conf->corner];
-
-		/* Check if overlay has timed out and must either be deleted
-		 * or refreshed. */
-		if(iter->conf->timer_func == 1)
-		{
-			iter->conf->timer.refresh.ms -= delta;
-			if(iter->conf->timer.refresh.ms <= 0)
-			{
-				free(iter->conf->text);
-				iter->conf->text = iter->conf->timer.refresh.ui_overlay_get_str(iter->conf->timer.refresh.priv);
-				SDL_DestroyTexture(iter->tex);
-				iter->tex = NULL;
-			}
-		}
-		else
-		{
-			iter->conf->timer.timeout_ms -= delta;
-			if(iter->conf->timer.timeout_ms <= 0)
-			{
-				struct ui_overlay_item *temp = iter->next;
-				ui_del_overlay(ui, iter);
-				iter = temp;
-				continue;
-			}
-		}
-
-		/* Recreate overlay. */
-		if(iter->tex == NULL)
-		{
-			unsigned ov_sz_w, ov_sz_h;
-			FontDrawSize(strlen(iter->conf->text),
-					&ov_sz_w, &ov_sz_h);
-
-			iter->tex = SDL_CreateTexture(ui->rend,
-					SDL_PIXELFORMAT_RGBA32,
-					SDL_TEXTUREACCESS_TARGET, ov_sz_w,
-					ov_sz_h);
-			SDL_SetRenderTarget(ui->rend, iter->tex);
-
-			SDL_SetRenderDrawColor(ui->rend, c[iter->conf->colour].r,
-					c[iter->conf->colour].g,
-					c[iter->conf->colour].b,
-					c[iter->conf->colour].a);
-
-			FontPrintToRenderer(ui->font, iter->conf->text, NULL);
-			dst->w = ov_sz_w;
-			dst->h = ov_sz_h;
-		}
-
-		SDL_QueryTexture(iter->tex, NULL, NULL, &dst->w, &dst->h);
-
-		/* Render overlays. */
-		SDL_SetRenderTarget(ui->rend, tex);
-		switch(iter->conf->corner)
-		{
-			case UI_OVERLAY_TOP_LEFT:
-				SDL_RenderCopy(ui->rend, iter->tex, NULL, dst);
-				dst->x += dst->h;
-				break;
-
-			case UI_OVERLAY_TOP_RIGHT:
-				break;
-
-			case UI_OVERLAY_BOTTOM_RIGHT:
-				break;
-
-			case UI_OVERLAY_BOTTOM_LEFT:
-				break;
-		}
-
-		iter = iter->next;
-	}
-
-	ui->last_ticks = SDL_GetTicks();
-	return tex;
-}
-#endif
 
 ui *ui_init(SDL_Renderer *rend)
 {
@@ -488,3 +314,5 @@ void launch_menu(ui *ui, menu_ctx *menu)
 	(void) menu;
 	return;
 }
+
+#endif

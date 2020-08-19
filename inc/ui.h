@@ -43,22 +43,25 @@ typedef struct ui_overlay_item ui_overlay_ctx;
 /**
  * Add a new overlay.
  *
- * \param ui_overlay_ctx Private overlay context. Must be initialised to NULL.
+ * \param ui_overlay_ctx Private overlay context pointer. Must be initialised to
+ * 			NULL.
  * \param text_colour	The text colour.
  * \param corner	The corner in which to display the overlay. The overlay
  * 			will be displayed from the corner selected to the
  * 			vertical center of the screen.
- * \param text		Static text to render or NULL if dynamic text where the
- * 			function get_new_str will be called to obtain the
- * 			string.
+ * \param text		Static text to render, or NULL if dynamic text is to be
+ * 			acquired from the get_new_str function.
+ * 			String must be null terminated.
  * \param timeout_ms	Number of milliseconds to show the overlay for. Set to
  * 			0 for no automatic deletion.
- * \param get_new_str	The function to call if the timer is to refresh the
- * 			text on timeout. Unused if timer_func is
- * 			ui_overlay_timeout.
- * \param priv		Private point to supply to function. Unused if
- * 			timer_func is ui_overlay_timeout.
- * \return		Context for specific overlay.
+ * \param get_new_str	The function to call to obtain new text on each render.
+ * 			If get_new_str returns NULL, the overlay is deleted.
+ * 			This function pointer must be NULL for static text.
+ * \param priv		Private pointer to supply to the get_new_str function.
+ * 			Unused when get_new_str is NULL.
+ * \param free_text	Set to non-zero to call SDL_free automatically on text
+ * 			when overlay is deleted.
+ * \return		Context for specific overlay. NULL on failure.
  */
 ui_overlay_item_s *ui_add_overlay(ui_overlay_ctx **ctx, SDL_Colour text_colour,
 		ui_overlay_corner_e corner, char *text, Uint32 timeout_ms,
