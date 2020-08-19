@@ -195,7 +195,7 @@ int ui_overlay_render(ui_overlay_ctx **p, SDL_Renderer *rend, font_ctx *font)
 			 * not already been cached, create a texture and cache
 			 * it. */
 			ctx->tex = SDL_CreateTexture(rend,
-					SDL_PIXELFORMAT_RGBA8888,
+					SDL_PIXELFORMAT_ARGB8888,
 					SDL_TEXTUREACCESS_TARGET, txtw, txth);
 			if(ctx->tex == NULL)
 				continue;

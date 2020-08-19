@@ -35,7 +35,6 @@
 #include <util.h>
 
 #define PROG_NAME       "Haiyajan"
-#define MAX_TITLE_LEN   56
 
 #ifndef GIT_VERSION
 #define GIT_VERSION     "NONE"
@@ -282,13 +281,6 @@ static void apply_settings(char **argv, struct settings_s *cfg)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
 				"The path to the content file was not given");
-		goto err;
-	}
-
-	if(cfg->core_filename == NULL)
-	{
-		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-				"The path to a libretro core was not given");
 		goto err;
 	}
 
@@ -561,8 +553,7 @@ int haiyajan_get_available_file_types(struct core_ctx_s *ctx)
 	return 0;
 }
 
-static int haiyajan_init_core(struct haiyajan_ctx_s *h,
-		char *core_filename,
+static int haiyajan_init_core(struct haiyajan_ctx_s *h, char *core_filename,
 		char *content_filename)
 {
 	struct core_ctx_s *ctx = &h->core;
@@ -699,26 +690,33 @@ int main(int argc, char *argv[])
 #endif
 	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 		       "Created window and renderer");
+	SDL_SetWindowTitle(h.win, PROG_NAME);
 
+#if 0
 	h.ui = ui_init(h.rend);
+	if(cfg->core_filename == NULL)
+		ui_open_menu();
+#endif
+
 	if(haiyajan_init_core(&h, h.stngs.core_filename,
 				h.stngs.content_filename) != 0)
 	{
 		goto err;
 	}
-	else
+
 	{
-		char title[MAX_TITLE_LEN];
-		SDL_snprintf(title, MAX_TITLE_LEN, "%s: %s", PROG_NAME,
+		char title[64];
+		SDL_snprintf(title, sizeof(title), "%s: %s", PROG_NAME,
 			     h.core.sys_info.library_name);
 		SDL_SetWindowTitle(h.win, title);
-		SDL_SetWindowMinimumSize(h.win, h.core.sdl.game_max_res.w,
-				h.core.sdl.game_max_res.h);
-		SDL_SetWindowSize(h.win, h.core.sdl.game_max_res.w,
-				h.core.sdl.game_max_res.h);
-		SDL_RenderSetLogicalSize(h.rend, h.core.sdl.game_max_res.w,
-				h.core.sdl.game_max_res.h);
 	}
+
+	SDL_SetWindowMinimumSize(h.win, h.core.sdl.game_max_res.w,
+			h.core.sdl.game_max_res.h);
+	SDL_SetWindowSize(h.win, h.core.sdl.game_max_res.w,
+			h.core.sdl.game_max_res.h);
+	SDL_RenderSetLogicalSize(h.rend, h.core.sdl.game_max_res.w,
+			h.core.sdl.game_max_res.h);
 
 	input_init(&h.core.inp);
 	/* TODO: Add return check. */
