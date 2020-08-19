@@ -20,10 +20,8 @@ major releases are:
 
 - Arch Linux (x86_64, glibc)
 - Alpine Linux (armhf, BCM2835/Raspberry Pi 1, musl libc)
-- Alpine Linux (armv7, BCM2837/Raspberry Pi 2, musl libc)
-- Alpine Linux (arm64, BCM2837B0/Raspberry Pi 3B+, musl libc)
 - Alpine Linux (arm64, BCM2711/Raspberry Pi 4B, musl libc)
-- React OS (x86_32, MSVC 2005)
+- Windows XP (x86_32, MSVC 2019)
 - Windows 10 (x86_64, MSVC 2019)
 
 Haiyajan *should* work on any platform supported by SDL2 and has a C99
@@ -32,11 +30,9 @@ XP/Vista/7/8/10/RT, Mac OS X 10.5+/macOS, Haiku, iOS 5.1.1+, Android 2.3.3+,
 Emscripten, Nintendo Switch (libnx).
 
 Note:
-- Haiyajan executables built for Windows will require the
-[Visual C++ 2005 Redistributable](https://www.microsoft.com/en-us/download/details.aspx?id=26347)
-for the 32-bit compatibility build, or
-[Visual C++ 2015 Redistributable](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads)
-for the 64-bit modern build.
+- Haiyajan executables built for Windows will be compiled with MSVC 2019, and
+will require the
+[Visual C++ 2015 Redistributable](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads).
 - Since the official SDL2 API for the Nintendo Switch is released under an NDA,
 it is not compatible with the AGPL license of Haiyajan. Consider using libnx.
 - Libretro cores may have different system requirements.
@@ -67,9 +63,9 @@ project for brevity.
 ## Building
 The following dependencies are required for building Haiyajan. Other tools
 may be used, but are unsupported by this project.
-- SDL2
-- C99 Compiler (GCC, Clang, MSVC 2005)
-- GNU Make
+- SDL2 2.0.12
+- C99 Compiler (GCC, Clang, MSVC 2019)
+- GNU Make 4.3
 
 Simply execute GNU make in the Haiyajan project folder to build with
 automatically detected options based on available libraries.
