@@ -463,6 +463,31 @@ static void process_events(struct haiyajan_ctx_s *ctx)
 			ctx->quit = 1;
 			return;
 		}
+		else if(ev.type == SDL_WINDOWEVENT &&
+			                ev.window.event == SDL_WINDOWEVENT_RESIZED)
+		{
+			int win_w = ev.window.data1;
+			int win_h = ev.window.data2;
+			float a = (float)win_w / (float)win_h;
+
+			if(a > ctx->core.av_info.geometry.aspect_ratio)
+			{
+				ctx->core_tex_targ.h = win_h;
+				ctx->core_tex_targ.w = win_h * ctx->core.av_info.geometry.aspect_ratio;
+				ctx->core_tex_targ.x = ((float)win_w - ctx->core_tex_targ.w) / 2.0f;
+				ctx->core_tex_targ.y = 0;
+			}
+			else
+			{
+				ctx->core_tex_targ.w = win_w;
+				ctx->core_tex_targ.h = win_w * (1.0f / ctx->core.av_info.geometry.aspect_ratio);
+				ctx->core_tex_targ.x = 0;
+				ctx->core_tex_targ.y = ((float)win_h - ctx->core_tex_targ.h) / 2.0f;
+			}
+
+			SDL_RenderSetLogicalSize(ctx->rend, win_w, win_h);
+			continue;
+		}
 		else if(INPUT_EVENT_CHK(ev.type))
 			input_handle_event(&ctx->core.inp, &ev);
 		else if(ev.type == ctx->core.inp.input_cmd_event &&
@@ -718,6 +743,11 @@ int main(int argc, char *argv[])
 	SDL_RenderSetLogicalSize(h.rend, h.core.sdl.game_max_res.w,
 			h.core.sdl.game_max_res.h);
 
+	h.core_tex_targ.x = 0;
+	h.core_tex_targ.y = 0;
+	h.core_tex_targ.w = h.core.sdl.game_max_res.w;
+	h.core_tex_targ.h = h.core.sdl.game_max_res.y;
+
 	input_init(&h.core.inp);
 	/* TODO: Add return check. */
 	timer_init(&h.core.tim, h.core.av_info.timing.fps);
@@ -758,7 +788,8 @@ int main(int argc, char *argv[])
 		SDL_RenderClear(h.rend);
 		play_frame(&h.core);
 		SDL_RenderCopyEx(h.rend, h.core.sdl.core_tex,
-				 &h.core.sdl.game_frame_res, NULL, 0.0, NULL,
+				 &h.core.sdl.game_frame_res,
+				 &h.core_tex_targ, 0.0, NULL,
 				 h.core.env.flip);
 
 #if ENABLE_VIDEO_RECORDING == 1

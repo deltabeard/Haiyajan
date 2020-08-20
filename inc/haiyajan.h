@@ -175,6 +175,9 @@ struct haiyajan_ctx_s
 	/* Haiyajan Settings. */
 	struct settings_s stngs;
 
+	/* Core texture target dimensions. */
+	SDL_Rect core_tex_targ;
+
 	/* Libretro core context. */
 	struct core_ctx_s core;
 
