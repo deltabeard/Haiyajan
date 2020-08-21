@@ -275,19 +275,19 @@ static void apply_settings(char **argv, struct settings_s *cfg)
 	/* Print remaining arguments. */
 	rem_arg = optparse_arg(&options);
 
+	if (cfg->core_filename == NULL)
+	{
+		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
+				"The path to a libretro core was not given");
+		goto err;
+	}
+
 	if(rem_arg != NULL)
 		cfg->content_filename = SDL_strdup(rem_arg);
 	else
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
 				"The path to the content file was not given");
-		goto err;
-	}
-
-	if (cfg->core_filename == NULL)
-	{
-		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-				"The path to a libretro core was not given");
 		goto err;
 	}
 
