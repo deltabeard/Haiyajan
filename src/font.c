@@ -242,6 +242,7 @@ int FontPrintToRenderer(font_ctx *const ctx, const char *text,
 
 	SDL_assert(ctx != NULL);
 	SDL_assert(text != NULL);
+	SDL_assert(*text != '\0');
 
 	if(dstscale == NULL)
 	{
@@ -268,7 +269,7 @@ int FontPrintToRenderer(font_ctx *const ctx, const char *text,
 		SDL_SetTextureAlphaMod(ctx->tex, a);
 	}
 
-	for(; *text; text++)
+	do
 	{
 		Uint8 pos;
 		int ret;
@@ -284,11 +285,11 @@ int FontPrintToRenderer(font_ctx *const ctx, const char *text,
 		ret = SDL_RenderCopy(ctx->rend, ctx->tex,
 				     &font_rect, &screen_rect);
 
-		if(ret < 0)
+		if(ret != 0)
 			return ret;
 
 		screen_rect.x += screen_rect.w;
-	}
+	} while(*(text++));
 
 	return 0;
 }
