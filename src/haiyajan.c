@@ -284,6 +284,13 @@ static void apply_settings(char **argv, struct settings_s *cfg)
 		goto err;
 	}
 
+	if (cfg->core_filename == NULL)
+	{
+		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
+				"The path to a libretro core was not given");
+		goto err;
+	}
+
 	/* Initialise default video driver if not done so already. */
 	if(video_init == 0 && SDL_VideoInit(NULL) != 0)
 	{
