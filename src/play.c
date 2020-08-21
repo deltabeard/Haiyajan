@@ -26,18 +26,18 @@ static struct core_ctx_s *ctx_retro = NULL;
 
 void play_frame(struct core_ctx_s *ctx)
 {
-	if(ctx->gl != NULL)
-		gl_prerun(ctx->gl);
+	if(ctx->env.status.bits.opengl_required != 0)
+		gl_prerun(ctx->sdl.gl);
 
-	if(ctx_retro->env.ftcb != NULL)
-		ctx_retro->env.ftcb(ctx_retro->env.ftref);
+	if(ctx->env.ftcb != NULL)
+		ctx->env.ftcb(ctx->env.ftref);
 
-	ctx->env.status_bits.playing = 1;
+	ctx->env.status.bits.playing = 1;
 	ctx->fn.retro_run();
-	ctx->env.status_bits.playing = 0;
+	ctx->env.status.bits.playing = 0;
 
-	if(ctx->gl != NULL)
-		gl_postrun(ctx->gl);
+	if(ctx->env.status.bits.opengl_required != 0)
+		gl_postrun(ctx->sdl.gl);
 }
 
 /**
@@ -64,8 +64,8 @@ void play_libretro_log(enum retro_log_level level, const char *fmt, ...)
 
 	SDL_LogMessage(PLAY_LOG_CATEGORY_CORE, priority,
 		"%.*s: %s",
-		(int)sizeof(ctx_retro->core_log_name),
-		ctx_retro->core_log_name, buf);
+		(int)sizeof(ctx_retro->core_short_name),
+		ctx_retro->core_short_name, buf);
 }
 
 bool cb_retro_environment(unsigned cmd, void *data)
@@ -82,7 +82,7 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		break;
 
 	case RETRO_ENVIRONMENT_SHUTDOWN:
-		ctx_retro->env.status_bits.shutdown = 1;
+		ctx_retro->env.status.bits.shutdown = 1;
 		SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 			       "Core requested the frontend to shutdown");
 		break;
@@ -93,8 +93,8 @@ bool cb_retro_environment(unsigned cmd, void *data)
 
 		/* Check that this is called in retro_load_game(). */
 		/* Abort if this a paranoid debug build. */
-		SDL_assert_paranoid(ctx_retro->env.status_bits.core_init == 1);
-		SDL_assert_paranoid(ctx_retro->env.status_bits.game_loaded == 0);
+		SDL_assert_paranoid(ctx_retro->env.status.bits.core_init == 1);
+		SDL_assert_paranoid(ctx_retro->env.status.bits.game_loaded == 0);
 
 		SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 			"Set performance level to %u", *perf);
@@ -126,7 +126,7 @@ bool cb_retro_environment(unsigned cmd, void *data)
 
 		/* Pixel format must be set before the video display is
 		 * initialised. */
-		if(ctx_retro->env.status_bits.av_init == 1)
+		if(ctx_retro->env.status.bits.av_init == 1)
 		{
 			SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO,
 				    "The core's request to change the pixel "
@@ -164,13 +164,14 @@ bool cb_retro_environment(unsigned cmd, void *data)
 	case RETRO_ENVIRONMENT_SET_HW_RENDER:
 	{
 		struct retro_hw_render_callback *hw_cb = data;
-		SDL_assert(ctx_retro->env.status_bits.game_loaded == 0);
 		const char *const ctx_type[] =
 		{
 			"None", "OpenGL 2.x", "OpenGL ES 2",
 			"OpenGL Specific", "OpenGL ES 3",
 			"OpenGL ES Specific", "Vulkan", "Direct3D"
 		};
+
+		SDL_assert(ctx_retro->env.status.bits.game_loaded == 0);
 
 		switch(hw_cb->context_type)
 		{
@@ -179,9 +180,18 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		case RETRO_HW_CONTEXT_OPENGLES2:
 		case RETRO_HW_CONTEXT_OPENGLES3:
 		{
-			ctx_retro->gl = gl_init(ctx_retro->disp_rend,
-						&ctx_retro->core_tex, hw_cb);
-			if(ctx_retro->gl == NULL)
+			int gl_ret;
+			if(ctx_retro->sdl.gl == NULL)
+			{
+				SDL_LogWarn(SDL_LOG_CATEGORY_RENDER,
+					"GL context was not prepared before "
+					"the core requested it");
+				return false;
+			}
+
+		       	gl_ret = gl_init(ctx_retro->sdl.gl,
+						&ctx_retro->sdl.core_tex, hw_cb);
+			if(gl_ret == SDL_FALSE)
 			{
 				SDL_LogWarn(SDL_LOG_CATEGORY_RENDER,
 					"The requested %s context could "
@@ -199,7 +209,7 @@ bool cb_retro_environment(unsigned cmd, void *data)
 				    "accepted",
 				    ctx_type[hw_cb->context_type],
 				hw_cb->version_major, hw_cb->version_minor);
-			ctx_retro->env.status_bits.opengl_required = 1;
+			ctx_retro->env.status.bits.opengl_required = 1;
 
 			break;
 		}
@@ -240,7 +250,7 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		const char **core_path = data;
 
 		/* FIXME: fix memory leak. */
-		char *tmp = SDL_strdup(ctx_retro->file_core);
+		char *tmp = SDL_strdup(ctx_retro->core_filename);
 		//size_t len = SDL_strlen(ctx_retro->file_core);
 		*core_path = tmp;
 
@@ -306,7 +316,8 @@ bool cb_retro_environment(unsigned cmd, void *data)
 	{
 		const struct retro_controller_info *info = data;
 		do {
-			for(unsigned port = 0; port < info->num_types; port++)
+			unsigned port;
+			for(port = 0; port < info->num_types; port++)
 			{
 				input_add_controller(&ctx_retro->inp, port, info->types[port].id);
 			}
@@ -341,7 +352,7 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		const Uint8 audio_disabled = 0;
 
 		*av_en = ((!audio_disabled) << 1) |
-			((!ctx_retro->env.status_bits.video_disabled) << 0);
+			((!ctx_retro->env.status.bits.video_disabled) << 0);
 		break;
 	}
 
@@ -386,16 +397,16 @@ unsupported:
 void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 	size_t pitch)
 {
-	ctx_retro->game_frame_res.h = height;
-	ctx_retro->game_frame_res.w = width;
+	ctx_retro->sdl.game_frame_res.h = height;
+	ctx_retro->sdl.game_frame_res.w = width;
 
-	if(data == NULL || ctx_retro->env.status_bits.video_disabled)
+	if(data == NULL || ctx_retro->env.status.bits.video_disabled)
 	{
-		ctx_retro->env.status_bits.valid_frame = 0;
+		ctx_retro->env.status.bits.valid_frame = 0;
 		return;
 	}
 
-	ctx_retro->env.status_bits.valid_frame = 1;
+	ctx_retro->env.status.bits.valid_frame = 1;
 
 	if(data == RETRO_HW_FRAME_BUFFER_VALID)
 		return;
@@ -408,7 +419,7 @@ void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 	int tex_w, tex_h;
 	Uint32 format;
 
-	SDL_QueryTexture(ctx_retro->core_tex, &format, NULL, &tex_w,
+	SDL_QueryTexture(ctx_retro->sdl.core_tex, &format, NULL, &tex_w,
 		&tex_h);
 	tex_pitch = tex_w * SDL_BYTESPERPIXEL(format);
 
@@ -416,10 +427,10 @@ void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 	SDL_assert_paranoid(format == ctx_retro->env.pixel_fmt);
 #endif
 
-	if(ctx_retro->env.status_bits.opengl_required)
+	if(ctx_retro->env.status.bits.opengl_required)
 		return;
 
-	if(SDL_UpdateTexture(ctx_retro->core_tex, &ctx_retro->game_frame_res, data, pitch) != 0)
+	if(SDL_UpdateTexture(ctx_retro->sdl.core_tex, &ctx_retro->sdl.game_frame_res, data, (int)pitch) != 0)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
 			"Texture could not updated: %s",
@@ -438,12 +449,12 @@ void cb_retro_audio_sample(int16_t left, int16_t right)
 
 size_t cb_retro_audio_sample_batch(const int16_t *data, size_t frames)
 {
-	if(ctx_retro->audio_dev == 0)
+	if(ctx_retro->sdl.audio_dev == 0)
 		goto out;
 
 	/* If the audio driver is lagging too far behind, reset the queue. */
-	if(SDL_GetQueuedAudioSize(ctx_retro->audio_dev) >= 32768UL)
-		SDL_ClearQueuedAudio(ctx_retro->audio_dev);
+	if(SDL_GetQueuedAudioSize(ctx_retro->sdl.audio_dev) >= 32768UL)
+		SDL_ClearQueuedAudio(ctx_retro->sdl.audio_dev);
 
 #if ENABLE_VIDEO_RECORDING == 1
 	if(ctx_retro->vid != NULL)
@@ -452,7 +463,7 @@ size_t cb_retro_audio_sample_batch(const int16_t *data, size_t frames)
 	}
 #endif
 
-	SDL_QueueAudio(ctx_retro->audio_dev, data, frames * sizeof(Uint16) * 2);
+	SDL_QueueAudio(ctx_retro->sdl.audio_dev, data, (Uint32)frames * sizeof(Uint16) * 2);
 
 out:
 	return frames;
@@ -470,7 +481,8 @@ int16_t cb_retro_input_state(unsigned port, unsigned device, unsigned index,
 }
 
 /* TODO: Initialise texture to max width/height. */
-static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
+static int play_reinit_texture(struct core_ctx_s *ctx,
+					SDL_Renderer *rend,
 	const Uint32 *req_format,
 	const unsigned int *new_max_width,
 	const unsigned int *new_max_height)
@@ -486,16 +498,11 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 	height = new_max_height != NULL ? *new_max_height
 		: ctx->av_info.geometry.max_height;
 
-	if(ctx->env.status_bits.opengl_required)
-	{
-		test_texture = SDL_CreateTexture(ctx->disp_rend, format,
-				SDL_TEXTUREACCESS_TARGET, width, height);
-	}
-	else
-	{
-		test_texture = SDL_CreateTexture(ctx->disp_rend, format,
-				SDL_TEXTUREACCESS_STREAMING, width, height);
-	}
+	test_texture = SDL_CreateTexture(rend, format,
+			ctx->env.status.bits.opengl_required ?
+				SDL_TEXTUREACCESS_TARGET :
+				SDL_TEXTUREACCESS_STREAMING,
+			width, height);
 
 	if(test_texture == NULL)
 	{
@@ -508,13 +515,13 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 
 	/* If we have previously created a texture, destroy it and assign the
 	 * newly created texture to it. */
-	if(ctx->core_tex != NULL)
-		SDL_DestroyTexture(ctx->core_tex);
+	if(ctx->sdl.core_tex != NULL)
+		SDL_DestroyTexture(ctx->sdl.core_tex);
 
-	ctx->core_tex = test_texture;
+	ctx->sdl.core_tex = test_texture;
 	ctx->env.pixel_fmt = format;
-	ctx->game_max_res.w = width;
-	ctx->game_max_res.h = height;
+	ctx->sdl.game_max_res.w = width;
+	ctx->sdl.game_max_res.h = height;
 
 	SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO, "Created texture: %s %d*%d",
 		SDL_GetPixelFormatName(format), width, height);
@@ -522,14 +529,14 @@ static uint_fast8_t play_reinit_texture(struct core_ctx_s *ctx,
 	return 0;
 }
 
-uint_fast8_t play_init_av(struct core_ctx_s *ctx)
+int play_init_av(struct core_ctx_s *ctx, SDL_Renderer *rend)
 {
 	SDL_AudioSpec want = { 0 };
 
-	SDL_assert(ctx->env.status_bits.core_init == 1);
-	SDL_assert(ctx->env.status_bits.shutdown == 0);
-	SDL_assert(ctx->env.status_bits.game_loaded == 1);
-	SDL_assert(ctx->env.status_bits.av_init == 0);
+	SDL_assert(ctx->env.status.bits.core_init == 1);
+	SDL_assert(ctx->env.status.bits.shutdown == 0);
+	SDL_assert(ctx->env.status.bits.game_loaded == 1);
+	SDL_assert(ctx->env.status.bits.av_init == 0);
 
 	ctx->fn.retro_get_system_av_info(&ctx->av_info);
 	SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO,
@@ -543,30 +550,26 @@ uint_fast8_t play_init_av(struct core_ctx_s *ctx)
 				   ctx->av_info.geometry.max_height,
 				   ctx->av_info.geometry.aspect_ratio);
 
-	if(play_reinit_texture(ctx, &ctx->env.pixel_fmt,
+	if(play_reinit_texture(ctx, rend, &ctx->env.pixel_fmt,
 		&ctx->av_info.geometry.max_width,
 		&ctx->av_info.geometry.max_height) != 0)
 	{
-		SDL_SetError("Unable to create texture: %s",
-					 SDL_GetError());
+		SDL_SetError("Unable to create texture: %s", SDL_GetError());
 		return 1;
 	}
 
 	if(ctx->env.pixel_fmt == 0)
 		ctx->env.pixel_fmt = SDL_PIXELFORMAT_RGB888;
 
-	if(ctx->gl != NULL)
-		gl_reset_context(ctx->gl);
-
-	want.freq = ctx->av_info.timing.sample_rate;
+	want.freq = (int)ctx->av_info.timing.sample_rate;
 	want.format = AUDIO_S16SYS;
 	want.channels = 2;
 	want.samples = 512;
 	want.callback = NULL;
 
-	ctx->audio_dev = SDL_OpenAudioDevice(NULL, 0, &want, NULL, 0);
+	ctx->sdl.audio_dev = SDL_OpenAudioDevice(NULL, 0, &want, NULL, 0);
 
-	if(ctx->audio_dev == 0)
+	if(ctx->sdl.audio_dev == 0)
 	{
 		SDL_LogWarn(SDL_LOG_CATEGORY_AUDIO, "Failed to open audio: %s",
 			SDL_GetError());
@@ -576,9 +579,10 @@ uint_fast8_t play_init_av(struct core_ctx_s *ctx)
 		SDL_LogInfo(SDL_LOG_CATEGORY_AUDIO,
 			"Audio driver %s initialised",
 			SDL_GetCurrentAudioDriver());
-		SDL_PauseAudioDevice(ctx->audio_dev, 0);
+		SDL_PauseAudioDevice(ctx->sdl.audio_dev, 0);
 	}
 
+	ctx->fn.retro_set_controller_port_device(0, RETRO_DEVICE_JOYPAD);
 	return 0;
 }
 
@@ -599,20 +603,20 @@ void play_init_cb(struct core_ctx_s *ctx)
 		else
 			len = c - ctx->sys_info.library_name;
 
-		printed = SDL_snprintf(ctx->core_log_name,
-				sizeof(ctx->core_log_name), "%.*s",
+		printed = SDL_snprintf(ctx->core_short_name,
+				sizeof(ctx->core_short_name), "%.*s",
 				(int)len, ctx->sys_info.library_name);
 
 		if(printed < 0)
 		{
-			SDL_strlcpy(ctx->core_log_name, "CORE",
-				sizeof(ctx->core_log_name));
+			SDL_strlcpy(ctx->core_short_name, "CORE",
+				sizeof(ctx->core_short_name));
 		}
 
 		while(printed >= 0)
 		{
-			ctx->core_log_name[printed] =
-				SDL_toupper(ctx->core_log_name[printed]);
+			ctx->core_short_name[printed] =
+				SDL_toupper(ctx->core_short_name[printed]);
 			printed--;
 		}
 	}
@@ -633,7 +637,7 @@ void play_init_cb(struct core_ctx_s *ctx)
 	ctx->fn.retro_init();
 	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION, "Core initialised");
 
-	ctx->env.status_bits.core_init = 1;
+	ctx->env.status.bits.core_init = 1;
 }
 
 void play_deinit_cb(struct core_ctx_s *ctx)
@@ -641,14 +645,15 @@ void play_deinit_cb(struct core_ctx_s *ctx)
 	if(ctx == NULL)
 		return;
 
-	gl_deinit(ctx->gl);
+	gl_deinit(ctx->sdl.gl);
 
-	if(ctx->core_tex != NULL)
+	if(ctx->sdl.core_tex != NULL)
 	{
-		SDL_DestroyTexture(ctx->core_tex);
-		ctx->core_tex = NULL;
+		SDL_DestroyTexture(ctx->sdl.core_tex);
+		ctx->sdl.core_tex = NULL;
 	}
 
-	SDL_CloseAudioDevice(ctx->audio_dev);
+	SDL_CloseAudioDevice(ctx->sdl.audio_dev);
 	ctx_retro = NULL;
 }
+

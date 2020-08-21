@@ -14,4 +14,6 @@
 
 #pragma once
 
-void init_sig(struct core_ctx_s *c);
+#include <haiyajan.h>
+
+void init_sig(struct haiyajan_ctx_s *c);

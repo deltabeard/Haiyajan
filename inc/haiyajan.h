@@ -16,20 +16,28 @@
 
 #include <SDL.h>
 
-#include <libretro.h>
-#include <input.h>
+#include <font.h>
 #include <gl.h>
+#include <input.h>
+#include <libretro.h>
+#include <retro-extensions.h>
 #include <rec.h>
+#include <timer.h>
+#include <ui.h>
 
 #define REL_VERSION_MAJOR 0
 #define REL_VERSION_MINOR 0
 
 struct settings_s
 {
-	unsigned char vid_info : 1;
-	unsigned char fullscreen : 1;
-	unsigned char benchmark : 1;
+	unsigned vid_info : 1;
+	unsigned fullscreen : 1;
+	unsigned benchmark : 1;
+	unsigned start_core : 1;
 	Uint32 benchmark_dur;
+	Uint8 frameskip_limit;
+	char *core_filename;
+	char *content_filename;
 };
 
 /**
@@ -72,8 +80,16 @@ struct core_ctx_s
 
 		void *(*retro_get_memory_data)(unsigned id);
 		size_t (*retro_get_memory_size)(unsigned id);
+
 		/* clang-format on */
 	} fn;
+
+	/* Retro extension functions are not mandatory. When not used,
+	 * they are set to NULL. */
+	struct {
+		const struct license_info_s *(*re_core_get_license_info)(void);
+		void (*re_core_set_pause)(int pause);
+	} ext_fn;
 
 	/* SDL2 handles. */
 	struct
@@ -84,12 +100,6 @@ struct core_ctx_s
 		/* For cores which require the content to be loaded into memory.
 		 * This is an allocated buffer of content for libretro cores. */
 		Uint8 *game_data;
-
-		/* The SDL2 Window context. */
-		SDL_Window *win;
-
-		/* The renderer that is shown on screen. */
-		SDL_Renderer *disp_rend;
 
 		/* The texture that the libretro core renders to. */
 		SDL_Texture *core_tex;
@@ -103,22 +113,19 @@ struct core_ctx_s
 
 		/* The context of the audio device. */
 		SDL_AudioDeviceID audio_dev;
-	};
 
-	gl_ctx *gl;
+		/* OpenGL context for Libretro Cores. */
+		gl_ctx *gl;
+	} sdl;
 
 	/* Libretro core information. */
 	struct retro_system_info sys_info;
 	struct retro_system_av_info av_info;
 
-	struct
-	{
-		char core_log_name[10];
-		char *file_core;
-		char *file_content;
-		char *file_content_sram;
-		char path_sep;
-	};
+	char core_short_name[10];
+	char *core_filename;
+	char *content_filename;
+	char *sram_filename;
 
 	/* Libretro core environment status. */
 	struct
@@ -127,20 +134,21 @@ struct core_ctx_s
 		{
 			struct
 			{
-				unsigned char core_init : 1;
-				unsigned char shutdown : 1;
-				unsigned char game_loaded : 1;
-				unsigned char av_init : 1;
-				unsigned char opengl_required : 1;
-				unsigned char playing : 1;
-				unsigned char video_disabled : 1;
-				unsigned char valid_frame : 1;
-			} status_bits;
-			Uint8 status;
-		};
+				unsigned core_init : 1;
+				unsigned shutdown : 1;
+				unsigned game_loaded : 1;
+				unsigned av_init : 1;
+				unsigned opengl_required : 1;
+				unsigned playing : 1;
+				unsigned video_disabled : 1;
+				unsigned valid_frame : 1;
+			} bits;
+			Uint8 all;
+		} status;
 
 		unsigned perf_lvl;
 		Uint32 pixel_fmt;
+		Uint32 frames;
 		SDL_RendererFlip flip;
 
 		struct retro_audio_callback audio_cb;
@@ -148,10 +156,38 @@ struct core_ctx_s
 		retro_usec_t ftref;
 	} env;
 
+	struct timer_ctx_s tim;
 	struct input_ctx_s inp;
-	struct settings_s stngs;
 
 #if ENABLE_VIDEO_RECORDING == 1
 	rec_ctx *vid;
 #endif
 };
+
+struct haiyajan_ctx_s
+{
+	/* The SDL2 Window context. */
+	SDL_Window *win;
+
+	/* The renderer that is shown on screen. */
+	SDL_Renderer *rend;
+
+	/* Haiyajan Settings. */
+	struct settings_s stngs;
+
+	/* Core texture target dimensions. */
+	SDL_Rect core_tex_targ;
+
+	/* Libretro core context. */
+	struct core_ctx_s core;
+
+	/* User interface context. */
+	ui *ui;
+	ui_overlay_ctx *ui_overlay;
+
+	/* Font */
+	font_ctx *font;
+
+	unsigned quit : 1;
+};
+

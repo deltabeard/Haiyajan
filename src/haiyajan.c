@@ -23,21 +23,24 @@
 #define OPTPARSE_API static
 #include <optparse.h>
 
+#include <haiyajan.h>
 #include <font.h>
 #include <input.h>
 #include <load.h>
 #include <play.h>
 #include <rec.h>
-#include <timer.h>
-#include <util.h>
 #include <sig.h>
+#include <timer.h>
+#include <ui.h>
+#include <util.h>
 
 #define PROG_NAME       "Haiyajan"
-#define MAX_TITLE_LEN   56
 
 #ifndef GIT_VERSION
 #define GIT_VERSION     "NONE"
 #endif
+
+#define NOTIF_TIMEOUT_MS	1000 * 4
 
 static void prerun_checks(void)
 {
@@ -91,8 +94,9 @@ static void print_info(void)
 		{SDL_HasSSE42,   "SSE42"}
 	};
 	char str_feat[128] = "\0";
+	unsigned i;
 
-	for(size_t i = 0; i < SDL_arraysize(cpu_features); i++)
+	for(i = 0; i < SDL_arraysize(cpu_features); i++)
 	{
 		if(cpu_features[i].get_cpu_feat() == SDL_FALSE)
 			continue;
@@ -114,39 +118,40 @@ static void print_help(void)
 	const int num_drivers = SDL_GetNumVideoDrivers();
 	const int num_rends = SDL_GetNumRenderDrivers();
 	const int num_audio = SDL_GetNumAudioDrivers();
+	int i;
 
 	fprintf(stderr, "\n"
 			"Usage: haiyajan [OPTIONS] -L CORE FILE\n"
 			"  -h, --help      Show this help message.\n"
 			"      --version   Print version information.\n"
 			"  -L, --libretro  Path to libretro core.\n"
-			"  -I, --info      Print statistics onscreen.\n"
 			"  -b, --benchmark Benchmark and print average frames"
 			" per second.\n"
 			"  -v, --verbose   Print verbose log messages.\n"
-			"  -V, --video     Video driver to use\n");
+			"  -V, --video     Video driver to use\n"
+			"  -R, --render    Render driver to use\n");
 
-	for(int index = 0; index < num_drivers; index++)
+	for(i = 0; i < num_drivers; i++)
 	{
-		fprintf(stderr, "%s%s", index != 0 ?
+		fprintf(stderr, "%s%s", i != 0 ?
 					", " : "\nAvailable video drivers: ",
-			SDL_GetVideoDriver(index));
+			SDL_GetVideoDriver(i));
 	}
 
-	for(int index = 0; index < num_rends; index++)
+	for(i = 0; i < num_rends; i++)
 	{
 		SDL_RendererInfo info;
-		SDL_GetRenderDriverInfo(index, &info);
-		fprintf(stderr, "%s%s", index != 0 ?
+		SDL_GetRenderDriverInfo(i, &info);
+		fprintf(stderr, "%s%s", i != 0 ?
 					", " : "\nAvailable render drivers: ",
 			info.name);
 	}
 
-	for(int index = 0; index < num_audio; index++)
+	for(i = 0; i < num_audio; i++)
 	{
-		fprintf(stderr, "%s%s", index != 0 ?
+		fprintf(stderr, "%s%s", i != 0 ?
 					", " : "\nAvailable audio drivers: ",
-			SDL_GetAudioDriver(index));
+			SDL_GetAudioDriver(i));
 	}
 
 	fprintf(stderr, "\nThe following environment variables may be used to "
@@ -158,26 +163,26 @@ static void print_help(void)
 
 static void free_settings(struct core_ctx_s *ctx)
 {
-	if(ctx->file_core != NULL)
+	if(ctx->core_filename != NULL)
 	{
-		SDL_free(ctx->file_core);
-		ctx->file_core = NULL;
+		SDL_free(ctx->core_filename);
+		ctx->core_filename = NULL;
 	}
 
-	if(ctx->file_content != NULL)
+	if(ctx->content_filename != NULL)
 	{
-		SDL_free(ctx->file_content);
-		ctx->file_content = NULL;
+		SDL_free(ctx->content_filename);
+		ctx->content_filename = NULL;
 	}
 }
 
-static void apply_settings(char **argv, struct core_ctx_s *ctx)
+static void apply_settings(char **argv, struct settings_s *cfg)
 {
 	const struct optparse_long longopts[] = {
 			{"libretro",  'L', OPTPARSE_REQUIRED},
-			{"info",      'I', OPTPARSE_NONE},
 			{"verbose",   'v', OPTPARSE_NONE},
 			{"video",     'V', OPTPARSE_REQUIRED},
+			{"render",    'R', OPTPARSE_REQUIRED},
 			{"version",   1,   OPTPARSE_NONE},
 			{"benchmark", 'b', OPTPARSE_OPTIONAL},
 			{"help",      'h', OPTPARSE_NONE},
@@ -186,7 +191,7 @@ static void apply_settings(char **argv, struct core_ctx_s *ctx)
 	int option;
 	struct optparse options;
 	char *rem_arg;
-	uint_fast8_t video_init = 0;
+	Uint8 video_init = 0;
 
 	optparse_init(&options, argv);
 
@@ -195,11 +200,7 @@ static void apply_settings(char **argv, struct core_ctx_s *ctx)
 		switch(option)
 		{
 		case 'L':
-			ctx->file_core = SDL_strdup(options.optarg);
-			break;
-
-		case 'I':
-			ctx->stngs.vid_info = 1;
+			cfg->core_filename = SDL_strdup(options.optarg);
 			break;
 
 		case 'v':
@@ -234,23 +235,27 @@ static void apply_settings(char **argv, struct core_ctx_s *ctx)
 
 			break;
 
+		case 'R':
+			SDL_SetHint(SDL_HINT_RENDER_DRIVER, options.optarg);
+			break;
+
 		case 1:
 			/* Version information has already been printed. */
 			exit(EXIT_SUCCESS);
 
 		case 'b':
-			ctx->stngs.benchmark = 1;
+			cfg->benchmark = 1;
 			if(options.optarg != 0)
-				ctx->stngs.benchmark_dur =
+				cfg->benchmark_dur =
 					SDL_atoi(options.optarg);
 
-			if(ctx->stngs.benchmark_dur == 0)
-				ctx->stngs.benchmark_dur = 20;
+			if(cfg->benchmark_dur == 0)
+				cfg->benchmark_dur = 20;
 
 			SDL_LogInfo(SDL_LOG_CATEGORY_VIDEO,
 				    "Haiyajan will exit after performing a "
 				    "benchmark for %d seconds",
-				    ctx->stngs.benchmark_dur);
+				    cfg->benchmark_dur);
 			break;
 
 		case 'h':
@@ -271,7 +276,7 @@ static void apply_settings(char **argv, struct core_ctx_s *ctx)
 	rem_arg = optparse_arg(&options);
 
 	if(rem_arg != NULL)
-		ctx->file_content = SDL_strdup(rem_arg);
+		cfg->content_filename = SDL_strdup(rem_arg);
 	else
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
@@ -279,7 +284,7 @@ static void apply_settings(char **argv, struct core_ctx_s *ctx)
 		goto err;
 	}
 
-	if(ctx->file_core == NULL)
+	if (cfg->core_filename == NULL)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
 				"The path to a libretro core was not given");
@@ -295,6 +300,7 @@ static void apply_settings(char **argv, struct core_ctx_s *ctx)
 		goto err;
 	}
 
+	cfg->frameskip_limit = 4;
 	return;
 
 err:
@@ -302,9 +308,61 @@ err:
 	exit(EXIT_FAILURE);
 }
 
-static SDL_atomic_t screenshot_timeout;
+#if ENABLE_VIDEO_RECORDING == 1
+struct rec_txt_priv {
+	rec_ctx *vid;
+	char str[32];
+};
+char *get_rec_txt(void *priv)
+{
+	struct rec_txt_priv *rtxt = priv;
+	struct {
+		Sint64 (*get_size)(rec_ctx *);
+	} sz_map[2] = {
+		{rec_video_size},
+		{rec_audio_size}
+	};
+	/* Technically MiB and GiB. */
+	const char prefix_str[5][3] = {
+		" B", "KB", "MB", "GB", "TB"
+	};
+	Uint64 sz = 0;
+	Uint8 prefix = 0;
+	unsigned i;
 
-void take_screenshot(struct core_ctx_s *const ctx)
+	/* If recording has finished, free memory and delete overlay. */
+	if(rtxt->vid == NULL)
+	{
+		SDL_free(priv);
+		return NULL;
+	}
+
+	for(i = 0; i < (Uint8)SDL_arraysize(sz_map); i++)
+	{
+		Sint64 szret = sz_map[i].get_size(rtxt->vid);
+		if(szret < 0)
+		{
+			SDL_free(priv);
+			return NULL;
+		}
+		sz += szret;
+	}
+
+	while(sz > 1 * 1024)
+	{
+		sz >>= (Uint8)10;
+		prefix++;
+	}
+
+	SDL_snprintf(rtxt->str, sizeof(rtxt->str), "REC %2" SDL_PRIu64 " %.2s",
+			sz, prefix_str[prefix]);
+
+	return rtxt->str;
+}
+#endif
+
+static SDL_atomic_t screenshot_timeout;
+static void take_screenshot(SDL_Renderer *rend, struct core_ctx_s *const ctx)
 {
 	SDL_Surface *surf;
 
@@ -317,12 +375,12 @@ void take_screenshot(struct core_ctx_s *const ctx)
 	SDL_AtomicSet(&screenshot_timeout, 1);
 	set_atomic_timeout(1024, &screenshot_timeout, 0, "Enable Screenshot");
 
-	surf = util_tex_to_surf(ctx->disp_rend, ctx->core_tex,
-				&ctx->game_frame_res, ctx->env.flip);
+	surf = util_tex_to_surf(rend, ctx->sdl.core_tex,
+				&ctx->sdl.game_frame_res, ctx->env.flip);
 	if(surf == NULL)
 		goto err;
 
-	rec_single_img(surf, ctx->core_log_name);
+	rec_single_img(surf, ctx->core_short_name);
 
 out:
 	return;
@@ -334,7 +392,6 @@ err:
 }
 
 #if ENABLE_VIDEO_RECORDING == 1
-
 void cap_frame(rec_ctx *vid, SDL_Renderer *rend, SDL_Texture *tex,
 	       const SDL_Rect *src, SDL_RendererFlip flip)
 {
@@ -345,439 +402,284 @@ void cap_frame(rec_ctx *vid, SDL_Renderer *rend, SDL_Texture *tex,
 
 	rec_enc_video(vid, surf);
 }
-
 #endif
 
-static void run(struct core_ctx_s *ctx)
+static void handle_rec_toggle(struct haiyajan_ctx_s *ctx)
 {
-	font_ctx *font;
-	SDL_Event ev;
-	Uint32 ticks_before, ticks_next, delta_ticks;
-	struct timer_ctx_s tim;
-	int tim_cmd;
-	float fps = 0.0F;
-	Uint32 fps_beg;
-	const uint_fast8_t fps_calc_frame_dur = 64;
-	uint_fast8_t fps_curr_frame_dur = fps_calc_frame_dur;
-	Uint32 benchmark_beg;
-	const Uint8 frame_skip_max = 4;
-	Uint8 frame_skip_count = 4;
+	SDL_Colour c = { 0x00, 0xFF, 0x00, SDL_ALPHA_OPAQUE };
 
-	input_init(&ctx->inp);
-	ctx->fn.retro_set_controller_port_device(0, RETRO_DEVICE_JOYPAD);
-
-	font = FontStartup(ctx->disp_rend);
-	if(font == NULL)
+	if(ctx->core.vid == NULL &&
+			ctx->core.env.status.bits.valid_frame)
 	{
-		SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-			    "Unable to start font drawer: %s", SDL_GetError());
-		/* Disable font drawing on error. */
-		ctx->stngs.vid_info = 0;
-	}
+		char vidfile[64];
+		struct rec_txt_priv *rtxt;
+		gen_filename(vidfile, ctx->core.core_short_name, "h264");
 
-	{
-		Uint32 lim = SDL_GetTicks();
-		while(ctx->env.status_bits.valid_frame == 0)
+		/* FIXME: add double to Sint32 sample
+		 * compensation should the sample rate
+		 * not be an integer. */
+		ctx->core.vid = rec_init(vidfile,
+				ctx->core.sdl.game_frame_res.w,
+				ctx->core.sdl.game_frame_res.h,
+				ctx->core.av_info.timing.fps,
+				SDL_ceil(ctx->core.av_info.timing.sample_rate));
+		if(ctx->core.vid == NULL)
 		{
-			play_frame(ctx);
-
-			/* If the first frame isn't drawn within two seconds,
-			 * break and begin showing screen anyway. */
-			if(SDL_GetTicks() - lim > 2000U)
-				break;
-
-		}
-	}
-
-	tim_cmd = timer_init(&tim, ctx->av_info.timing.fps);
-	ticks_before = fps_beg = benchmark_beg = SDL_GetTicks();
-
-	while(ctx->env.status_bits.shutdown == 0)
-	{
-		static Uint32 frames = 0;
-
-		while(SDL_PollEvent(&ev) != 0)
-		{
-			if(ev.type == SDL_QUIT)
-				goto out;
-			else if(INPUT_EVENT_CHK(ev.type))
-				input_handle_event(&ctx->inp, &ev);
-			else if(ev.type == ctx->inp.input_cmd_event &&
-				!ctx->stngs.benchmark)
-			{
-				switch(ev.user.code)
-				{
-				case INPUT_EVENT_TOGGLE_INFO:
-					ctx->stngs.vid_info =
-						!ctx->stngs.vid_info;
-					SDL_SetRenderDrawBlendMode(
-						ctx->disp_rend,
-						ctx->stngs.vid_info
-						? SDL_BLENDMODE_BLEND
-						: SDL_BLENDMODE_NONE);
-					if(!ctx->stngs.vid_info)
-						break;
-
-					/* Reset FPS counter. */
-					fps_beg = SDL_GetTicks();
-					fps_curr_frame_dur = fps_calc_frame_dur;
-					break;
-
-				case INPUT_EVENT_TOGGLE_FULLSCREEN:
-					ctx->stngs.fullscreen =
-						!ctx->stngs.fullscreen;
-					if(ctx->stngs.fullscreen)
-						SDL_SetWindowFullscreen(
-							ctx->win,
-							SDL_WINDOW_FULLSCREEN_DESKTOP);
-					else
-						SDL_SetWindowFullscreen(
-							ctx->win,
-							0);
-					break;
-
-				case INPUT_EVENT_TAKE_SCREENSHOT:
-					take_screenshot(ctx);
-					break;
-
-#if ENABLE_VIDEO_RECORDING == 1
-				case INPUT_EVENT_RECORD_VIDEO_TOGGLE:
-				{
-					if(ctx->vid == NULL &&
-					   ctx->env.status_bits.valid_frame)
-					{
-						char vidfile[64];
-						gen_filename(vidfile,
-							     ctx->core_log_name,
-							     "h264");
-
-						/* FIXME: add double to Sint32 sample compensation should the sample rate not be an integer. */
-						ctx->vid = rec_init(vidfile,
-								    ctx->game_frame_res.w,
-								    ctx->game_frame_res.h,
-								    ctx->av_info.timing.fps,
-								    SDL_ceil(
-									    ctx->av_info.timing.sample_rate));
-						if(ctx->vid == NULL)
-						{
-							SDL_LogWarn(
-								SDL_LOG_CATEGORY_VIDEO,
-								"Unable to initialise libx264: %s",
-								SDL_GetError());
-							break;
-						}
-
-						SDL_LogInfo(
-							SDL_LOG_CATEGORY_VIDEO,
-							"Video recording started");
-					}
-					else if(ctx->vid != NULL)
-					{
-						rec_end(&ctx->vid);
-					}
-					break;
-				}
-#endif
-				}
-			}
-			else if(ev.type == tim.timer_event)
-			{
-				switch(ev.user.code)
-				{
-				case TIMER_SPEED_UP_AGGRESSIVELY:
-#if ENABLE_VIDEO_RECORDING == 1
-					if(ctx->vid != NULL)
-					{
-						rec_speedup(ctx->vid);
-						rec_speedup(ctx->vid);
-						rec_speedup(ctx->vid);
-						rec_speedup(ctx->vid);
-					}
-#endif
-
-					break;
-
-				case TIMER_SPEED_UP:
-#if ENABLE_VIDEO_RECORDING == 1
-					if(ctx->vid != NULL)
-						rec_speedup(ctx->vid);
-#endif
-					break;
-
-				case TIMER_OKAY:
-				default:
-#if ENABLE_VIDEO_RECORDING == 1
-					if(ctx->vid != NULL)
-						rec_relax(ctx->vid);
-#endif
-					break;
-				}
-			}
+			SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO,
+					"Unable to initialise libx264: %s",
+					SDL_GetError());
+			c.r = 0xFF;
+			c.g = 0x00;
+			c.b = 0x00;
+			ui_add_overlay(&ctx->ui_overlay, c,
+					ui_overlay_bot_right,
+					"Unable to start recording: libx264 failure",
+					NOTIF_TIMEOUT_MS, NULL, NULL, 0);
+			return;
 		}
 
-		/* If in benchmark mode, run as fast as possible. */
-		if(ctx->stngs.benchmark)
-			tim_cmd = 0;
-
-		frames++;
-
-#if ENABLE_VIDEO_RECORDING == 1
-		if(tim_cmd < 0 && ctx->vid == NULL)
-#else
-			if(tim_cmd < 0)
-#endif
-		{
-			/* Disable video for the skipped frame to improve
-			 * performance. But only when we're not recording a
-			 * video. */
-			ctx->env.status_bits.video_disabled = 1;
-
-		}
-		else if(tim_cmd > 0)
-			SDL_Delay(tim_cmd);
-
-		timer_profile_start(&tim);
-		SDL_SetRenderDrawColor(ctx->disp_rend, 0x00, 0x00, 0x00, 0x00);
-		SDL_RenderClear(ctx->disp_rend);
-		play_frame(ctx);
-		SDL_RenderCopyEx(ctx->disp_rend, ctx->core_tex,
-				 &ctx->game_frame_res, NULL, 0.0, NULL,
-				 ctx->env.flip);
-
-		if(ctx->stngs.vid_info)
-		{
-			static char busy_str[10] = {'\0'};
-			static char fps_str[10] = {'\0'};
-			static char acc_str[10] = {'\0'};
-			static char aud_str[10] = {'\0'};
-			static char frames_str[10] = {'\0'};
-			const SDL_Rect font_bg =
-				{
-					.w = 10 * FONT_CHAR_WIDTH,
-					.h = 5 * (FONT_CHAR_HEIGHT + 1),
-					.x = 0,
-					.y = 0
-				};
-			SDL_Rect dim = {.w = 1, .h = 1, .x = 0, .y = 0};
-			Uint32 ticks_busy = SDL_GetTicks();
-			Uint32 busy_diff = ticks_busy - ticks_before;
-
-			/* Only update every five frames to make values
-			 * readable. */
-			if(fps_curr_frame_dur % 5 == 0)
-			{
-				SDL_snprintf(busy_str, 10, "%6u ms", busy_diff);
-				SDL_snprintf(acc_str, 10, "%6.2f ms",
-					     tim.timer_accumulator);
-				SDL_snprintf(aud_str, 10, "%6u",
-					     (unsigned)(
-						     SDL_GetQueuedAudioSize(
-							     ctx->audio_dev)
-						     /
-						     sizeof(Uint16)
-						     / 2U));
-				SDL_snprintf(frames_str, 10, "%6u", frames);
-			}
-
-			/* Update only after FPS has been recalculated. */
-			if(fps_curr_frame_dur == fps_calc_frame_dur)
-				SDL_snprintf(fps_str, 10, "%6.2f Hz", fps);
-
-			SDL_SetRenderDrawColor(ctx->disp_rend,
-					       0x00, 0x00, 0x00, 0x40);
-			SDL_RenderFillRect(ctx->disp_rend, &font_bg);
-
-			SDL_SetRenderDrawColor(ctx->disp_rend,
-					       0xFF, 0xFF, 0xFF, 0xFF);
-			FontPrintToRenderer(font, busy_str, &dim);
-
-			dim.y += FONT_CHAR_HEIGHT + 1;
-			FontPrintToRenderer(font, fps_str, &dim);
-
-			dim.y += FONT_CHAR_HEIGHT + 1;
-			FontPrintToRenderer(font, acc_str, &dim);
-
-			dim.y += FONT_CHAR_HEIGHT + 1;
-			FontPrintToRenderer(font, aud_str, &dim);
-
-			dim.y += FONT_CHAR_HEIGHT + 1;
-			FontPrintToRenderer(font, frames_str, &dim);
-
-			SDL_SetRenderDrawColor(ctx->disp_rend,
-					       0x00, 0x00, 0x00, 0x00);
-		}
-
-#if ENABLE_VIDEO_RECORDING == 1
-		while(ctx->vid != NULL)
-		{
-			SDL_Rect loc =
-				{
-					.x = 0,
-					.y = FONT_CHAR_WIDTH * 2,
-					.w = 2,
-					.h = 2
-				};
-			struct {
-				Sint64 (*get_size)(rec_ctx *);
-
-				char str[16];
-			} sz_map[2] =
-				{
-					{rec_video_size, ""},
-					{rec_audio_size, ""}
-				};
-
-			SDL_RenderGetLogicalSize(ctx->disp_rend, &loc.x, NULL);
-			if(loc.x < 320)
-				break;
-
-			cap_frame(ctx->vid, ctx->disp_rend, ctx->core_tex,
-				  &ctx->game_frame_res, ctx->env.flip);
-
-			SDL_SetRenderDrawColor(ctx->disp_rend, UINT8_MAX, 0, 0,
-					       SDL_ALPHA_OPAQUE);
-
-			loc.x -= FONT_CHAR_WIDTH * loc.h * 5;
-			FontPrintToRenderer(font, " REC", &loc);
-
-			/* Print output file sizes so far. */
-			loc.y += FONT_CHAR_HEIGHT * 2;
-			loc.w = 1;
-			loc.h = 1;
-
-			for(uint_fast8_t i = 0;
-			    i < (uint_fast8_t)SDL_arraysize(sz_map); i++)
-			{
-				/* Technically MiB and GiB. */
-				const char prefix[5][3] =
-					{
-						" B", "KB", "MB", "GB", "TB"
-					};
-				Uint64 sz = sz_map[i].get_size(ctx->vid);
-				Uint8 p = 0;
-
-				while(sz > 1 * 1024)
-				{
-					sz >>= (Uint8)10;
-					p++;
-				}
-
-				SDL_snprintf(sz_map[i].str,
-					     SDL_arraysize(sz_map[0].str),
-					     "%5" PRIu64 " %.2s",
-					     sz, prefix[p]);
-			}
-
-			FontPrintToRenderer(font, sz_map[0].str, &loc);
-			loc.y += FONT_CHAR_HEIGHT;
-			FontPrintToRenderer(font, sz_map[1].str, &loc);
-
-			SDL_SetRenderDrawColor(ctx->disp_rend,
-					       0x00, 0x00, 0x00, 0x00);
-			break;
-		}
-#endif
-
-		/* If the user took a screen capture within the last second,
-		 * respond in the interface. */
-		if(SDL_AtomicGet(&screenshot_timeout) != 0)
-		{
-			SDL_Rect loc =
-				{
-					.x = 0,
-					.y = FONT_CHAR_WIDTH * 2,
-					.w = 2,
-					.h = 2
-				};
-			SDL_SetRenderDrawColor(ctx->disp_rend, UINT8_MAX,
-					       UINT8_MAX, 0, SDL_ALPHA_OPAQUE);
-			SDL_RenderGetLogicalSize(ctx->disp_rend, &loc.x, NULL);
-			loc.x -= FONT_CHAR_WIDTH * loc.h * 8;
-			FontPrintToRenderer(font, "CAP", &loc);
-			SDL_SetRenderDrawColor(ctx->disp_rend,
-					       0x00, 0x00, 0x00, 0x00);
-		}
-
-		timer_profile_end(&tim);
-
-		/* Only draw to screen if we're not falling behind. */
-		if(tim_cmd >= 0 || frame_skip_count == 0)
-		{
-			SDL_RenderPresent(ctx->disp_rend);
-			frame_skip_count = frame_skip_max;
-		}
-		else
-			frame_skip_count--;
-
-		/* Reset video_disabled for next frame. */
-		ctx->env.status_bits.video_disabled = 0;
-
-		ticks_next = SDL_GetTicks();
-		delta_ticks = ticks_next - ticks_before;
-		tim_cmd = timer_get_delay(&tim, delta_ticks);
-		ticks_before = ticks_next;
-
-		if(ctx->stngs.vid_info)
-			fps_curr_frame_dur--;
-
-		if(ctx->stngs.vid_info && fps_curr_frame_dur == 0)
-		{
-			Uint32 fps_delta;
-			Uint32 fps_end = SDL_GetTicks();
-			fps_delta = fps_end - fps_beg;
-			fps = 1000.0F / ((float)fps_delta
-					 / (float)fps_calc_frame_dur);
-			fps_curr_frame_dur = fps_calc_frame_dur;
-			fps_beg = fps_end;
-		}
-
-		while(ctx->stngs.benchmark)
-		{
-			uint_fast32_t elapsed;
-			float bench_fps;
-			static Uint32 bench_frames = 0;
-
-			bench_frames++;
-			elapsed = SDL_GetTicks() - benchmark_beg;
-			if(elapsed < ctx->stngs.benchmark_dur * 1000)
-				break;
-
-			bench_fps = (float)bench_frames /
-				    ((float)elapsed / 1000.0F);
-			SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-				    "Benchmark: %.2f FPS", bench_fps);
+		SDL_LogInfo(SDL_LOG_CATEGORY_VIDEO, "Video recording started");
+		rtxt = SDL_malloc(sizeof(struct rec_txt_priv));
+		if(rtxt == NULL)
 			goto out;
-		}
+
+		rtxt->vid = ctx->core.vid;
+		ui_add_overlay(&ctx->ui_overlay, c, ui_overlay_bot_right, NULL,
+				0, get_rec_txt, rtxt, 0);
+	}
+	else if(ctx->core.vid != NULL)
+	{
+		rec_end(&ctx->core.vid);
+		ui_add_overlay(&ctx->ui_overlay, c, ui_overlay_bot_right,
+				"Recording Saved",
+				NOTIF_TIMEOUT_MS, NULL, NULL, 0);
 	}
 
 out:
-	util_exit_all();
+	return;
+}
+
+static void process_events(struct haiyajan_ctx_s *ctx)
+{
+	SDL_Event ev;
+
+	while(SDL_PollEvent(&ev) != 0)
+	{
+		if(ev.type == SDL_QUIT)
+		{
+			ctx->quit = 1;
+			return;
+		}
+		else if(ev.type == SDL_WINDOWEVENT &&
+			                ev.window.event == SDL_WINDOWEVENT_RESIZED)
+		{
+			int win_w = ev.window.data1;
+			int win_h = ev.window.data2;
+			float a = (float)win_w / (float)win_h;
+
+			if(a > ctx->core.av_info.geometry.aspect_ratio)
+			{
+				ctx->core_tex_targ.h = win_h;
+				ctx->core_tex_targ.w = win_h * ctx->core.av_info.geometry.aspect_ratio;
+				ctx->core_tex_targ.x = ((float)win_w - ctx->core_tex_targ.w) / 2.0f;
+				ctx->core_tex_targ.y = 0;
+			}
+			else
+			{
+				ctx->core_tex_targ.w = win_w;
+				ctx->core_tex_targ.h = win_w * (1.0f / ctx->core.av_info.geometry.aspect_ratio);
+				ctx->core_tex_targ.x = 0;
+				ctx->core_tex_targ.y = ((float)win_h - ctx->core_tex_targ.h) / 2.0f;
+			}
+
+			SDL_RenderSetLogicalSize(ctx->rend, win_w, win_h);
+			continue;
+		}
+		else if(INPUT_EVENT_CHK(ev.type))
+			input_handle_event(&ctx->core.inp, &ev);
+		else if(ev.type == ctx->core.inp.input_cmd_event &&
+				!ctx->stngs.benchmark)
+		{
+			switch(ev.user.code)
+			{
+			case INPUT_EVENT_TOGGLE_FULLSCREEN:
+				ctx->stngs.fullscreen = !ctx->stngs.fullscreen;
+				if(ctx->stngs.fullscreen)
+				{
+					SDL_SetWindowFullscreen(ctx->win,
+							SDL_WINDOW_FULLSCREEN_DESKTOP);
+				}
+				else
+				{
+					SDL_SetWindowFullscreen(ctx->win, 0);
+				}
+				break;
+
+			case INPUT_EVENT_TAKE_SCREENSHOT:
+			{
+				SDL_Colour c = { 0, 0xFF, 0, 0xFF };
+				take_screenshot(ctx->rend, &ctx->core);
+				ui_add_overlay(&ctx->ui_overlay, c,
+						ui_overlay_top_right,
+						"SCREENSHOT", NOTIF_TIMEOUT_MS,
+						NULL, NULL, 0);
+				break;
+			}
 #if ENABLE_VIDEO_RECORDING == 1
-	rec_end(&ctx->vid);
+			case INPUT_EVENT_RECORD_VIDEO_TOGGLE:
+				handle_rec_toggle(ctx);
+				break;
 #endif
-	FontExit(font);
+		}
+		}
+		else if(ev.type == ctx->core.tim.timer_event)
+		{
+			switch(ev.user.code)
+			{
+			case TIMER_SPEED_UP_AGGRESSIVELY:
+#if ENABLE_VIDEO_RECORDING == 1
+				if(ctx->core.vid != NULL)
+				{
+					rec_speedup(ctx->core.vid);
+					rec_speedup(ctx->core.vid);
+					rec_speedup(ctx->core.vid);
+					rec_speedup(ctx->core.vid);
+				}
+#endif
+				break;
+
+			case TIMER_SPEED_UP:
+#if ENABLE_VIDEO_RECORDING == 1
+				if(ctx->core.vid != NULL)
+					rec_speedup(ctx->core.vid);
+#endif
+				break;
+
+			case TIMER_OKAY:
+			default:
+#if ENABLE_VIDEO_RECORDING == 1
+				if(ctx->core.vid != NULL)
+					rec_relax(ctx->core.vid);
+#endif
+				break;
+			}
+		}
+	}
+}
+
+struct benchmark_txt_priv {
+	Uint32 fps;
+	char str[64];
+};
+char *get_benchmark_txt(void *priv)
+{
+	struct benchmark_txt_priv *btxt = priv;
+	SDL_snprintf(btxt->str, sizeof(btxt->str), "Benchmark: %u FPS",
+			btxt->fps);
+	return btxt->str;
+}
+
+int haiyajan_get_available_file_types(struct core_ctx_s *ctx)
+{
+	(void) ctx;
+	return 0;
+}
+
+static int haiyajan_init_core(struct haiyajan_ctx_s *h, char *core_filename,
+		char *content_filename)
+{
+	struct core_ctx_s *ctx = &h->core;
+	SDL_Colour c = { 0xF3, 0x9C, 0x12, SDL_ALPHA_OPAQUE };
+
+	ctx->core_filename = core_filename;
+	ctx->content_filename = content_filename;
+
+	if(load_libretro_core(ctx->core_filename, ctx))
+		goto err;
+
+	/* TODO:
+	 * - Check that input file is supported by core
+	 */
+	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+		    "Libretro core \"%.32s\" loaded successfully.",
+		    ctx->sys_info.library_name);
+
+#if SDL_VERSION_ATLEAST(2, 0, 13)
+	SDL_SetHint(SDL_HINT_AUDIO_DEVICE_STREAM_NAME, ctx->sys_info.library_name);
+#endif
+
+	play_init_cb(ctx);
+	ctx->sdl.gl = gl_prepare(h->rend);
+
+	if(load_libretro_file(ctx) != 0)
+		goto err;
+
+	if(play_init_av(ctx, h->rend) != 0)
+		goto err;
+
+	if(ctx->env.status.bits.opengl_required)
+		gl_reset_context(ctx->sdl.gl);
+
+	do {
+		char *buf = SDL_malloc(64);
+		if(buf == NULL)
+			break;
+
+		SDL_snprintf(buf, 64, "Playing with %s",
+				h->core.sys_info.library_name);
+		ui_add_overlay(&h->ui_overlay, c, ui_overlay_bot_left,
+				buf, NOTIF_TIMEOUT_MS, NULL, NULL, 1);
+	} while(0);
+
+	do
+	{
+		const struct license_info_s *l;
+		char *buf;
+
+		if(h->core.ext_fn.re_core_get_license_info == NULL)
+			break;
+
+		l = h->core.ext_fn.re_core_get_license_info();
+		if(l->license_fullname == NULL)
+			break;
+
+		buf = SDL_malloc(128);
+		if(buf == NULL)
+			break;
+
+		SDL_snprintf(buf, 128, "Released under the %s",
+				l->license_fullname);
+		ui_add_overlay(&h->ui_overlay, c, ui_overlay_bot_left,
+				buf, NOTIF_TIMEOUT_MS, NULL, NULL, 1);
+	} while(0);
+
+	return 0;
+
+err:
+	return -1;
 }
 
 int main(int argc, char *argv[])
 {
 	int ret = EXIT_FAILURE;
-	struct core_ctx_s ctx = {0};
+	struct haiyajan_ctx_s h = {0};
 
 	/* Ignore argc being unused warning. */
 	(void)argc;
 
+	SDL_SetMainReady();
+
 #ifdef _WIN32
 	/* Windows (MinGW) does not unbuffer stderr by default. */
-	setbuf(stderr, NULL);
+	setvbuf(stderr, NULL, _IOLBF, BUFSIZ);
 #endif
 
 	SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO);
-
 	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
 		    "%s Libretro Interface -- %d.%d (GIT %s)\n", PROG_NAME,
 		    REL_VERSION_MAJOR, REL_VERSION_MINOR, GIT_VERSION);
 
-	init_sig(&ctx);
+	init_sig(&h);
 	print_info();
 	prerun_checks();
 
@@ -794,97 +696,187 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	apply_settings(argv, &ctx);
-
-	ctx.win = SDL_CreateWindow(PROG_NAME, SDL_WINDOWPOS_UNDEFINED,
+	apply_settings(argv, &h.stngs);
+	h.win = SDL_CreateWindow(PROG_NAME, SDL_WINDOWPOS_UNDEFINED,
 				   SDL_WINDOWPOS_UNDEFINED, 320, 240,
 				   SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-
-	if(ctx.win == NULL)
+	if(h.win == NULL)
 		goto err;
 
 	{
 		Uint32 flags =
 			SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE;
-		if(!ctx.stngs.benchmark)
+		if(!h.stngs.benchmark)
 			flags |= SDL_RENDERER_PRESENTVSYNC;
 
-		ctx.disp_rend = SDL_CreateRenderer(ctx.win, -1, flags);
+		h.rend = SDL_CreateRenderer(h.win, -1, flags);
 	}
-
-	if(ctx.disp_rend == NULL)
+	if(h.rend == NULL)
 		goto err;
 
 #if 1
-	//SDL_SetHint(SDL_HINT_RENDER_OPENGL_SHADERS, "0");
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
 			    SDL_GL_CONTEXT_PROFILE_CORE);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 #endif
-
-	/* Allows for transparency on information display. */
-	if(ctx.stngs.vid_info)
-		SDL_SetRenderDrawBlendMode(ctx.disp_rend, SDL_BLENDMODE_BLEND);
-
 	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
 		       "Created window and renderer");
+	SDL_SetWindowTitle(h.win, PROG_NAME);
 
-	if(load_libretro_core(ctx.file_core, &ctx))
-		goto err;
-
-	/* TODO:
-	 * - Check that input file is supported by core
-	 */
-	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-		    "Libretro core \"%.32s\" loaded successfully.",
-		    ctx.sys_info.library_name);
-
-#if SDL_VERSION_ATLEAST(2, 0, 13)
-	SDL_SetHint(SDL_HINT_AUDIO_DEVICE_STREAM_NAME, ctx.sys_info.library_name);
+#if 0
+	h.ui = ui_init(h.rend);
+	if(cfg->core_filename == NULL)
+		ui_open_menu();
 #endif
 
+	if(haiyajan_init_core(&h, h.stngs.core_filename,
+				h.stngs.content_filename) != 0)
 	{
-		char title[MAX_TITLE_LEN];
-		SDL_snprintf(title, MAX_TITLE_LEN, "%s: %s", PROG_NAME,
-			     ctx.sys_info.library_name);
-		SDL_SetWindowTitle(ctx.win, title);
+		goto err;
 	}
 
-	play_init_cb(&ctx);
+	{
+		char title[64];
+		SDL_snprintf(title, sizeof(title), "%s: %s", PROG_NAME,
+			     h.core.sys_info.library_name);
+		SDL_SetWindowTitle(h.win, title);
+	}
 
-	if(load_libretro_file(&ctx) != 0)
-		goto err;
+	SDL_SetWindowMinimumSize(h.win, h.core.sdl.game_max_res.w,
+			h.core.sdl.game_max_res.h);
+	SDL_SetWindowSize(h.win, h.core.sdl.game_max_res.w,
+			h.core.sdl.game_max_res.h);
+	SDL_RenderSetLogicalSize(h.rend, h.core.sdl.game_max_res.w,
+			h.core.sdl.game_max_res.h);
 
-	if(play_init_av(&ctx) != 0)
-		goto err;
+	h.core_tex_targ.x = 0;
+	h.core_tex_targ.y = 0;
+	h.core_tex_targ.w = h.core.sdl.game_max_res.w;
+	h.core_tex_targ.h = h.core.sdl.game_max_res.y;
 
-	SDL_SetWindowMinimumSize(ctx.win, ctx.game_max_res.w,
-				 ctx.game_max_res.h);
-	SDL_SetWindowSize(ctx.win, ctx.game_max_res.w, ctx.game_max_res.h);
-	SDL_RenderSetLogicalSize(ctx.disp_rend, ctx.game_max_res.w,
-				 ctx.game_max_res.h);
+	input_init(&h.core.inp);
+	/* TODO: Add return check. */
+	timer_init(&h.core.tim, h.core.av_info.timing.fps);
+	h.font = FontStartup(h.rend);
 
-	run(&ctx);
+	while(h.core.env.status.bits.shutdown == 0 && h.quit == 0)
+	{
+		static int tim_cmd = 0;
+		static Uint8 frames_skipped = 0;
 
+		timer_profile_start(&h.core.tim);
+		if(tim_cmd > 0)
+		{
+			SDL_Delay(tim_cmd);
+			h.core.env.status.bits.video_disabled = 0;
+		}
+		else if(tim_cmd < 0 && frames_skipped > 0
+#if ENABLE_VIDEO_RECORDING == 1
+				&& h.core.vid == NULL
+#endif
+		       )
+		{
+			/* Disable video for the skipped frame to improve
+			 * performance. But only when we're not recording a
+			 * video. */
+			h.core.env.status.bits.video_disabled = 1;
+			frames_skipped--;
+		}
+		else
+		{
+			h.core.env.status.bits.video_disabled = 0;
+			frames_skipped = h.stngs.frameskip_limit;
+		}
+
+		h.core.env.frames++;
+		process_events(&h);
+		SDL_SetRenderDrawColor(h.rend, 0x00, 0x00, 0x00, 0x00);
+		SDL_RenderClear(h.rend);
+		play_frame(&h.core);
+		SDL_RenderCopyEx(h.rend, h.core.sdl.core_tex,
+				 &h.core.sdl.game_frame_res,
+				 &h.core_tex_targ, 0.0, NULL,
+				 h.core.env.flip);
+
+#if ENABLE_VIDEO_RECORDING == 1
+		if(h.core.vid != NULL)
+		{
+			cap_frame(h.core.vid, h.rend, h.core.sdl.core_tex,
+				  &h.core.sdl.game_frame_res, h.core.env.flip);
+		}
+#endif
+		SDL_SetRenderTarget(h.rend, NULL);
+		ui_overlay_render(&h.ui_overlay, h.rend, h.font);
+
+		/* Only draw to screen if we're not falling behind. */
+		if(tim_cmd >= 0 || frames_skipped == 0)
+			SDL_RenderPresent(h.rend);
+
+		tim_cmd = timer_profile_end(&h.core.tim);
+
+		if(h.stngs.benchmark)
+		{
+			Uint32 elapsed;
+			static Uint32 bench_frames = 0;
+			static Uint32 benchmark_beg = 0;
+			static struct benchmark_txt_priv btxt;
+
+			/* Run as fast as possible. */
+			tim_cmd = 0;
+
+			if(benchmark_beg == 0)
+			{
+				SDL_Colour c = { 0xFF, 0x00, 0x00, SDL_ALPHA_OPAQUE };
+				ui_add_overlay(&h.ui_overlay, c, ui_overlay_top_right, NULL,
+						0, get_benchmark_txt,
+						&btxt, 0);
+				benchmark_beg = SDL_GetTicks();
+			}
+
+			bench_frames++;
+			elapsed = SDL_GetTicks() - benchmark_beg;
+			if(elapsed == 0)
+				continue;
+
+			btxt.fps = (bench_frames * 1024) / elapsed;
+			if(elapsed >= h.stngs.benchmark_dur * 1024)
+			{
+				SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+						"Benchmark: %u FPS",
+						btxt.fps);
+				break;
+			}
+		}
+	}
+
+#if ENABLE_VIDEO_RECORDING == 1
+	rec_end(&h.core.vid);
+#endif
+	while(h.ui_overlay != NULL)
+		ui_overlay_delete_all(&h.ui_overlay);
+
+	util_exit_all();
+	FontExit(h.font);
 	ret = EXIT_SUCCESS;
 
 out:
+	/* TODO: Free UI.*/
 
-	if(ctx.env.status_bits.game_loaded)
-		unload_libretro_file(&ctx);
+	if(h.core.env.status.bits.game_loaded)
+		unload_libretro_file(&h.core);
 
-	if(ctx.env.status_bits.core_init)
+	if(h.core.env.status.bits.core_init)
 	{
-		unload_libretro_core(&ctx);
-		play_deinit_cb(&ctx);
+		unload_libretro_core(&h.core);
+		play_deinit_cb(&h.core);
 	}
 
-	SDL_DestroyRenderer(ctx.disp_rend);
-	SDL_DestroyWindow(ctx.win);
+	SDL_DestroyRenderer(h.rend);
+	SDL_DestroyWindow(h.win);
 	SDL_VideoQuit();
 	SDL_Quit();
-	free_settings(&ctx);
+	free_settings(&h.core);
 
 	if(ret == EXIT_SUCCESS)
 	{

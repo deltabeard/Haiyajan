@@ -1,22 +1,32 @@
-*
+# Compiler output
+*.s
 
-# Hidden files
-!.gitignore
-!.astylerc
-!.editorconfig
+# Object files
+*.obj
+*.o
+*.so
+*.dll
+*.lib
 
-# Project documentation
-!*Makefile*
-!LICENSE
-!*.md
-!*.sh
-!/meta/*.xcf
-!/meta/*.png
-!/meta/*.jpg
+# Executables and symbols
+haiyajan
+*.exe
+*.sym
 
-# Source code
-!*.h
-!*.c
-!link.T
+# Debugging
+*.gcda
+callgrind.out*
+.gdb*
 
-!*/
+# Media files created by Haiyajan
+*.webp
+*.bmp
+*.h264
+*.wv
+
+# Hidden folders
+.*/*
+
+# IDE files
+*.kdev*
+*.json

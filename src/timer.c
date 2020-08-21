@@ -20,7 +20,7 @@ int timer_init(struct timer_ctx_s *const tim, double emulated_rate)
 {
 	int ret = 0;
 	tim->core_ms = (1.0 / emulated_rate) * 1000.0;
-	tim->core_us = ((1.0 / emulated_rate) * 1000.0 * 1024.0);
+	tim->core_us = (Uint32)((1.0 / emulated_rate) * 1000.0 * 1024.0);
 	tim->timer_accumulator = 0.0;
 	tim->delay_comp_ms = ((int)tim->core_ms + 1) * 2;
 	tim->timer_event = SDL_RegisterEvents(1);
@@ -39,43 +39,56 @@ void timer_profile_start(struct timer_ctx_s *const tim)
 	return;
 }
 
-void timer_profile_end(struct timer_ctx_s *const tim)
+int timer_profile_end(struct timer_ctx_s *const tim)
 {
 	enum timer_status_e status;
+	Uint64 busy_acu_us;
+	Uint32 elapsed_ms;
+
 	tim->busy_acu_ms += SDL_GetTicks() - tim->profile_start_ms;
 	tim->busy_samples++;
 
-	if(tim->busy_samples < 32)
-		return;
+	if(tim->busy_samples >= 32)
+	{
+		busy_acu_us = tim->busy_acu_ms * 1024;
+		busy_acu_us /= 32;
+		tim->busy_acu_ms = 0;
+		tim->busy_samples = 0;
 
-	Uint64 busy_acu_us = tim->busy_acu_ms * 1024;
-	busy_acu_us /= 32;
-	tim->busy_acu_ms = 0;
-	tim->busy_samples = 0;
-
-	if(busy_acu_us >= tim->core_us * 1.5)
-		status = TIMER_SPEED_UP_AGGRESSIVELY;
-	else if(busy_acu_us >= (tim->core_us / 1.5))
-		status = TIMER_SPEED_UP;
-	else
-		status = TIMER_OKAY;
+		if(busy_acu_us >= tim->core_us * 1.5)
+			status = TIMER_SPEED_UP_AGGRESSIVELY;
+		else if(busy_acu_us >= (tim->core_us / 1.5))
+			status = TIMER_SPEED_UP;
+		else
+			status = TIMER_OKAY;
 
 #if 0
-	SDL_LogVerbose(SDL_LOG_CATEGORY_SYSTEM, "Average busy time %.2f",
-		       ((float)busy_acu_us / 1024));
+		SDL_LogVerbose(SDL_LOG_CATEGORY_SYSTEM, "Average busy time %.2f",
+				((float)busy_acu_us / 1024));
 #endif
 
-	{
-		SDL_Event event;
-		SDL_zero(event);
-		event.type = tim->timer_event;
-		event.user.code = status;
-		SDL_PushEvent(&event);
+		{
+			SDL_Event event;
+			SDL_zero(event);
+			event.type = tim->timer_event;
+			event.user.code = status;
+			SDL_PushEvent(&event);
+		}
 	}
-}
 
-int timer_get_delay(struct timer_ctx_s *const tim, Uint32 elapsed_ms)
-{
+	{
+		Uint32 ticks = SDL_GetTicks();
+		if(ticks >= tim->profile_start_ms)
+			elapsed_ms = ticks - tim->profile_start_ms;
+		else
+		{
+			/* Handle overflow of SDL_GetTicks() that occurs
+			 * every ~50 days. */
+			elapsed_ms = (SDL_MAX_UINT32 - tim->profile_start_ms) +
+				ticks;
+		}
+	}
+
 	tim->timer_accumulator -= (double)elapsed_ms;
 	tim->timer_accumulator += tim->core_ms;
 

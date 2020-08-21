@@ -1,13 +1,18 @@
 CFLAGS := -std=c99 -g3 -Og -Wall -Wextra -Werror -I../inc \
-	$(shell sdl2-config --cflags)
+	$(shell sdl2-config --cflags) -D ENABLE_WEBP_SCREENSHOTS=0 \
+	-D ENABLE_VIDEO_RECORDING=0
 LDLIBS := $(shell sdl2-config --libs)
 
-all: test run
-test: test.o ../src/load.o ../src/timer.o
-	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
+SRC_DIR	:= ../src
+INC_DIR	:= ../inc
+SRCS	:= $(addprefix $(SRC_DIR)/, font.c gl.c input.c load.c \
+	menu.c play.c sig.c timer.c tinflate.c ui.c util.c)
+HDRS	:= $(wildcard $(INC_DIR)/*.h)
+OBJS	:= $(SRCS:.c=.o)
 
-../src/load.o: ../src/load.c ../inc/load.h ../inc/haiyajan.h ../inc/libretro.h
-../src/timer.o: ../src/timer.c ../inc/timer.h
+all: test run
+test: test.o $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 libretro-init:
 	$(MAKE) -C ./libretro_init

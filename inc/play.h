@@ -22,7 +22,7 @@
 
 enum
 {
-	PLAY_LOG_CATEGORY_CORE = SDL_LOG_CATEGORY_CUSTOM,
+	PLAY_LOG_CATEGORY_CORE = SDL_LOG_CATEGORY_CUSTOM
 };
 
 /**
@@ -45,7 +45,7 @@ void play_frame(struct core_ctx_s *ctx);
  * \param ctx	Libretro core context.
  * \returns	0 on success, else failure. Use SDL_GetError().
  */
-uint_fast8_t play_init_av(struct core_ctx_s *ctx);
+int play_init_av(struct core_ctx_s *ctx, SDL_Renderer *rend);
 
 /**
  * Free audio and video contexts for libretro core.

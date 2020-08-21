@@ -171,8 +171,8 @@ static const unsigned char bitmap_font[FONT_BITMAP_SIZE] = {
 font_ctx *FontStartup(SDL_Renderer *renderer)
 {
 	const SDL_Colour colours[2] = {
-		{.r = 0x00, .g = 0x00, .b = 0x00, .a = 0x00}, // BG
-		{.r = 0xFF, .g = 0xFF, .b = 0xFF, .a = 0xFF}  // FG
+		{ 0x00, 0x00, 0x00, 0x00}, /* BG */
+		{ 0xFF, 0xFF, 0xFF, 0xFF}  /* FG */
 	};
 	SDL_Surface *bmp_surf;
 	font_ctx *ctx = SDL_malloc(sizeof(font_ctx));
@@ -228,7 +228,7 @@ err:
 	goto out;
 }
 
-void FontDrawSize(const size_t text_len, int *w, int *h)
+void FontDrawSize(const unsigned text_len, unsigned *w, unsigned *h)
 {
 	*w = text_len * FONT_CHAR_WIDTH;
 	*h = FONT_CHAR_HEIGHT;

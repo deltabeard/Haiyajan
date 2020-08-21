@@ -40,28 +40,26 @@ struct venc_stor_s {
 };
 
 struct rec_s {
-	struct {
-		SDL_RWops *fa;
-		WavpackContext *wpc;
-		void *first_block;
-		Sint32 first_block_sz;
-		Sint32 *samples;
-		Uint64 samples_sz;
-	};
+	/* Audio */
+	SDL_RWops *fa;
+	WavpackContext *wpc;
+	void *first_block;
+	Sint32 first_block_sz;
+	Sint32 *samples;
+	Uint64 samples_sz;
 
-	struct {
-		SDL_RWops *fv;
-		x264_t *h;
-		x264_param_t param;
+	/* Video */
+	SDL_RWops *fv;
+	x264_t *h;
+	x264_param_t param;
 
-		/* Preset value pointing to x264_preset_names[] */
-		Uint8 preset;
-		SDL_Thread *venc_th;
-		SDL_mutex *venc_mtx;
-		SDL_cond *venc_cond;
-		SDL_SpinLock venc_slk;
-		struct venc_stor_s venc_stor;
-	};
+	/* Preset value pointing to x264_preset_names[] */
+	Uint8 preset;
+	SDL_Thread *venc_th;
+	SDL_mutex *venc_mtx;
+	SDL_cond *venc_cond;
+	SDL_SpinLock venc_slk;
+	struct venc_stor_s venc_stor;
 };
 
 /* Max preset is fast. */
@@ -448,16 +446,16 @@ void rec_enc_audio(rec_ctx *ctx, const Sint16 *data, uint32_t frames)
 
 Sint64 rec_video_size(rec_ctx *ctx)
 {
-	if(ctx == NULL)
-		return 0;
+	if(ctx == NULL || ctx->venc_stor.cmd == VID_CMD_ENCODE_FINISH)
+		return -1;
 
 	return SDL_RWtell(ctx->fv);
 }
 
 Sint64 rec_audio_size(rec_ctx *ctx)
 {
-	if(ctx == NULL)
-		return 0;
+	if(ctx == NULL || ctx->venc_stor.cmd == VID_CMD_ENCODE_FINISH)
+		return -1;
 
 	return SDL_RWtell(ctx->fa);
 }
@@ -512,7 +510,7 @@ static int rec_single_img_thread(void *param)
 
 #if ENABLE_WEBP_SCREENSHOTS == 1
 	outsz = WebPEncodeRGB(surf->pixels, surf->w, surf->h, surf->pitch,
-			      95, &webp);
+			      99, &webp);
 	if(outsz == 0)
 		goto out;
 
