@@ -50,6 +50,8 @@ int timer_profile_end(struct timer_ctx_s *const tim)
 
 	if(tim->busy_samples >= 32)
 	{
+		SDL_Event event = { 0 };
+
 		busy_acu_us = tim->busy_acu_ms * 1024;
 		busy_acu_us /= 32;
 		tim->busy_acu_ms = 0;
@@ -67,13 +69,9 @@ int timer_profile_end(struct timer_ctx_s *const tim)
 				((float)busy_acu_us / 1024));
 #endif
 
-		{
-			SDL_Event event;
-			SDL_zero(event);
-			event.type = tim->timer_event;
-			event.user.code = status;
-			SDL_PushEvent(&event);
-		}
+		event.type = tim->timer_event;
+		event.user.code = status;
+		SDL_PushEvent(&event);
 	}
 
 	{
