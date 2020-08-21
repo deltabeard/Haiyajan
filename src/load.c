@@ -106,6 +106,9 @@ int load_libretro_file(struct core_ctx_s *restrict ctx)
 	SDL_assert_paranoid(ctx != NULL);
 	SDL_assert(ctx->env.status.bits.core_init == 1);
 
+	if(ctx->content_filename == NULL)
+		return 1;
+
 	if(ctx->sys_info.need_fullpath == true)
 	{
 		ctx->sdl.game_data = NULL;
@@ -122,7 +125,7 @@ int load_libretro_file(struct core_ctx_s *restrict ctx)
 			return 1;
 
 		game.size = SDL_RWsize(game_file);
-		ctx->sdl.game_data = malloc(game.size);
+		ctx->sdl.game_data = SDL_malloc(game.size);
 
 		if(ctx->sdl.game_data == NULL)
 		{
@@ -132,7 +135,7 @@ int load_libretro_file(struct core_ctx_s *restrict ctx)
 
 		if(SDL_RWread(game_file, ctx->sdl.game_data, game.size, 1) == 0)
 		{
-			free(ctx->sdl.game_data);
+			SDL_free(ctx->sdl.game_data);
 			return 1;
 		}
 
@@ -248,7 +251,7 @@ void unload_libretro_file(struct core_ctx_s *restrict ctx)
 
 	if(ctx->sdl.game_data != NULL)
 	{
-		free(ctx->sdl.game_data);
+		SDL_free(ctx->sdl.game_data);
 		ctx->sdl.game_data = NULL;
 	}
 
