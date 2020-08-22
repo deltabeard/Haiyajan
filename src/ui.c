@@ -257,8 +257,56 @@ int ui_overlay_render(ui_overlay_ctx **p, SDL_Renderer *rend, font_ctx *font)
 	return ret;
 }
 
-#if 0
+SDL_Texture *ui_draw_menu(SDL_Renderer *rend, font_ctx *font, menu_ctx *menu)
+{
+	unsigned i;
+	SDL_Texture *tex;
+	unsigned max_text_len = 0;
+	SDL_Rect dst = { 0, 0, 1, 1 };
 
+	for(i = 0; i < menu->items_nmemb; i++)
+	{
+		unsigned len = strlen(menu->items[i].name);
+		if(len > max_text_len)
+			max_text_len = len;
+	}
+
+	tex = SDL_CreateTexture(rend, SDL_PIXELFORMAT_ARGB8888,
+		SDL_TEXTUREACCESS_TARGET,
+		max_text_len * FONT_CHAR_WIDTH,
+		menu->items_nmemb * FONT_CHAR_HEIGHT);
+
+	if(tex == NULL)
+		goto out;
+
+	if(SDL_SetRenderTarget(rend, tex) != 0)
+	{
+		SDL_DestroyTexture(tex);
+		tex = NULL;
+		goto out;
+	}
+
+	SDL_SetRenderDrawBlendMode(rend, SDL_BLENDMODE_BLEND);
+	SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_BLEND);
+	/* Set background to transparent. */
+	SDL_SetRenderDrawColor(rend, 0, 0, 0, SDL_ALPHA_TRANSPARENT);
+	SDL_RenderClear(rend);
+
+	/* Set text to white. Use SDL_SetTextureColorMod() to change colour on
+	 * copy. */
+	SDL_SetRenderDrawColor(rend, 0xFF, 0xFF, 0xFF, SDL_ALPHA_OPAQUE);
+
+	for(i = 0; i < menu->items_nmemb; i++)
+	{
+		FontPrintToRenderer(font, menu->items[i].name, &dst);
+		dst.y += FONT_CHAR_HEIGHT;
+	}
+
+out:
+	return tex;
+}
+
+#if 0
 ui *ui_init(SDL_Renderer *rend)
 {
 	ui *ui = SDL_calloc(1, sizeof(struct ui_s));

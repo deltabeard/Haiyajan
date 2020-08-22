@@ -92,7 +92,14 @@ void ui_overlay_delete(ui_overlay_ctx **p, ui_overlay_item_s *item);
  */
 void ui_overlay_delete_all(ui_overlay_ctx **p);
 
-typedef struct ui_s	ui;
-ui *ui_init(SDL_Renderer *rend);
-void draw_menu(ui *ui, menu_ctx *menu);
-void launch_menu(ui *ui, menu_ctx *menu);
+/**
+ * Create an SDL_Texture and draw the given menu text to it on a transparent
+ * background.
+ */
+SDL_Texture *ui_draw_menu(SDL_Renderer *rend, font_ctx *font, menu_ctx *menu);
+
+/**
+ * Create an SDL_Texture and draw the given menu help text to it on a
+ * transparent background.
+ */
+SDL_Texture *ui_draw_help(SDL_Renderer *rend, font_ctx *font, menu_ctx *menu);

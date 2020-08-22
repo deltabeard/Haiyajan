@@ -275,21 +275,23 @@ static void apply_settings(char **argv, struct settings_s *cfg)
 	/* Print remaining arguments. */
 	rem_arg = optparse_arg(&options);
 
-	if (cfg->core_filename == NULL)
-	{
-		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-				"The path to a libretro core was not given");
-		goto err;
-	}
-
 	if(rem_arg != NULL)
 		cfg->content_filename = SDL_strdup(rem_arg);
-	else
+
+	if(cfg->core_filename == NULL && rem_arg != NULL)
+	{
+		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
+				"The path to the libretro core was not given");
+		goto err;
+	}
+	else if(cfg->core_filename != NULL && rem_arg == NULL)
 	{
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
 				"The path to the content file was not given");
 		goto err;
 	}
+	else if(cfg->core_filename == NULL && rem_arg == NULL)
+		cfg->show_menu = 1;
 
 	/* Initialise default video driver if not done so already. */
 	if(video_init == 0 && SDL_VideoInit(NULL) != 0)
@@ -313,7 +315,7 @@ struct rec_txt_priv {
 	rec_ctx *vid;
 	char str[32];
 };
-char *get_rec_txt(void *priv)
+static char *get_rec_txt(void *priv)
 {
 	struct rec_txt_priv *rtxt = priv;
 	struct {
@@ -392,7 +394,7 @@ err:
 }
 
 #if ENABLE_VIDEO_RECORDING == 1
-void cap_frame(rec_ctx *vid, SDL_Renderer *rend, SDL_Texture *tex,
+static void cap_frame(rec_ctx *vid, SDL_Renderer *rend, SDL_Texture *tex,
 	       const SDL_Rect *src, SDL_RendererFlip flip)
 {
 	SDL_Surface *surf = util_tex_to_surf(rend, tex, src, flip);
@@ -567,11 +569,93 @@ static void process_events(struct haiyajan_ctx_s *ctx)
 	}
 }
 
+static void menu_load_core(void *ctx)
+{
+	(void) ctx;
+	SDL_Log("Stub: load libretro core");
+}
+
+static void menu_load_content(void *ctx)
+{
+	(void) ctx;
+	SDL_Log("Stub: load content");
+}
+
+static void menu_exit(void *ctx)
+{
+	(void) ctx;
+	SDL_Log("Stub: Exit");
+}
+
+static SDL_Texture *show_menu(struct haiyajan_ctx_s *h)
+{
+	static menu_item main_items[3] = {
+		{
+			.name = "Load Core",
+			.help = "Load a Libretro core from filesystem",
+			.op = MENU_EXEC_FUNC,
+			.param.exec_func = { NULL, menu_load_core }
+		},
+		{
+			.name = "Load Content",
+			.help = "Open a file to play using loaded libretro core.",
+			.op = MENU_EXEC_FUNC,
+			.param.exec_func = { NULL, menu_load_content }
+		},
+		{
+			.name = "Exit",
+			.help = "Close Haiyajan.",
+			.op = MENU_EXEC_FUNC,
+			.param.exec_func = { NULL, menu_exit }
+		}
+	};
+	static menu_ctx main_menu = {
+		.parent = NULL, .title = "Haiyajan",
+		.help = "Main Menu",
+		.item_selected = 0,
+		.items_nmemb = 3,
+		.items = main_items,
+		.type = UI_MENU_TYPE_SMALL_MENU
+	};
+	SDL_Texture *main_tex = ui_draw_menu(h->rend, h->font, &main_menu);
+	SDL_Rect menu_dst = { 20, 15, 0, 0};
+	SDL_Rect menu_sel_src = { .x = 0, .y = 0, .h = FONT_CHAR_HEIGHT };
+	SDL_Rect menu_sel = { .x = 20, .y = 15, .h = FONT_CHAR_HEIGHT };
+	/* Entry colour: #338ae0 */
+	/* Select colour: #ffff5e */
+
+	/* TODO: Check return values. */
+	SDL_QueryTexture(main_tex, NULL, NULL, &menu_dst.w, &menu_dst.h);
+	menu_sel.w = menu_dst.w;
+	menu_sel_src.w = menu_dst.w;
+
+	/* Draw menu background on screen. */
+	SDL_SetRenderTarget(h->rend, NULL);
+	SDL_SetRenderDrawColor(h->rend, 0x33, 0x8A, 0xE0, SDL_ALPHA_OPAQUE);
+	SDL_RenderFillRect(h->rend, &menu_dst);
+
+	/* Draw menu text on top of background. */
+	SDL_RenderCopy(h->rend, main_tex, NULL, &menu_dst);
+
+	/* Highlight selected menu entry. */
+	menu_sel.y += main_menu.item_selected * FONT_CHAR_HEIGHT;
+	menu_sel.h = FONT_CHAR_HEIGHT;
+	SDL_SetRenderDrawColor(h->rend, 0xFF, 0xFF, 0x5E, SDL_ALPHA_OPAQUE);
+	SDL_RenderFillRect(h->rend, &menu_sel);
+
+	/* Draw selected entry. */
+	/* Set text colour to black. */
+	SDL_SetTextureColorMod(main_tex, 0, 0, 0);
+	SDL_RenderCopy(h->rend, main_tex, &menu_sel_src, &menu_sel);
+
+	return main_tex;
+}
+
 struct benchmark_txt_priv {
 	Uint32 fps;
 	char str[64];
 };
-char *get_benchmark_txt(void *priv)
+static char *get_benchmark_txt(void *priv)
 {
 	struct benchmark_txt_priv *btxt = priv;
 	SDL_snprintf(btxt->str, sizeof(btxt->str), "Benchmark: %u FPS",
@@ -579,11 +663,13 @@ char *get_benchmark_txt(void *priv)
 	return btxt->str;
 }
 
+#if 0
 int haiyajan_get_available_file_types(struct core_ctx_s *ctx)
 {
 	(void) ctx;
 	return 0;
 }
+#endif
 
 static int haiyajan_init_core(struct haiyajan_ctx_s *h, char *core_filename,
 		char *content_filename)
@@ -659,6 +745,8 @@ err:
 	return -1;
 }
 
+
+
 int main(int argc, char *argv[])
 {
 	int ret = EXIT_FAILURE;
@@ -724,46 +812,63 @@ int main(int argc, char *argv[])
 		       "Created window and renderer");
 	SDL_SetWindowTitle(h.win, PROG_NAME);
 
+	input_init(&h.core.inp);
+	h.font = FontStartup(h.rend);
+
 #if 0
 	h.ui = ui_init(h.rend);
 	if(cfg->core_filename == NULL)
 		ui_open_menu();
 #endif
 
-	if(haiyajan_init_core(&h, h.stngs.core_filename,
+	if(h.stngs.show_menu)
+	{
+		;
+	}
+	else if(haiyajan_init_core(&h, h.stngs.core_filename,
 				h.stngs.content_filename) != 0)
 	{
 		goto err;
 	}
-
+	else
 	{
 		char title[64];
 		SDL_snprintf(title, sizeof(title), "%s: %s", PROG_NAME,
 			     h.core.sys_info.library_name);
 		SDL_SetWindowTitle(h.win, title);
+		SDL_SetWindowMinimumSize(h.win, h.core.sdl.game_max_res.w,
+					 h.core.sdl.game_max_res.h);
+		SDL_SetWindowSize(h.win, h.core.sdl.game_max_res.w,
+				  h.core.sdl.game_max_res.h);
+		SDL_RenderSetLogicalSize(h.rend, h.core.sdl.game_max_res.w,
+					 h.core.sdl.game_max_res.h);
 	}
-
-	SDL_SetWindowMinimumSize(h.win, h.core.sdl.game_max_res.w,
-			h.core.sdl.game_max_res.h);
-	SDL_SetWindowSize(h.win, h.core.sdl.game_max_res.w,
-			h.core.sdl.game_max_res.h);
-	SDL_RenderSetLogicalSize(h.rend, h.core.sdl.game_max_res.w,
-			h.core.sdl.game_max_res.h);
 
 	h.core_tex_targ.x = 0;
 	h.core_tex_targ.y = 0;
 	h.core_tex_targ.w = h.core.sdl.game_max_res.w;
 	h.core_tex_targ.h = h.core.sdl.game_max_res.y;
 
-	input_init(&h.core.inp);
 	/* TODO: Add return check. */
 	timer_init(&h.core.tim, h.core.av_info.timing.fps);
-	h.font = FontStartup(h.rend);
 
 	while(h.core.env.status.bits.shutdown == 0 && h.quit == 0)
 	{
 		static int tim_cmd = 0;
 		static Uint8 frames_skipped = 0;
+
+		if(h.stngs.show_menu)
+		{
+			static SDL_Texture *menu = NULL;
+			//SDL_SetRenderDrawColor(h.rend, 0x00, 0x00, 0x00, 0x00);
+			//SDL_RenderClear(h.rend);
+			if(menu == NULL)
+				menu = show_menu(&h);
+
+			process_events(&h);
+			SDL_RenderPresent(h.rend);
+			continue;
+		}
 
 		timer_profile_start(&h.core.tim);
 		if(tim_cmd > 0)

@@ -34,6 +34,7 @@ struct settings_s
 	unsigned fullscreen : 1;
 	unsigned benchmark : 1;
 	unsigned start_core : 1;
+	unsigned show_menu : 1;
 	Uint32 benchmark_dur;
 	Uint8 frameskip_limit;
 	char *core_filename;
@@ -182,7 +183,6 @@ struct haiyajan_ctx_s
 	struct core_ctx_s core;
 
 	/* User interface context. */
-	ui *ui;
 	ui_overlay_ctx *ui_overlay;
 
 	/* Font */

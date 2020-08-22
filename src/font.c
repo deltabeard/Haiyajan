@@ -269,7 +269,7 @@ int FontPrintToRenderer(font_ctx *const ctx, const char *text,
 		SDL_SetTextureAlphaMod(ctx->tex, a);
 	}
 
-	do
+	for(; *text; text++)
 	{
 		Uint8 pos;
 		int ret;
@@ -289,7 +289,7 @@ int FontPrintToRenderer(font_ctx *const ctx, const char *text,
 			return ret;
 
 		screen_rect.x += screen_rect.w;
-	} while(*(text++));
+	}
 
 	return 0;
 }
