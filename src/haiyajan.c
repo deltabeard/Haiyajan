@@ -402,7 +402,6 @@ void cap_frame(rec_ctx *vid, SDL_Renderer *rend, SDL_Texture *tex,
 
 	rec_enc_video(vid, surf);
 }
-#endif
 
 static void handle_rec_toggle(struct haiyajan_ctx_s *ctx)
 {
@@ -458,6 +457,7 @@ static void handle_rec_toggle(struct haiyajan_ctx_s *ctx)
 out:
 	return;
 }
+#endif
 
 static void process_events(struct haiyajan_ctx_s *ctx)
 {

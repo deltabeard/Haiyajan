@@ -39,7 +39,6 @@ ccparam = $(if $(subst cl,,$(CC)),$(1),$(2))
 
 # Set default flags
 CFLAGS := $(call ccparam, -std=c99 -pedantic -g3 -fPIE -Wall -Wextra -pipe, /W3)
-LDLIBS := -lSDL2 -lSDL2main
 
 ifeq ($(DEBUG),1)
 	CFLAGS += -DDEBUG=1 -DSDL_ASSERT_LEVEL=3
@@ -58,16 +57,13 @@ ifeq ($(GIT_VERSION),)
 endif
 CFLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\"
 
-ifneq ($(call fn_chklib, SDL2), 0)
-	err := $(error Unable to find any of $(subst %,SDL2,$(.LIBPATTERNS) in library paths). SDL2 is required)
-endif
-
 ifeq ($(CC),cl)
 	LDFLAGS += /link /LTCG /NODEFAULTLIB:MSVCRT /SUBSYSTEM:WINDOWS user32.lib gdi32.lib winmm.lib imm32.lib ole32.lib oleaut32.lib version.lib uuid.lib advapi32.lib setupapi.lib shell32.lib dinput8.lib
-	SDL_LIBS = $(error SDL_LIBS must be defined to the location of the SDL2 include folder)
+	SDL_CFLAGS = $(error SDL_CFLAGS must be defined to the location of the SDL2 include folder)
+	SDL_LIBS = -lSDL2 -lSDL2main
 else
-	SDL_LIBS = $(shell sdl2-config --libs)
 	SDL_CFLAGS = $(shell sdl2-config --cflags)
+	SDL_LIBS = $(shell sdl2-config --libs)
 endif
 
 # Check if WEBP is available. Otherwise use BMP for screenshots.
@@ -106,22 +102,20 @@ SRCS	:= $(wildcard src/*.c)
 HDRS	:= $(wildcard inc/*.h)
 OBJS	:= $(SRCS:.c=.$(OBJEXT)) $(call ccparam,,meta/Haiyajan.res)
 DEPS	:= Makefile.depend
-override CFLAGS += -Iinc $(SDL_LIBS) $(SDL_CFLAGS)
+override CFLAGS += -Iinc $(SDL_CFLAGS)
+override LDFLAGS += $(SDL_LIBS)
 
 .PHONY: test
 
 all: $(TARGETS)
 haiyajan: $(OBJS) $(LDLIBS)
-	$(info LINK $@ $^)
-	@$(CC) $(CFLAGS) $(EXEOUT)$@ $^ $(LDFLAGS)
+	$(CC) $(CFLAGS) $(EXEOUT)$@ $^ $(LDFLAGS)
 
 %.obj: %.c
-	$(info CC $^)
-	@$(CC) $(CFLAGS) /Fo$@ /c /TC $^
+	$(CC) $(CFLAGS) /Fo$@ /c /TC $^
 
 %.res: %.rc
-	$(info RC $^)
-	@rc /c65001 $^
+	rc /c65001 $^
 
 include Makefile.depend
 
