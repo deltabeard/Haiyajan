@@ -116,31 +116,10 @@ int load_libretro_file(struct core_ctx_s *restrict ctx)
 	}
 	else
 	{
-		/* Read file to memory. */
-		SDL_RWops *game_file;
-
-		game_file = SDL_RWFromFile(ctx->content_filename, "rb");
-
-		if(game_file == NULL)
-			return 1;
-
-		game.size = SDL_RWsize(game_file);
-		ctx->sdl.game_data = SDL_malloc(game.size);
+		ctx->sdl.game_data = SDL_LoadFile(ctx->content_filename, &game.size);
 
 		if(ctx->sdl.game_data == NULL)
-		{
-			SDL_SetError("Unable to allocate memory for game.");
 			return 1;
-		}
-
-		if(SDL_RWread(game_file, ctx->sdl.game_data, game.size, 1) == 0)
-		{
-			SDL_free(ctx->sdl.game_data);
-			return 1;
-		}
-
-		game.data = ctx->sdl.game_data;
-		SDL_RWclose(game_file);
 	}
 
 	if(ctx->fn.retro_load_game(&game) == false)
@@ -153,6 +132,44 @@ int load_libretro_file(struct core_ctx_s *restrict ctx)
 
 	return 0;
 }
+
+#if 0
+/* TODO: Function for later consideration. */
+int load_is_libretro_core(const char *file)
+{
+	SDL_RWops *f;
+	Uint8 header[4];
+	const Uint8 elf[4] = { 0x7F, 'E', 'L', 'F' };
+	const Uint8 dll[2] = { 'M', 'Z' };
+	const Uint8 dylib[4] = { 0xCF, 0xFA, 0xED, 0xFE };
+
+	f = SDL_RWFromFile(file, "rb");
+	if(f == NULL)
+		return -1;
+
+	if(SDL_RWread(f, header, 1, sizeof(header)) != sizeof(header))
+	{
+		SDL_RWclose(f);
+		return -1;
+	}
+
+	SDL_RWclose(f);
+
+	/* Check if an ELF executable. */
+	if(SDL_memcmp(header, elf, sizeof(elf)) == 0)
+		return 1;
+
+	/* Check if an DLL executable. */
+	if(SDL_memcmp(header, dll, sizeof(dll)) == 0)
+		return 1;
+
+	/* Check if an DYLIB executable. */
+	if(SDL_memcmp(header, dylib, sizeof(dylib)) == 0)
+		return 1;
+
+	return 0;
+}
+#endif
 
 int load_libretro_core(const char *restrict so_file,
 	struct core_ctx_s *restrict ctx)
