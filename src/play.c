@@ -280,8 +280,6 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		const struct retro_frame_time_callback *ftcb = data;
 		ctx_retro->env.ftcb = ftcb->callback;
 		ctx_retro->env.ftref = ftcb->reference;
-		SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
-				"Set frame time callback");
 		break;
 	}
 
