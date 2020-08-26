@@ -132,6 +132,8 @@ int load_libretro_file(struct core_ctx_s *restrict ctx)
 
 		if(ctx->sdl.game_data == NULL)
 			return 1;
+
+		game.data = ctx->sdl.game_data;
 	}
 
 	if(ctx->fn.retro_load_game(gamep) == false)
