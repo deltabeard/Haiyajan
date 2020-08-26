@@ -121,7 +121,8 @@ static void print_help(void)
 	int i;
 
 	fprintf(stderr, "\n"
-			"Usage: haiyajan [OPTIONS] -L CORE FILE\n"
+			"Usage: haiyajan [OPTIONS] -L CORE [FILE]\n"
+			"Options:\n"
 			"  -h, --help      Show this help message.\n"
 			"      --version   Print version information.\n"
 			"  -L, --libretro  Path to libretro core.\n"
@@ -284,12 +285,6 @@ static void apply_settings(char **argv, struct settings_s *cfg)
 
 	if(rem_arg != NULL)
 		cfg->content_filename = SDL_strdup(rem_arg);
-	else
-	{
-		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-				"The path to the content file was not given");
-		goto err;
-	}
 
 	/* Initialise default video driver if not done so already. */
 	if(video_init == 0 && SDL_VideoInit(NULL) != 0)

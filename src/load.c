@@ -54,6 +54,9 @@ static void load_sram_file(struct core_ctx_s *ctx)
 	size_t sram_len;
 	void *sram_dat;
 
+	if(ctx->content_filename == NULL)
+		goto out;
+
 	ctx->sram_filename = SDL_strdup(ctx->content_filename);
 	if(ctx->sram_filename == NULL)
 		goto out;
@@ -74,7 +77,7 @@ static void load_sram_file(struct core_ctx_s *ctx)
 
 	sram_size = SDL_RWsize(sram_rw);
 	sram_size_exp =
-	ctx->fn.retro_get_memory_size(RETRO_MEMORY_SAVE_RAM);
+		ctx->fn.retro_get_memory_size(RETRO_MEMORY_SAVE_RAM);
 	sram_size = sram_size > sram_size_exp ? sram_size_exp : sram_size;
 	sram_dat = ctx->fn.retro_get_memory_data(RETRO_MEMORY_SAVE_RAM);
 	if(sram_dat != NULL)
@@ -99,6 +102,7 @@ int load_libretro_file(struct core_ctx_s *restrict ctx)
 	 * memory.
 	 */
 	struct retro_game_info game;
+	struct retro_game_info *gamep = &game;
 
 	game.path = ctx->content_filename;
 	game.meta = NULL;
@@ -106,10 +110,18 @@ int load_libretro_file(struct core_ctx_s *restrict ctx)
 	SDL_assert_paranoid(ctx != NULL);
 	SDL_assert(ctx->env.status.bits.core_init == 1);
 
-	if(ctx->content_filename == NULL)
+	if(ctx->content_filename == NULL &&
+			ctx->env.status.bits.support_no_game == SDL_FALSE)
+	{
+		SDL_SetError("This libretro core requires a content file.");
 		return 1;
-
-	if(ctx->sys_info.need_fullpath == true)
+	}
+	else if(ctx->content_filename == NULL &&
+			ctx->env.status.bits.support_no_game == SDL_TRUE)
+	{
+		gamep = NULL;
+	}
+	else if(ctx->sys_info.need_fullpath == true)
 	{
 		ctx->sdl.game_data = NULL;
 		game.data = NULL;
@@ -122,11 +134,13 @@ int load_libretro_file(struct core_ctx_s *restrict ctx)
 			return 1;
 	}
 
-	if(ctx->fn.retro_load_game(&game) == false)
+	if(ctx->fn.retro_load_game(gamep) == false)
+	{
+		SDL_SetError("Libretro core failed to load content");
 		return 1;
+	}
 
 	load_sram_file(ctx);
-
 	ctx->env.status.bits.game_loaded = 1;
 	ctx->env.status.bits.shutdown = 0;
 

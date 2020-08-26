@@ -142,8 +142,9 @@ struct core_ctx_s
 				unsigned playing : 1;
 				unsigned video_disabled : 1;
 				unsigned valid_frame : 1;
+				unsigned support_no_game : 1;
 			} bits;
-			Uint8 all;
+			Uint16 all;
 		} status;
 
 		unsigned perf_lvl;

@@ -245,6 +245,13 @@ bool cb_retro_environment(unsigned cmd, void *data)
 		break;
 	}
 
+	case RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME:
+	{
+		const bool *support_no_game = data;
+		ctx_retro->env.status.bits.support_no_game = *support_no_game;
+		break;
+	}
+
 	case RETRO_ENVIRONMENT_GET_LIBRETRO_PATH:
 	{
 		const char **core_path = data;
