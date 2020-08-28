@@ -90,7 +90,7 @@ out:
 	return;
 }
 
-int load_libretro_file(struct core_ctx_s *restrict ctx)
+int load_libretro_file(struct core_ctx_s *ctx)
 {
 	/* TODO:
 	 * - Check whether file must be loaded into RAM, or is read straight
@@ -187,8 +187,7 @@ int load_is_libretro_core(const char *file)
 }
 #endif
 
-int load_libretro_core(const char *restrict so_file,
-	struct core_ctx_s *restrict ctx)
+int load_libretro_core(const char *so_file, struct core_ctx_s *ctx)
 {
 	unsigned i;
 	struct fn_links_s
@@ -278,7 +277,7 @@ int load_libretro_core(const char *restrict so_file,
 	return 0;
 }
 
-void unload_libretro_file(struct core_ctx_s *restrict ctx)
+void unload_libretro_file(struct core_ctx_s *ctx)
 {
 	save_sram_file(ctx);
 
@@ -291,7 +290,7 @@ void unload_libretro_file(struct core_ctx_s *restrict ctx)
 	ctx->env.status.bits.game_loaded = 0;
 }
 
-void unload_libretro_core(struct core_ctx_s *restrict ctx)
+void unload_libretro_core(struct core_ctx_s *ctx)
 {
 	if(ctx->env.status.bits.game_loaded)
 		unload_libretro_file(ctx);

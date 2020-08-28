@@ -33,7 +33,7 @@ static const char *const input_type_str[] = {
 
 static struct keymap_info_s keymap[512] = { 0 };
 
-void input_init(struct input_ctx_s *restrict in_ctx)
+void input_init(struct input_ctx_s *in_ctx)
 {
 #if defined(__linux__)
 	#include <gcdb_bin_linux.h>
