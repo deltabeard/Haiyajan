@@ -1,4 +1,7 @@
+<img align="right" width="128" height="128" src="meta/haiya_dragon_bg_rounded.svg">
+
 # Haiyajan
+
 Haiyajan (هیجان) is a tiny and fast entertainment interface that is designed to
 be simple to use. It uses plugins named "Libretro cores" to provide various
 emulation and multimedia features. It is written in C99 language and depends
@@ -53,6 +56,8 @@ Haiyajan is free software released under the **GNU Affero General Public
 License Version 3 (AGPL v3)**; see the LICENSE file for copying conditions.
 There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A
 PARTICULAR PURPOSE.
+
+The Haiyajan icon was created by Cher at https://ko-fi.com/staticevent.
 
 # Development
 
