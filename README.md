@@ -1,4 +1,4 @@
-<img align="right" width="128" height="128" src="meta/haiya_dragon_bg_rounded.svg">
+<img align="right" width="128" height="128" alt="The Haiyajan Icon: Haiya Dragon" src="meta/haiya_dragon_bg_rounded.svg">
 
 # Haiyajan
 
