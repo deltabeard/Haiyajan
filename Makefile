@@ -33,16 +33,8 @@ Available options and their descriptions when enabled:
           This option will be enabled automatically if the linker is able to
           detect the availability of libx264 and libwavpack.
 
-ifeq ($(VSCMD_VER),)
   OPT="$(OPT)"
           Set custom optimisation options.
-else
-   SDL_LIB=""
-	  Location of compiled SDL2 libraries SDL2-static.lib and SDL2main.lib.
-	  
-   SDL_INC=""
-	  Location of SDL2 headers, such as SDL2.h.
-endif
 
   Example: make DEBUG=1 OPT="-Ofast -march=native"
 
