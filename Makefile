@@ -104,10 +104,13 @@ ifeq ($(OS),Windows_NT)
 		info = $(info Compiling for Win32 platforms)
 		CFLAGS += $(NT32_CFLAGS)
 		NT_REV = 5.01
+		ICON_FILE = icon_lo.ico
 	else ifeq ($(Platform),x64)
 		info = $(info Compiling for Win64 platforms)
 		CFLAGS += $(NT64_CFLAGS)
 		NT_REV = 6.01
+		# Use high quality EXE icon for newer platforms
+		ICON_FILE = icon_hi.ico
 	endif
 	
 	help_txt = $(help_txt_nt)
@@ -135,7 +138,7 @@ else
 	TARGETS += $(call ccparam, haiyajan.sym,)
 endif
 
-GIT_VERSION := $(shell git describe --tags 2>$(NULL))
+GIT_VERSION := $(shell git describe --abbrev=0 --tags 2>$(NULL))
 GIT_FULL_VERSION := $(shell git describe --dirty --always --tags --long 2>$(NULL))
 ifeq ($(GIT_VERSION),)
 	GIT_VERSION := 0,0
@@ -198,7 +201,7 @@ haiyajan: $(OBJS) $(LDLIBS)
 	$(CC) $(CFLAGS) /Fo$@ /c /TC $^
 
 %.res: %.rc
-	rc /nologo /c65001 /DEXE_VER=$(EXE_VERSION) /DGIT_VER="$(GIT_FULL_VERSION)" $^
+	rc /nologo /c65001 /DEXE_VER=$(EXE_VERSION) /DGIT_VER="$(GIT_FULL_VERSION)" /DICON_FILE="$(ICON_FILE)" $^
 
 include Makefile.depend
 

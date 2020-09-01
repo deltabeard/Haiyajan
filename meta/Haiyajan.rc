@@ -2,6 +2,9 @@
 //
 #include "resource.h"
 
+#define Q(x) #x
+#define QUOTE(x) Q(x)
+
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -50,18 +53,19 @@ END
 // Icon
 //
 
+#ifndef ICON_FILE
+#define ICON_FILE icon_lo.ico
+#endif
+
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-IDI_ICON1               ICON                    "icon1.ico"
+IDI_ICON1               ICON                    QUOTE(ICON_FILE)
 
 
 /////////////////////////////////////////////////////////////////////////////
 //
 // Version
 //
-
-#define Q(x) #x
-#define QUOTE(x) Q(x)
 
 #ifndef EXE_VER
 #define EXE_VER 0,0,0,0
