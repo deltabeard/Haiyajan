@@ -60,9 +60,20 @@ IDI_ICON1               ICON                    "icon1.ico"
 // Version
 //
 
+#define Q(x) #x
+#define QUOTE(x) Q(x)
+
+#ifndef EXE_VER
+#define EXE_VER 0,0,0,0
+#endif
+
+#ifndef GIT_VER
+#define GIT_VER LOCAL
+#endif
+
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,1,0,0
- PRODUCTVERSION 0,1,0,0
+ FILEVERSION EXE_VER
+ PRODUCTVERSION EXE_VER
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -75,21 +86,21 @@ VS_VERSION_INFO VERSIONINFO
 BEGIN
     BLOCK "StringFileInfo"
     BEGIN
-        BLOCK "080904b0"
+        BLOCK "040004b0"
         BEGIN
             VALUE "CompanyName", "Deltabeard"
-            VALUE "FileDescription", "A tiny and fast libretro entertainment application."
-            VALUE "FileVersion", "0.1.0.0"
+            VALUE "FileDescription", "A tiny and fast Libretro entertainment application."
+            VALUE "FileVersion", EXE_VER
             VALUE "InternalName", "Haiyajan.exe"
-            VALUE "LegalCopyright", "Copyleft (C) 2020 Mahyar Koshkouei <mk@deltabeard.com>; This is free software released under the terms of the GNU AGPL3 license."
+            VALUE "LegalCopyright", "Copyright (C) 2020 Mahyar Koshkouei <mk@deltabeard.com>; This is free software released under the terms of the GNU AGPL3 license."
             VALUE "OriginalFilename", "Haiyajan.exe"
             VALUE "ProductName", "Haiyajan"
-            VALUE "ProductVersion", "0.1 UNRELEASE"
+            VALUE "ProductVersion", QUOTE(GIT_VER)
         END
     END
     BLOCK "VarFileInfo"
     BEGIN
-        VALUE "Translation", 0x809, 1200
+        VALUE "Translation", 0x400, 1200
     END
 END
 
