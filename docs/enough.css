@@ -32,6 +32,7 @@ td, th{
 }
 #platlst th:nth-child(1) img {
   height: 3em;
+  max-width: 3em;
 }
 nav a {
   padding-right: 0.4em;
