@@ -11,8 +11,8 @@ to use.
 Haiyajan is a new project and is therefore not ready for regular use. The first
 stable version will be released as version "1.0".
 
-Join the community on Matrix at [#haiyajan:deltabeard.com](https://matrix.to/#/#haiyajan:deltabeard.com)
-or on Reddit at [/r/Haiyajan/](https://www.reddit.com/r/Haiyajan/).
+Join the community on Reddit at
+[/r/Haiyajan/](https://www.reddit.com/r/Haiyajan/).
 
 ## Libretro
 
