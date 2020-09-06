@@ -19,9 +19,11 @@ endif
 ifeq ($(CC),cl)
 	OBJEXT := obj
 	EXEOUT := /Fe
+	STATIC_EXT := lib
 else
 	OBJEXT := o
 	EXEOUT := -o
+	STATIC_EXT := a
 endif
 
 # Returns 0 if library exists.

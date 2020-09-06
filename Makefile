@@ -33,6 +33,9 @@ Available options and their descriptions when enabled:
           This option will be enabled automatically if the linker is able to
           detect the availability of libx264 and libwavpack.
 
+  STATIC_CORES=$(STATIC_CORES)
+  EXTRA_LDFLAGS=$(EXTRA_LDFLAGS)
+
   OPT="$(OPT)"
           Set custom optimisation options.
 
@@ -176,18 +179,21 @@ ifeq ($(ENABLE_VIDEO_RECORDING),1)
 	CFLAGS += $(LIBFLGS) -DENABLE_VIDEO_RECORDING=1
 endif
 
+add_core_sub = $(STATIC_CORE_TEMP)_libretro.$(STATIC_EXT)
+LDLIBS += $(foreach STATIC_CORE_TEMP,$(STATIC_CORES),$(add_core_sub))
+
 SRCS	:= $(wildcard src/*.c)
 HDRS	:= $(wildcard inc/*.h)
 OBJS	:= $(SRCS:.c=.$(OBJEXT)) $(call ccparam,,meta/Haiyajan.res)
 DEPS	:= Makefile.depend
 override CFLAGS += -Iinc $(SDL_CFLAGS)
-override LDFLAGS += $(SDL_LIBS)
+override LDFLAGS += $(SDL_LIBS) $(EXTRA_LDFLAGS)
 
 .PHONY: test
 
 all: $(TARGETS)
-haiyajan: $(OBJS) $(LDLIBS) snes9x2010_libretro.a
-	$(CC) $(CFLAGS) $(EXEOUT)$@ $^ $(LDFLAGS)
+haiyajan: $(OBJS) $(LDLIBS)
+	$(CXX) $(CFLAGS) $(EXEOUT)$@ $^ $(LDFLAGS)
 
 %.obj: %.c
 	$(CC) $(CFLAGS) /Fo$@ /c /TC $^
