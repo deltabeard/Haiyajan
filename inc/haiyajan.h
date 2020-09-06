@@ -25,8 +25,9 @@
 #include <timer.h>
 #include <ui.h>
 
-#define REL_VERSION_MAJOR 0
-#define REL_VERSION_MINOR 0
+#ifndef GIT_FULL_VERSION
+#define GIT_FULL_VERSION "UNKNOWN"
+#endif
 
 struct settings_s
 {

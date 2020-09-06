@@ -723,8 +723,8 @@ int main(int argc, char *argv[])
 
 	SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO);
 	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-		    "%s Libretro Interface -- %d.%d (GIT %s)\n", PROG_NAME,
-		    REL_VERSION_MAJOR, REL_VERSION_MINOR, GIT_VERSION);
+		    "%s Libretro Interface -- %s\n", PROG_NAME,
+		    GIT_FULL_VERSION);
 
 	init_sig(&h);
 	print_info();
