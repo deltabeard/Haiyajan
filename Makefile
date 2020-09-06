@@ -56,10 +56,10 @@ Available options and their descriptions when enabled:
 
   SDL_LIB=""
 	  Location of compiled SDL2 libraries SDL2-static.lib and SDL2main.lib.
-	  
+
   SDL_INC=""
 	  Location of SDL2 headers, such as SDL2.h.
-	  
+
   Compiling for Windows NT $(NT_REV) $(Platform) platforms.
 
   Example: make -B SDL_LIB="C:\SDL2\libs" SDL_INC="C:\SDL2\include"
@@ -104,7 +104,7 @@ ifeq ($(OS),Windows_NT)
 		# Use high quality EXE icon for newer platforms
 		ICON_FILE = icon_hi.ico
 	endif
-	
+
 	help_txt = $(help_txt_nt)
 else
 	help_txt = $(help_txt_unix)
@@ -186,7 +186,7 @@ override LDFLAGS += $(SDL_LIBS)
 .PHONY: test
 
 all: $(TARGETS)
-haiyajan: $(OBJS) $(LDLIBS)
+haiyajan: $(OBJS) $(LDLIBS) snes9x2010_libretro.a
 	$(CC) $(CFLAGS) $(EXEOUT)$@ $^ $(LDFLAGS)
 
 %.obj: %.c

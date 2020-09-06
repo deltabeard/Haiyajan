@@ -73,11 +73,19 @@ int main(int argc, char *argv[])
 
 		for(unsigned i = 0; i < fns; i++)
 		{
+			char *end;
+			size_t foundlen;
+
 			if((found = strstr(line, libretro_fns[i])) == NULL)
 				continue;
 
+			end = strchr(found, '(');
+			foundlen = end - found;
+			if(foundlen != strlen(libretro_fns[i]))
+				continue;
 
 			prefix_len = strlen(libretro_fns[i]) + found - line;
+			break;
 		}
 
 		if(found != NULL)
@@ -91,3 +99,48 @@ int main(int argc, char *argv[])
 
 	return EXIT_SUCCESS;
 }
+
+#if 0
+struct links_list_s
+{
+	void **fn_retro;
+	void **fn_re;
+};
+const void *fn_links_snes9x2010[] =
+{
+	(void *)retro_init_snes9x2010,
+	(void *)retro_deinit_snes9x2010,
+	(void *)retro_api_version_snes9x2010,
+	(void *)retro_set_environment_snes9x2010,
+	(void *)retro_set_video_refresh_snes9x2010,
+	(void *)retro_set_audio_sample_snes9x2010,
+	(void *)retro_set_audio_sample_batch_snes9x2010,
+	(void *)retro_set_input_poll_snes9x2010,
+	(void *)retro_set_input_state_snes9x2010,
+	(void *)retro_get_system_info_snes9x2010,
+	(void *)retro_get_system_av_info_snes9x2010,
+	(void *)retro_set_controller_port_device_snes9x2010,
+	(void *)retro_reset_snes9x2010,
+	(void *)retro_run_snes9x2010,
+	(void *)retro_serialize_size_snes9x2010,
+	(void *)retro_serialize_snes9x2010,
+	(void *)retro_unserialize_snes9x2010,
+	(void *)retro_cheat_reset_snes9x2010,
+	(void *)retro_cheat_set_snes9x2010,
+	(void *)retro_load_game_snes9x2010,
+	(void *)retro_load_game_special_snes9x2010,
+	(void *)retro_unload_game_snes9x2010,
+	(void *)retro_get_region_snes9x2010,
+	(void *)retro_get_memory_data_snes9x2010,
+	(void *)retro_get_memory_size_snes9x2010
+};
+const void *ext_fn_links_snes9x2010[] = {
+	(void *)re_core_get_license_info_snes9x2010,
+	(void *)re_core_set_pause_snes9x2010
+};
+
+const struct links_list_s *const internal_cores[] = {
+	{ &fn_links_snes9x2010, &ext_fn_links_snes9x2010 },
+	{ NULL, NULL }
+}
+#endif

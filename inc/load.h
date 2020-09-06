@@ -16,6 +16,19 @@
 
 #include <haiyajan.h>
 
+struct fn_links_s
+{
+	/* Name of libretro core function. */
+	const char *fn_str;
+	void **fn_ptr;
+};
+
+struct links_list_s
+{
+	const void **fn_retro;
+	const void **fn_re;
+};
+
 /**
  * Loads a file for the libretro core.
  *
@@ -50,3 +63,15 @@ void unload_libretro_file(struct core_ctx_s *ctx);
  * \param ctx Libretro core context to unload.
  */
 void unload_libretro_core(struct core_ctx_s *ctx);
+
+/**
+ * Searches built-in libretro cores for their compatibility with the given
+ * file extension.
+ *
+ * \param ext	File extension.
+ * \param ptr	Opaque pointer. Must be NULL for first call of search.
+ * \returns	Library name or NULL. Repeat call until NULL is returned.
+ */
+const char *load_get_supported_internal_cores(const char *ext, void **ptr);
+
+SDL_bool load_internal_libretro_core(const char *corename, struct core_ctx_s *ctx);

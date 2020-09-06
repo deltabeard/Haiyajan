@@ -187,16 +187,105 @@ int load_is_libretro_core(const char *file)
 }
 #endif
 
+static SDL_bool does_core_support_ext(const char *ext, const char *valid_ext)
+{
+	SDL_bool ret = SDL_FALSE;
+	char *token;
+	char *saveptr;
+	char *str;
+
+	str = SDL_strdup(valid_ext);
+	if(str == NULL)
+		goto out;
+
+	token = SDL_strtokr(str, "|", &saveptr);
+	if(token == NULL)
+		goto out;
+
+	do
+	{
+		if(SDL_strcasecmp(token, ext) != 0)
+			continue;
+
+		ret = SDL_TRUE;
+		break;
+	} while((token = SDL_strtokr(NULL, "|", &saveptr)) != NULL);
+
+out:
+	SDL_free(str);
+	return ret;
+}
+
+/**
+ * A pointer to an external array of string pointers that store the name of
+ * libretro cores that are statically linked with Haiyajan.
+ * Array must be NULL terminated.
+ */
+extern const struct links_list_s internal_cores[];
+
+const char *load_get_supported_internal_cores(const char *ext, void **ptr)
+{
+	const struct links_list_s **ic;
+	const struct links_list_s *retro;
+
+	SDL_assert(ptr != NULL);
+
+	ic = ptr;
+	if(*ic == NULL)
+		*ic = internal_cores;
+	else
+	{
+		(*ic)++;
+		if((*ic)->fn_retro == NULL)
+			goto out;
+	}
+
+	for(retro = *ic; retro->fn_retro != NULL; retro++)
+	{
+		const unsigned rgsi_index = 9;
+		struct retro_system_info info;
+		void (*retro_get_system_info)(struct retro_system_info *);
+
+		retro_get_system_info = retro->fn_retro[rgsi_index];
+		retro_get_system_info(&info);
+		if(does_core_support_ext(ext, info.valid_extensions) == SDL_FALSE)
+			continue;
+
+		return info.library_name;
+	}
+
+out:
+	return NULL;
+}
+
+SDL_bool load_internal_libretro_core(const char *corename, struct core_ctx_s *ctx)
+{
+	const struct links_list_s *retro;
+
+	for(retro = internal_cores; retro->fn_retro != NULL; retro++)
+	{
+		const unsigned rgsi_index = 9;
+		struct retro_system_info info;
+		void (*retro_get_system_info)(struct retro_system_info *);
+
+		retro_get_system_info = retro->fn_retro[rgsi_index];
+		retro_get_system_info(&info);
+
+		if(SDL_strcasecmp(corename, info.library_name) != 0)
+			continue;
+
+		SDL_memcpy(&ctx->fn, retro->fn_retro, sizeof(ctx->fn));
+		/* Not doing an API check. If this is statically linked, then
+		 * libretro.h should be on the same version at compile time? */
+		return SDL_TRUE;
+	}
+
+	return SDL_FALSE;
+}
+
 int load_libretro_core(const char *so_file, struct core_ctx_s *ctx)
 {
 	unsigned i;
-	struct fn_links_s
-	{
-		/* clang-format off */
-		/* Name of libretro core function. */
-		const char *fn_str;
-		void **fn_ptr;
-	};
 	const struct fn_links_s fn_links[] =
 	{
 		{ "retro_init",			(void **)&ctx->fn.retro_init },
@@ -267,12 +356,6 @@ int load_libretro_core(const char *so_file, struct core_ctx_s *ctx)
 		SDL_SetError("Incompatible retro API version");
 		return 3;
 	}
-
-	ctx->fn.retro_set_controller_port_device(0, RETRO_INPUT_JOYPAD);
-	ctx->fn.retro_get_system_info(&ctx->sys_info);
-
-	/* Initialise ctx status information to zero. */
-	ctx->env.status.all = 0;
 
 	return 0;
 }

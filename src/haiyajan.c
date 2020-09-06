@@ -276,13 +276,6 @@ static void apply_settings(char **argv, struct settings_s *cfg)
 	/* Print remaining arguments. */
 	rem_arg = optparse_arg(&options);
 
-	if (cfg->core_filename == NULL)
-	{
-		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-				"The path to a libretro core was not given");
-		goto err;
-	}
-
 	if(rem_arg != NULL)
 		cfg->content_filename = SDL_strdup(rem_arg);
 
@@ -585,12 +578,71 @@ static int haiyajan_init_core(struct haiyajan_ctx_s *h, char *core_filename,
 {
 	struct core_ctx_s *ctx = &h->core;
 	SDL_Colour c = { 0xF3, 0x9C, 0x12, SDL_ALPHA_OPAQUE };
+	SDL_bool loaded = SDL_FALSE;
 
 	ctx->core_filename = core_filename;
 	ctx->content_filename = content_filename;
 
-	if(load_libretro_core(ctx->core_filename, ctx))
-		goto err;
+	do {
+		void *ptr = NULL;
+		const char *core;
+		const char* ext;
+
+		ext = SDL_strrchr(content_filename, '.');
+		if(ext == NULL)
+			break;
+
+		/* Skip full stop character. */
+		ext++;
+
+		core = load_get_supported_internal_cores(ext, &ptr);
+		if(core == NULL)
+			break;
+
+		loaded = load_internal_libretro_core(core, ctx);
+		if(loaded == SDL_TRUE)
+		{
+			SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+				"Choosing to load internal libretro core: "
+				"%s", core);
+		}
+
+#if 0
+/* Disabled support for selection of specific internal libretro core. */
+
+		do
+		{
+			SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+				"Compatible libretro core: %s", core);
+		} while((core = load_get_supported_internal_cores(ext, &ptr)) != NULL);
+#endif
+	}while(0);
+
+	if(loaded == SDL_FALSE)
+	{
+		if(ctx->core_filename == NULL)
+		{
+			SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+				"No internal core is available for this "
+				"content.");
+			goto err;
+		}
+
+		if(load_libretro_core(ctx->core_filename, ctx) == 0)
+		{
+			SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+				"Choosing to load external libretro core: "
+				"%s", ctx->sys_info.library_name);
+		}
+		else
+			goto err;
+	}
+
+	ctx->fn.retro_set_controller_port_device(0, RETRO_INPUT_JOYPAD);
+	ctx->fn.retro_get_system_info(&ctx->sys_info);
+
+	/* Initialise ctx status information to zero. */
+	ctx->env.status.all = 0;
 
 	/* TODO:
 	 * - Check that input file is supported by core
