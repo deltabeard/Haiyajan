@@ -12,22 +12,26 @@ URL="https://github.com/gabomdq/SDL_GameControllerDB/raw/master/gamecontrollerdb
 
 echo "Checking that required applications are available..."
 
+NOTFOUND=0
 for prog in "wget" "grep" "xxd" "cp" "rm" "zopfli" "stat"
 do
-	which $prog > /dev/null
-	if (($?)); then
-		echo "$prog not found"
-		exit 1
+	if ! which $prog > /dev/null; then
+		echo "X  $prog not found"
+		NOTFOUND=1
 	else
-		echo "found $prog"
+		echo "   $prog found"
 	fi
 done
+
+if [ $NOTFOUND -eq 1 ]; then
+	echo "Please install the missing dependencies."
+	exit 1
+fi
 
 rm -f $FILESRC*
 
 echo "Downloading latest gamecontrollerdb.txt"
-wget -q $URL
-if (($?)); then
+if ! wget -q $URL; then
 	echo "wget failed"
 	exit $?
 fi
@@ -41,8 +45,7 @@ for os in "linux" "windows" "all"
 do
 	zopfli -i100 --deflate -c ${FILESRC}_${os}.txt > ${FILEDEF}
 
-	xxd -i ${FILEDEF} > ${FILEDEF}_${os}.h
-	if (($?)); then
+	if ! xxd -i ${FILEDEF} > ${FILEDEF}_${os}.h; then
 		echo "xxd failed"
 		exit $?
 	fi
@@ -53,4 +56,4 @@ do
 	sed -i "s/unsigned\ int\ /const\ unsigned\ long\ /" ${FILEDEF}_${os}.h
 done
 
-cp ${FILEOUT}*.h ../inc/
+cp "${FILEOUT}"*.h ../inc/
