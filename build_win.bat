@@ -1,6 +1,5 @@
+@echo off
 rem This file is for use in Windows 10 command prompt only.
-
-echo off
 
 set sdlincdir=sdlinc
 set sdllibdir=sdllib
@@ -28,20 +27,21 @@ if errorlevel 1 (
 )
 
 set CC=cl
-set CFLAGS=/nologo /GL /O2 /Ob2 /fp:fast /Ot /GF /GT /Oi /MT /I"inc" /I"%sdlincdir%" /D"_UNICODE" /D"UNICODE"
+set CFLAGS=/nologo /GL /O2 /Ob2 /fp:fast /Ot /GF /GT /Oi /MT /Iinc /I'%sdlincdir%' /D_UNICODE /DUNICODE
 
 if "%VSCMD_ARG_TGT_ARCH%"=="x64" (
-	set CFLAGS=%CFLAGS% /Fd"vc142.pdb"
+	set CFLAGS=%CFLAGS% /Fdvc142.pdb
 	set NT_REV=6.01
 	set ICON_FILE=icon_hi.ico
 ) else (
 	rem 32-bit Windows NT builds require SSE instructions, supported from Pentium III CPUs.
 	rem These builds offer support for ReactOS and Windows XP.
-	set CFLAGS=%CFLAGS% /arch:SSE /Fd"vc141.pdb"
+	set CFLAGS=%CFLAGS% /arch:SSE /Fdvc141.pdb
 	set NT_REV=5.01
 	set ICON_FILE=icon_lo.ico
 )
 
-set LDFLAGS=/link /OUT:"Haiyajan-%VSCMD_ARG_TGT_ARCH%.exe" /MANIFEST /LTCG /NXCOMPAT /PDB:"Haiyajan-%VSCMD_ARG_TGT_ARCH%.pdb" /DYNAMICBASE "SDL2main.lib" "SDL2-static.lib" "winmm.lib" "msimg32.lib" "version.lib" "imm32.lib" "setupapi.lib" "kernel32.lib" "user32.lib" "gdi32.lib" "winspool.lib" "comdlg32.lib" "advapi32.lib" "shell32.lib" "ole32.lib" "oleaut32.lib" "uuid.lib" "odbc32.lib" "odbccp32.lib" /MACHINE:%VSCMD_ARG_TGT_ARCH% /INCREMENTAL:NO /SUBSYSTEM:WINDOWS",%NT_REV%" /LIBPATH:"%sdllibdir%"
+set LDFLAGS=/link /OUT:"Haiyajan-%VSCMD_ARG_TGT_ARCH%.exe" /MANIFEST /LTCG /NXCOMPAT /PDB:"Haiyajan-%VSCMD_ARG_TGT_ARCH%.pdb" /DYNAMICBASE "SDL2main.lib" "SDL2-static.lib" "libx264.lib" "libwavpack.lib" "winmm.lib" "msimg32.lib" "version.lib" "imm32.lib" "setupapi.lib" "kernel32.lib" "user32.lib" "gdi32.lib" "winspool.lib" "comdlg32.lib" "advapi32.lib" "shell32.lib" "ole32.lib" "oleaut32.lib" "uuid.lib" "odbc32.lib" "odbccp32.lib" /MACHINE:%VSCMD_ARG_TGT_ARCH% /INCREMENTAL:NO /SUBSYSTEM:WINDOWS",%NT_REV%" /LIBPATH:"%sdllibdir%"
 
-gnumake -B CC="%CC%" LDFLAGS="%LDFLAGS%" CFLAGS="%CFLAGS%" DEBUG=0
+@echo on
+gnumake -B CC="%CC%" LDFLAGS="%LDFLAGS%" CFLAGS="%CFLAGS%" DEBUG=0 %1
