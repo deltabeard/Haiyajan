@@ -1,0 +1,1 @@
+source "$BR2_EXTERNAL_HAIYAJAN_PATH/package/haiyajan/Config.in"
