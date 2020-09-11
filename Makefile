@@ -6,13 +6,13 @@ ifeq ($(CC)$(CFLAGS),cl)
 		  		build_win.bat or specify CFLAGS and LDFLAGS)
 endif
 
-SDL2_CONFIG := sdl2-config
+PKG_CONFIG := pkg-config
 TARGETS := haiyajan
 DEBUG := 0
 STATIC := 0
-CFLAGS = -std=c99 -pedantic -g3 -fPIE -Wall -Wextra -pipe -flto -Iinc \
-		 $(shell $(SDL2_CONFIG) --cflags)
-LDFLAGS = $(shell $(SDL2_CONFIG) --libs)
+CFLAGS = -std=c99 -pedantic -g3 -fPIE -Wall -Wextra -pipe -flto
+LDFLAGS =
+STRIP := strip
 
 define help_txt
 Available options and their descriptions when enabled:
@@ -43,8 +43,17 @@ Haiyajan is free software; see the LICENSE file for copying conditions. There is
 NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 endef
 
+ifeq ($(STATIC),1)
+	CFLAGS += -static
+	PKG_CONFIG += --static
+endif
+
 # Function substitutes variables depending on the value set in $(CC)
 ccparam = $(if $(subst cl,,$(CC)),$(1),$(2))
+
+chklib_fn = $(shell $(PKG_CONFIG) --exists $(1))$(.SHELLSTATUS)
+getlibs_fn = $(shell $(PKG_CONFIG) --libs $(1))
+getcflags_fn = $(shell $(PKG_CONFIG) --cflags $(1))
 
 ifeq ($(DEBUG),1)
 	CFLAGS += -DDEBUG=1 -DSDL_ASSERT_LEVEL=3
@@ -69,37 +78,38 @@ FULLSTOP := .
 EXE_VERSION = $(subst $(FULLSTOP),$(COMMA),$(GIT_VERSION))
 CFLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\" -DGIT_FULL_VERSION=\"$(GIT_FULL_VERSION)\"
 
+USE_SDL2 = $(call chklib_fn,sdl2)
+ifneq ($(USE_SDL2),0)
+	$(error SDL2 is required but $(PKG_CONFIG) could not locate it)
+endif
+SDL2_CFLAGS += $(call getcflags_fn,sdl2)
+SDL2_LDLIBS += $(call getlibs_fn,sdl2)
+
 # Check if WEBP is available. Otherwise use BMP for screenshots.
-USE_WEBP := $(call fn_chklib, webp)
-ifeq ($(USE_WEBP), 0)
-	ENABLE_WEBP_SCREENSHOTS := 1
+USE_WEBP = $(call chklib_fn,libwebp)
+ifeq ($(USE_WEBP),0)
+	ENABLE_WEBP_SCREENSHOTS = 1
 else
-	ENABLE_WEBP_SCREENSHOTS := 0
+	ENABLE_WEBP_SCREENSHOTS = 0
 endif
-ifeq ($(ENABLE_WEBP_SCREENSHOTS), 1)
-	LDLIBS += -lwebp
-	CFLAGS += -DENABLE_WEBP_SCREENSHOTS=1
-endif
-
-USE_X264 := $(call fn_chklib, x264)
-ifeq ($(USE_X264), 0)
-	VIDLIBS := -lx264
+ifeq ($(ENABLE_WEBP_SCREENSHOTS),1)
+	WEBP_CFLAGS += $(call getcflags_fn,libwebp)
+	WEBP_LDLIBS += $(call getlibs_fn,libwebp)
 endif
 
-USE_WAVPACK := $(call fn_chklib, wavpack)
-ifeq ($(USE_WAVPACK), 0)
-	VIDLIBS += -lwavpack
-endif
-
-ifeq ($(USE_X264)$(USE_WAVPACK),00)
-	ENABLE_VIDEO_RECORDING := 1
+USE_VIDEOREC = $(call chklib_fn,x264 wavpack)
+ifeq ($(USE_VIDEOREC),0)
+	ENABLE_VIDEO_RECORDING = 1
 else
-	ENABLE_VIDEO_RECORDING := 0
+	ENABLE_VIDEO_RECORDING = 0
 endif
 ifeq ($(ENABLE_VIDEO_RECORDING),1)
-	LDLIBS += $(VIDLIBS)
-	CFLAGS += $(LIBFLGS) -DENABLE_VIDEO_RECORDING=1
+	VID_CFLAGS += $(call getcflags_fn,x264 wavpack) -DENABLE_VIDEO_RECORDING=1
+	VID_LDLIBS += $(call getlibs_fn,x264 wavpack)
 endif
+
+override CFLAGS += -Iinc $(SDL2_CFLAGS) $(WEBP_CFLAGS) $(VID_CFLAGS)
+override LDLIBS += -Iinc $(SDL2_LDLIBS) $(WEBP_LDLIBS) $(VID_LDLIBS)
 
 SRCS := $(wildcard src/*.c)
 HDRS := $(wildcard inc/*.h)
@@ -113,8 +123,8 @@ endif
 .PHONY: test
 
 all: $(TARGETS)
-haiyajan: $(OBJS) $(LDLIBS)
-	$(CC) $(CFLAGS) $(EXEOUT)$@ $^ $(LDFLAGS)
+haiyajan: $(OBJS)
+	$(CC) $(CFLAGS) $(EXEOUT)$@ $^ $(LDFLAGS) $(LDLIBS)
 
 %.obj: %.c
 	$(CC) $(CFLAGS) /Fo$@ /c /TC $^
@@ -127,8 +137,8 @@ include Makefile.depend
 # Saves debug symbols in a separate file, and strips the main executable.
 # To get information from stack trace: `addr2line -e haiyajan.debug addr`
 haiyajan.sym: haiyajan
-	strip --only-keep-debug -o $@ $<
-	strip -s $<
+	$(STRIP) --only-keep-debug -o $@ $<
+	$(STRIP) -s $<
 	@chmod -x $@
 
 test: haiyajan
