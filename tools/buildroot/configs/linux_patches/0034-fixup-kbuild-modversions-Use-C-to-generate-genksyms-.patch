@@ -1,0 +1,33 @@
+From f7b0384169e46ea74865f6a23d513aac30d054c2 Mon Sep 17 00:00:00 2001
+From: Andi Kleen <ak@linux.intel.com>
+Date: Tue, 7 Jul 2020 16:20:22 -0700
+Subject: [PATCH 34/38] fixup! kbuild, modversions: Use C to generate genksyms
+ crc symbols
+
+---
+ scripts/Makefile.crc | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/scripts/Makefile.crc b/scripts/Makefile.crc
+index 1912dd5b7918..c0317a6c409a 100644
+--- a/scripts/Makefile.crc
++++ b/scripts/Makefile.crc
+@@ -7,10 +7,14 @@ ifdef CONFIG_MODVERSIONS
+ # $1: postfix of target
+ # $2: input files
+ # produces merged object in $$TO shell variable in same recipe
++#
++# The strange shell use is to keep the recipe inside shell argument limits.
++# We filter out all files that do not contain crcs.
+ merge_ksyms = \
+ 	TC=$(@D)/.tmp_$(@F:$(1)=_vermerged.c); \
+ 	TO=$(@D)/.tmp_$(@F:$(1)=_vermerged.o); \
+-	cat $(patsubst %.o,%.ver.c,$(filter %.o,$(2))) /dev/null > $$TC; \
++	cat $(shell find $(patsubst %.o,%.ver.c,$(filter %.o,$(2))) \
++		/dev/null -type f -size +2) /dev/null > $$TC; \
+ 	$(CC) -c -o $$TO $$TC; \
+         rm -f $$TC
+ 
+-- 
+2.28.0
+

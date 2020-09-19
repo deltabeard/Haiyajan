@@ -1,0 +1,48 @@
+From d2c9f2b8e38fb35e26f2ccad33151062c130b150 Mon Sep 17 00:00:00 2001
+From: Andi Kleen <ak@linux.intel.com>
+Date: Sat, 8 Feb 2014 07:29:43 +0100
+Subject: [PATCH 22/38] kbuild, kallsyms: Put kallsyms into own section
+
+Put the kallsyms information into an own .kallsyms section.
+This makes it easier to patch the kallsyms inside the executable.
+Otherwise it shouldn't change anything.
+
+Signed-off-by: Andi Kleen <ak@linux.intel.com>
+---
+ include/asm-generic/vmlinux.lds.h | 6 ++++++
+ scripts/kallsyms.c                | 2 +-
+ 2 files changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/include/asm-generic/vmlinux.lds.h b/include/asm-generic/vmlinux.lds.h
+index db600ef218d7..2b369176ab48 100644
+--- a/include/asm-generic/vmlinux.lds.h
++++ b/include/asm-generic/vmlinux.lds.h
+@@ -437,6 +437,12 @@
+ 									\
+ 	TRACEDATA							\
+ 									\
++	.kallsyms          : AT(ADDR(.kallsyms) - LOAD_OFFSET) {	\
++		__start_kallsyms = .;					\
++		*(.kallsyms)						\
++		__end_kallsyms = .;					\
++	}								\
++									\
+ 	/* Kernel symbol table: Normal symbols */			\
+ 	__ksymtab         : AT(ADDR(__ksymtab) - LOAD_OFFSET) {		\
+ 		__start___ksymtab = .;					\
+diff --git a/scripts/kallsyms.c b/scripts/kallsyms.c
+index 8e7f9a7d56c9..a3c6f89e1add 100644
+--- a/scripts/kallsyms.c
++++ b/scripts/kallsyms.c
+@@ -392,7 +392,7 @@ static void write_src(void)
+ 	printf("#define ALGN .balign 4\n");
+ 	printf("#endif\n");
+ 
+-	printf("\t.section .rodata, \"a\"\n");
++	printf("\t.section .kallsyms, \"a\"\n");
+ 
+ 	if (!base_relative)
+ 		output_label("kallsyms_addresses");
+-- 
+2.28.0
+

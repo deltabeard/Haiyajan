@@ -1,0 +1,37 @@
+From 1aed9112511e0358e19d196718528ee20298d363 Mon Sep 17 00:00:00 2001
+From: Andi Kleen <ak@linux.intel.com>
+Date: Sat, 27 Jun 2020 20:50:06 -0700
+Subject: [PATCH 14/38] Kbuild, lto: Generate debuginfo for temporary kallsyms
+ links
+
+gcc 10 changes the layout of the data segment when --strip-debug is
+specified with LTO. This causes problems with kallsyms, which builds
+temporary vmlinux with --strip-debug, and expects the final vmlinux
+without --strip-debug to have the same symbol table.
+
+To work around this problem generate debuginfo the temporary
+links too when LTO is enabled. This will cause some extra IO.
+
+Signed-off-by: Andi Kleen <ak@linux.intel.com>
+---
+ scripts/link-vmlinux.sh | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/scripts/link-vmlinux.sh b/scripts/link-vmlinux.sh
+index 92dd745906f4..afe4d05ee85d 100755
+--- a/scripts/link-vmlinux.sh
++++ b/scripts/link-vmlinux.sh
+@@ -94,7 +94,9 @@ vmlinux_link()
+ 	shift
+ 
+ 	# The kallsyms linking does not need debug symbols included.
+-	if [ "$output" != "${output#.tmp_vmlinux.kallsyms}" ] ; then
++	# except for LTO because gcc 10 LTO changes the layout of the data segment
++	# with --strip-debug
++	if [ "$output" != "${output#.tmp_vmlinux.kallsyms}" -a -z "$CONFIG_LTO" ] ; then
+ 		strip_debug=-Wl,--strip-debug
+ 	fi
+ 
+-- 
+2.28.0
+

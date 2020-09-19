@@ -1,0 +1,26 @@
+From a5059348831c819d8c1c81a76e8c21b19fe87e86 Mon Sep 17 00:00:00 2001
+From: Andi Kleen <andi@firstfloor.org>
+Date: Tue, 7 Jul 2020 12:07:31 -0700
+Subject: [PATCH 30/38] fixup! kbuild, kallsyms: Support single pass kallsyms
+
+---
+ scripts/Makefile | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/scripts/Makefile b/scripts/Makefile
+index cc406f4da4d0..8f7593984e85 100644
+--- a/scripts/Makefile
++++ b/scripts/Makefile
+@@ -4,7 +4,8 @@
+ # the kernel for the build process.
+ 
+ always-$(CONFIG_BUILD_BIN2C)			+= bin2c
+-always-$(CONFIG_KALLSYMS)			+= kallsyms patchfile
++always-$(CONFIG_KALLSYMS)			+= kallsyms
++always-$(CONFIG_KALLSYMS_SINGLE)		+= patchfile
+ always-$(BUILD_C_RECORDMCOUNT)			+= recordmcount
+ always-$(CONFIG_BUILDTIME_TABLE_SORT)		+= sorttable
+ always-$(CONFIG_ASN1)				+= asn1_compiler
+-- 
+2.28.0
+

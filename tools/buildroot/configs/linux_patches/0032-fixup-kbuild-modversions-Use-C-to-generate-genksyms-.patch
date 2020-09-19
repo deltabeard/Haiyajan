@@ -1,0 +1,42 @@
+From b1dc527a6a5d69b17cb4cee4b5872b5d39ee924e Mon Sep 17 00:00:00 2001
+From: Andi Kleen <ak@linux.intel.com>
+Date: Tue, 7 Jul 2020 16:17:19 -0700
+Subject: [PATCH 32/38] fixup! kbuild, modversions: Use C to generate genksyms
+ crc symbols
+
+---
+ drivers/firmware/efi/libstub/Makefile | 4 +++-
+ drivers/misc/lkdtm/Makefile           | 1 +
+ 2 files changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/firmware/efi/libstub/Makefile b/drivers/firmware/efi/libstub/Makefile
+index 4cce372edaf4..02cd61cb6b7d 100644
+--- a/drivers/firmware/efi/libstub/Makefile
++++ b/drivers/firmware/efi/libstub/Makefile
+@@ -57,6 +57,7 @@ efi-deps-y := fdt_rw.c fdt_ro.c fdt_wip.c fdt.c fdt_empty_tree.c fdt_sw.c
+ 
+ $(obj)/lib-%.o: $(srctree)/lib/%.c FORCE
+ 	$(call if_changed_rule,cc_o_c)
++	$(if $(CONFIG_MODVERSIONS),touch $(@:.o=.ver.c))
+ 
+ lib-$(CONFIG_EFI_GENERIC_STUB)	+= efi-stub.o fdt.o string.o \
+ 				   $(patsubst %.c,lib-%.o,$(efi-deps-y))
+@@ -123,4 +124,5 @@ quiet_cmd_stubcopy = STUBCPY $@
+ 		echo "$@: absolute symbol references not allowed in the EFI stub" >&2; \
+ 		/bin/false;						\
+ 	fi;								\
+-	$(OBJCOPY) $(STUBCOPY_FLAGS-y) $< $@
++	$(OBJCOPY) $(STUBCOPY_FLAGS-y) $< $@;				\
++	$(if $(CONFIG_MODVERSIONS),touch $(@:.o=.ver.c))
+diff --git a/drivers/misc/lkdtm/Makefile b/drivers/misc/lkdtm/Makefile
+index c70b3822013f..2a7157158bee 100644
+--- a/drivers/misc/lkdtm/Makefile
++++ b/drivers/misc/lkdtm/Makefile
+@@ -20,3 +20,4 @@ OBJCOPYFLAGS_rodata_objcopy.o	:= \
+ targets += rodata.o rodata_objcopy.o
+ $(obj)/rodata_objcopy.o: $(obj)/rodata.o FORCE
+ 	$(call if_changed,objcopy)
++	$(if $(CONFIG_MODVERSIONS),touch $(obj)/rodata_objcopy.ver.c)
+-- 
+2.28.0
+

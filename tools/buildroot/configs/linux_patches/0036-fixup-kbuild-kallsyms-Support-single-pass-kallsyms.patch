@@ -1,0 +1,25 @@
+From 5e928384d049e22d6842410e49bd092d511afa55 Mon Sep 17 00:00:00 2001
+From: Andi Kleen <ak@linux.intel.com>
+Date: Tue, 7 Jul 2020 17:31:45 -0700
+Subject: [PATCH 36/38] fixup! kbuild, kallsyms: Support single pass kallsyms
+
+---
+ scripts/Makefile.crc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/scripts/Makefile.crc b/scripts/Makefile.crc
+index c0317a6c409a..f79a660f9b4b 100644
+--- a/scripts/Makefile.crc
++++ b/scripts/Makefile.crc
+@@ -15,7 +15,7 @@ merge_ksyms = \
+ 	TO=$(@D)/.tmp_$(@F:$(1)=_vermerged.o); \
+ 	cat $(shell find $(patsubst %.o,%.ver.c,$(filter %.o,$(2))) \
+ 		/dev/null -type f -size +2) /dev/null > $$TC; \
+-	$(CC) -c -o $$TO $$TC; \
++	$(CC) $(c_flags) -c -o $$TO $$TC; \
+         rm -f $$TC
+ 
+ # after immediate linking generate a dummy .ver.c for the next step
+-- 
+2.28.0
+

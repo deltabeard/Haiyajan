@@ -1,0 +1,108 @@
+From ce697c33844593e15e565c92e9960ed319da08ab Mon Sep 17 00:00:00 2001
+From: Andi Kleen <andi@firstfloor.org>
+Date: Mon, 6 Jul 2020 09:42:22 -0700
+Subject: [PATCH 19/38] kbuild, modpost: Read .ver.o. files to resolve CRC
+ symbols
+
+Followon patches will convert the Makefiles to use C to generate
+the MODVERSIONS CRC symbols. Normally these symbols are linked or
+ar'ed in, but for the case of a single file module we don't
+want to use incremental linking just to link in the CRC symbol.
+In this case modpost runs on the original object, which is missing
+the CRC symbols and would complain about it.
+
+Add support for automatically checking for .ver.o files and reading
+them for the CRC symbol for each module. This way we can avoid
+an extra link step just for modpost checking.
+
+The CRC symbols are then really linked in in the final module
+linking step after modpost.
+
+Signed-off-by: Andi Kleen <ak@linux.intel.com>
+---
+ scripts/mod/modpost.c | 40 +++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 39 insertions(+), 1 deletion(-)
+
+diff --git a/scripts/mod/modpost.c b/scripts/mod/modpost.c
+index 6aea65c65745..a481de34f1ee 100644
+--- a/scripts/mod/modpost.c
++++ b/scripts/mod/modpost.c
+@@ -1979,6 +1979,25 @@ static char *remove_dot(char *s)
+ 	return s;
+ }
+ 
++static bool open_ver_o(const char *name, struct elf_info *info)
++{
++	int nlen = strlen(name);
++	char *n = NOFAIL(malloc(nlen + 10));
++	char *p;
++	bool ret;
++
++	if (nlen > 6 && !strcmp(name + nlen - 6, ".ver.o"))
++		return false;
++	strcpy(n, name);
++	p = strrchr(n, '.');
++	if (p)
++		*p = 0;
++	strcat(n, ".ver.o");
++	ret = !access(n, R_OK) && parse_elf(info, n);
++	free(n);
++	return ret;
++}
++
+ static void read_symbols(const char *modname)
+ {
+ 	const char *symname;
+@@ -1986,8 +2005,9 @@ static void read_symbols(const char *modname)
+ 	char *license;
+ 	char *namespace;
+ 	struct module *mod;
+-	struct elf_info info = { };
++	struct elf_info info = { }, vinfo = { };
+ 	Elf_Sym *sym;
++	bool have_ver_o;
+ 
+ 	if (!parse_elf(&info, modname))
+ 		return;
+@@ -2002,6 +2022,8 @@ static void read_symbols(const char *modname)
+ 		free(tmp);
+ 	}
+ 
++	have_ver_o = open_ver_o(modname, &vinfo);
++
+ 	if (!mod->is_vmlinux) {
+ 		license = get_modinfo(&info, "license");
+ 		if (!license)
+@@ -2045,6 +2067,20 @@ static void read_symbols(const char *modname)
+ 					  symname + strlen("__crc_"));
+ 	}
+ 
++	if (have_ver_o) {
++		/*
++		 * Also read CRCs from a .ver.o if available. They will be linked
++		 * into the module after modpost.
++		 */
++		for (sym = vinfo.symtab_start; sym < vinfo.symtab_stop; sym++) {
++			symname = remove_dot(vinfo.strtab + sym->st_name);
++			if (strstarts(symname, "__crc_")) {
++				handle_modversion(mod, &vinfo, sym,
++						  symname + strlen("__crc_"));
++			}
++		}
++	}
++
+ 	// check for static EXPORT_SYMBOL_* functions && global vars
+ 	for (sym = info.symtab_start; sym < info.symtab_stop; sym++) {
+ 		unsigned char bind = ELF_ST_BIND(sym->st_info);
+@@ -2069,6 +2105,8 @@ static void read_symbols(const char *modname)
+ 	}
+ 
+ 	parse_elf_finish(&info);
++	if (have_ver_o)
++		parse_elf_finish(&vinfo);
+ 
+ 	/* Our trick to get versioning for module struct etc. - it's
+ 	 * never passed as an argument to an exported function, so
+-- 
+2.28.0
+

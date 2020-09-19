@@ -1,0 +1,27 @@
+From 4572de2f7986db4193094daa624fc21ef8fd8fe5 Mon Sep 17 00:00:00 2001
+From: Andi Kleen <ak@linux.intel.com>
+Date: Sat, 27 Jun 2020 20:44:29 -0700
+Subject: [PATCH 17/38] x86, lto: Enable LTO for x86
+
+Now that everything is in place, allow LTO for the x86 build.
+
+Signed-off-by: Andi Kleen <ak@linux.intel.com>
+---
+ arch/x86/Kconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+index ab90d1897076..4b5023dcfe5b 100644
+--- a/arch/x86/Kconfig
++++ b/arch/x86/Kconfig
+@@ -226,6 +226,7 @@ config X86
+ 	select PCI_DOMAINS			if PCI
+ 	select PCI_LOCKLESS_CONFIG		if PCI
+ 	select PERF_EVENTS
++	select ARCH_SUPPORTS_LTO
+ 	select RTC_LIB
+ 	select RTC_MC146818_LIB
+ 	select SPARSE_IRQ
+-- 
+2.28.0
+

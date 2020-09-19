@@ -1,0 +1,33 @@
+From c34d6d36a9fed93a200d60c9d35fb4f81105dfb5 Mon Sep 17 00:00:00 2001
+From: Andi Kleen <ak@linux.intel.com>
+Date: Sat, 27 Jun 2020 20:48:32 -0700
+Subject: [PATCH 10/38] lto: Allow LTO for sys_ni.c
+
+At some earlier point LTO was disabled for sys_ni.c to handle the system
+call aliases without problems. This is not needed anymore, now that we
+express syscall aliaseing in C instead of assembler. In fact
+current LTO builds require this file to be LTOed because of some strange
+external symbol weak resolution quirks in gcc 10.
+
+Signed-off-by: Andi Kleen <ak@linux.intel.com>
+---
+ kernel/Makefile | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/kernel/Makefile b/kernel/Makefile
+index f3218bc5ec69..2496ed72e8f5 100644
+--- a/kernel/Makefile
++++ b/kernel/Makefile
+@@ -37,9 +37,6 @@ KASAN_SANITIZE_kcov.o := n
+ KCSAN_SANITIZE_kcov.o := n
+ CFLAGS_kcov.o := $(call cc-option, -fno-conserve-stack -fno-stack-protector)
+ 
+-# cond_syscall is currently not LTO compatible
+-CFLAGS_sys_ni.o = $(DISABLE_LTO)
+-
+ obj-y += sched/
+ obj-y += locking/
+ obj-y += power/
+-- 
+2.28.0
+

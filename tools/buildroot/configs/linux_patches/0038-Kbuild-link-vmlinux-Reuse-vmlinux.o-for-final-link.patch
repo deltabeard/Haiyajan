@@ -1,0 +1,77 @@
+From b2be2a713756684e476c6965c39710723b2a5076 Mon Sep 17 00:00:00 2001
+From: Andi Kleen <andi@firstfloor.org>
+Date: Wed, 8 Jul 2020 07:19:06 -0700
+Subject: [PATCH 38/38] Kbuild, link-vmlinux: Reuse vmlinux.o for final link
+
+Even without kallsyms, link-vmlinux links the kernel twice: once
+to generate a vmlinux.o for modpost and objtool, and another
+time for the final executable.
+
+This patch reuses the vmlinux.o to create the final executable
+to avoid some redundant linking work.
+
+Of course this particularly helps with Link Time Optimization, where
+it prevents a double optimization of the whole kernel, but it's
+midly beneficial on a standard build too.
+
+This is a config option for now, but probably should be unconditional
+at some point once all the architectures have been tested.
+um support would need some extra work.
+
+Signed-off-by: Andi Kleen <ak@linux.intel.com>
+---
+ init/Kconfig            |  9 +++++++++
+ scripts/link-vmlinux.sh | 14 ++++++++++++++
+ 2 files changed, 23 insertions(+)
+
+diff --git a/init/Kconfig b/init/Kconfig
+index 25c853e27d5d..9fc76c39199b 100644
+--- a/init/Kconfig
++++ b/init/Kconfig
+@@ -1390,6 +1390,15 @@ config LTO_CP_CLONE
+ 	  arguments when it determines these arguments are very commonly
+ 	  called.  Experimential. Will increase text size.
+ 
++config SINGLE_LINK
++	bool "Use single linking step for final vmlinux"
++	default y if LTO
++	# for now. In theory should work everywhere except for um
++	depends on ARCH_SUPPORTS_LTO
++	help
++	  Use only a single linking step for the final vmlinux, making
++	  the build slightly faster.
++
+ config SYSCTL
+ 	bool
+ 
+diff --git a/scripts/link-vmlinux.sh b/scripts/link-vmlinux.sh
+index d4a786a0e853..2bb837495680 100755
+--- a/scripts/link-vmlinux.sh
++++ b/scripts/link-vmlinux.sh
+@@ -398,9 +398,23 @@ elif [ -n "${CONFIG_KALLSYMS}" ]; then
+ 	fi
+ fi
+ 
++if [ -z "${CONFIG_SINGLE_LINK}" ] ; then
++
+ info LDFINAL vmlinux
+ vmlinux_link vmlinux "${kallsymso} ${kallsymsorel}" ${btf_vmlinux_bin_o}
+ 
++else
++
++# Reuse the partial linking from the modpost vmlinux.o earlier
++
++info LD vmlinux
++${LD} ${KBUILD_LDFLAGS} ${LDFLAGS_vmlinux}	\
++			-o vmlinux		\
++			-T ${objtree}/${KBUILD_LDS} \
++			vmlinux.o ${kallsymso} ${kallsymsorel} ${btf_vmlinux_bin_o}
++
++fi
++
+ if [ -n "${CONFIG_KALLSYMS}" -a -n "${CONFIG_KALLSYMS_SINGLE}" ] ; then
+ 	# Now regenerate the kallsyms table and patch it into the
+ 	# previously linked file. We tell kallsyms to pad it
+-- 
+2.28.0
+

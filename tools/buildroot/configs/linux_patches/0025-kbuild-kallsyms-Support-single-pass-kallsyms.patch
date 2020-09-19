@@ -1,0 +1,306 @@
+From 5e5c62d6348caaf0360a2f5ca1caef7ab2dba738 Mon Sep 17 00:00:00 2001
+From: Andi Kleen <ak@linux.intel.com>
+Date: Thu, 8 Aug 2013 16:44:06 -0700
+Subject: [PATCH 25/38] kbuild, kallsyms: Support single pass kallsyms
+
+kallsyms currenly links the kernel upto three times
+(in addition to another one for modpost checks)
+
+Linking can be a quite slow operation, especially when
+the kernel has a lot of debug information (lots of IO),
+or Link Time Optimization is used.
+
+Final linking is also a non parallelizable bottleneck, so it's
+always good to do it less.
+
+Use a different kallsyms method to avoid this:
+- generate a initial kallsyms table from the top level
+object files
+- This table is usually a superset of the final table,
+but without final addresses and some extra symbols
+(e.g. discard and local symbols)
+- Use this table to link the vmlinux
+- Then generate a new kallsyms table with padding so
+that all symbols stay at the same offsets. This works
+because the new table is smaller or the same than the
+original one.
+We let the first kallsyms generate a padding file and
+then use it on the next link.
+- Then finally patch in the new table into the vmlinux
+
+Right now we still do two links. One to generate
+the kernel, and another one to generate the vmlinux.o
+for modpost.
+
+The kernel size is slightly increased from the padding.
+
+On my slowish laptop this cuts down the final serialized phase
+of a moderate size kernel build (just relinking vmlinux) by 1/3,
+from ~30s to 20s. With LTO the wins are much higher.
+
+Tested on x86, tests on other architectures would be appreciated.
+This is still a somewhat experimental feature, so I made it
+Kconfig. So far it is only enabled on x86, but can be enabled
+elsewhere as testing progresses.
+
+Signed-off-by: Andi Kleen <ak@linux.intel.com>
+---
+ init/Kconfig            | 11 ++++++
+ scripts/Makefile        |  2 +-
+ scripts/elf_file_offset | 24 ++++++++++++
+ scripts/link-vmlinux.sh | 64 +++++++++++++++++++++++++++++++-
+ scripts/patchfile.c     | 81 +++++++++++++++++++++++++++++++++++++++++
+ 5 files changed, 179 insertions(+), 3 deletions(-)
+ create mode 100644 scripts/elf_file_offset
+ create mode 100644 scripts/patchfile.c
+
+diff --git a/init/Kconfig b/init/Kconfig
+index 1dc347126463..25c853e27d5d 100644
+--- a/init/Kconfig
++++ b/init/Kconfig
+@@ -1714,6 +1714,17 @@ config KALLSYMS_BASE_RELATIVE
+ 	  time constants, and no relocation pass is required at runtime to fix
+ 	  up the entries based on the runtime load address of the kernel.
+ 
++config KALLSYMS_SINGLE
++       bool "Single pass kallsyms"
++       default y if LTO
++       # For now. Needs to be tested on other architectures.
++       depends on X86
++       depends on !(KALLSYMS_ALL && LTO)
++       help
++         Use a single pass to generate kallsyms. This will speed up the build,
++	 but might slightly increase the binary size. Also an experimental
++	 feature. Only works for functions currently with LTO.
++
+ # end of the "standard kernel features (expert users)" menu
+ 
+ # syscall, maps, verifier
+diff --git a/scripts/Makefile b/scripts/Makefile
+index 95ecf970c74c..cc406f4da4d0 100644
+--- a/scripts/Makefile
++++ b/scripts/Makefile
+@@ -4,7 +4,7 @@
+ # the kernel for the build process.
+ 
+ always-$(CONFIG_BUILD_BIN2C)			+= bin2c
+-always-$(CONFIG_KALLSYMS)			+= kallsyms
++always-$(CONFIG_KALLSYMS)			+= kallsyms patchfile
+ always-$(BUILD_C_RECORDMCOUNT)			+= recordmcount
+ always-$(CONFIG_BUILDTIME_TABLE_SORT)		+= sorttable
+ always-$(CONFIG_ASN1)				+= asn1_compiler
+diff --git a/scripts/elf_file_offset b/scripts/elf_file_offset
+new file mode 100644
+index 000000000000..2c8ee49d5b96
+--- /dev/null
++++ b/scripts/elf_file_offset
+@@ -0,0 +1,24 @@
++#!/bin/bash
++# find the file offset of a section in a ELF file
++# objdump --section-headers elf-file |
++# gawk -f elf_file_offset filesize=SIZE section=SECTIONNAME
++# gawk needed for strtonum()
++#Idx Name          Size      VMA               LMA               File off  Algn
++#  4 .kallsyms     001fd648  ffffffff81b1c068  0000000001b1c068  00d1c068  2**3
++
++$2 == section {
++	old = strtonum("0x" $3)
++	new = strtonum(filesize)
++	if (old < new) {
++		print "Not enough padding in vmlinux for new kallsyms, missing",new-old > "/dev/stderr"
++		print "Please lower (=increase) PAD_RATIO in kallsyms.c"
++		exit 1
++	}
++	print "0x" $6
++	# XXX doesn't exit in gawk 4.1.0 ?!?
++	#exit(0)
++}
++#END {
++#    print section " not found" > "/dev/stderr"
++#    exit 1
++#}
+diff --git a/scripts/link-vmlinux.sh b/scripts/link-vmlinux.sh
+index 7c6179b7f2e8..8ed0341129ce 100755
+--- a/scripts/link-vmlinux.sh
++++ b/scripts/link-vmlinux.sh
+@@ -184,13 +184,39 @@ kallsyms()
+ 	if [ -n "${CONFIG_KALLSYMS_BASE_RELATIVE}" ]; then
+ 		kallsymopt="${kallsymopt} --base-relative"
+ 	fi
++	kallsymopt="${kallsymopt} $3 $4 $5"
+ 
+ 	local aflags="${KBUILD_AFLAGS} ${KBUILD_AFLAGS_KERNEL}               \
+ 		      ${NOSTDINC_FLAGS} ${LINUXINCLUDE} ${KBUILD_CPPFLAGS}"
+ 
+ 	local afile="`basename ${2} .o`.S"
+ 
+-	${NM} -n ${1} | scripts/kallsyms ${kallsymopt} > ${afile}
++	(
++	if [ -n "$CONFIG_LTO" -a -n "$CONFIG_KALLSYMS_SINGLE" -a -n "$CONFIG_CC_IS_GCC" ] &&
++		( ${OBJDUMP} -h ${1} | grep -q gnu\.lto) ; then
++        # workaround for slim LTO gcc-nm not outputing static symbols
++        # http://gcc.gnu.org/PR60016
++        # generate a fake symbol table based on the LTO function sections.
++        # This unfortunately "knows" about the internal LTO file format
++        # and only works for functions
++
++	# read the function names directly from the LTO object
++	objdump -h ${1} |
++		awk '/gnu\.lto_[a-z]/ { gsub(/\.gnu\.lto_/,""); gsub(/\..*/, ""); print "0 t " $2 } '
++	# read the non LTO symbols with readelf (which doesn't use the LTO plugin,
++	# so we only get pure ELF symbols)
++	# readelf doesn't handle ar, so we have to expand the objects
++	echo ${1} | sed 's/ /\n/g' | grep built-in.a | while read i ; do
++		${AR} t $i | while read j ; do readelf -s $j ; done
++	done | awk 'NF >= 8 { print "0 t " $8 } '
++	# now handle the objects
++	readelf -s `echo ${1} | sed 's/ /\n/g' | grep '\.o$'` | awk 'NF >= 8 {
++	if ($8 !~ /Name|__gnu_lto_slim|\.c(\.[0-9a-f]+)?/) { print "0 t " $8 }
++	}'
++	else
++		${NM} -n ${1}
++	fi
++	) | scripts/kallsyms ${kallsymopt} > ${afile}
+ 	${CC} ${aflags} -c -o ${2} ${afile}
+ }
+ 
+@@ -299,7 +325,17 @@ fi
+ kallsymso=""
+ kallsymso_prev=""
+ kallsyms_vmlinux=""
+-if [ -n "${CONFIG_KALLSYMS}" ]; then
++if [ -n "${CONFIG_KALLSYMS}" -a -n "${CONFIG_KALLSYMS_SINGLE}" ]; then
++	# Generate kallsyms from the top level object files
++	# this is slightly off, and has wrong addresses,
++	# but gives us the conservative max length of the kallsyms
++	# table to link in something with the right size.
++	info KALLSYMS1 .tmp_kallsyms1.o
++	kallsyms "${KBUILD_VMLINUX_OBJS} ${KBUILD_VMLINUX_LIBS}" .tmp_kallsyms1.o \
++		--all-symbols \
++		"--pad-file=.kallsyms_pad"
++	kallsymso=.tmp_kallsyms1.o
++elif [ -n "${CONFIG_KALLSYMS}" ]; then
+ 
+ 	# kallsyms support
+ 	# Generate section listing all symbols and add it into vmlinux
+@@ -339,6 +375,30 @@ fi
+ info LDFINAL vmlinux
+ vmlinux_link vmlinux "${kallsymso}" ${btf_vmlinux_bin_o}
+ 
++if [ -n "${CONFIG_KALLSYMS}" -a -n "${CONFIG_KALLSYMS_SINGLE}" ] ; then
++	# Now regenerate the kallsyms table and patch it into the
++	# previously linked file. We tell kallsyms to pad it
++	# to the previous length, so that no symbol changes.
++	info KALLSYMS2 .tmp_kallsyms2.o
++	kallsyms vmlinux .tmp_kallsyms2.o `cat .kallsyms_pad`
++
++	info OBJCOPY .tmp_kallsyms2.bin
++	${OBJCOPY} -O binary .tmp_kallsyms2.o .tmp_kallsyms2.bin
++
++	info PATCHFILE vmlinux
++	EF=scripts/elf_file_offset
++	if [ ! -r $EF ] ; then EF=source/$EF ; fi
++	SIZE=`stat -c%s .tmp_kallsyms2.bin`
++	OFF=`${OBJDUMP} --section-headers vmlinux |
++	     gawk -f $EF -v section=.kallsyms -v filesize=$SIZE`
++	if [ -z "$OFF" ] ; then
++		echo "Cannot find .kallsyms section in vmlinux binary"
++		exit 1
++	fi
++	scripts/patchfile vmlinux $OFF .tmp_kallsyms2.bin
++	kallsyms_vmlinux=vmlinux
++fi
++
+ if [ -n "${CONFIG_BUILDTIME_TABLE_SORT}" ]; then
+ 	info SORTTAB vmlinux
+ 	if ! sorttable vmlinux; then
+diff --git a/scripts/patchfile.c b/scripts/patchfile.c
+new file mode 100644
+index 000000000000..1a3414d11803
+--- /dev/null
++++ b/scripts/patchfile.c
+@@ -0,0 +1,81 @@
++/* Patch file at specific offset
++ * patchfile file-to-patch offset patch-file [len-of-patch]
++ */
++#define _GNU_SOURCE 1
++#include <sys/mman.h>
++#include <unistd.h>
++#include <sys/fcntl.h>
++#include <sys/stat.h>
++#include <stdio.h>
++#include <unistd.h>
++#include <stdlib.h>
++
++#define ROUNDUP(x, y) (((x) + (y) - 1) & ~((y) - 1))
++
++static void *mmapfile(char *file, size_t *size)
++{
++	int pagesize = sysconf(_SC_PAGESIZE);
++	int fd = open(file, O_RDONLY);
++	void *res = NULL;
++	struct stat st;
++
++	*size = 0;
++	if (fd < 0)
++		return NULL;
++	if (fstat(fd, &st) >= 0) {
++		*size = st.st_size;
++		res = mmap(NULL, ROUNDUP(st.st_size, pagesize),
++				PROT_READ, MAP_SHARED,
++				fd, 0);
++		if (res == (void *)-1)
++			res = NULL;
++	}
++	close(fd);
++	return res;
++}
++
++static void usage(void)
++{
++	fprintf(stderr, "Usage: patchfile file-to-patch offset file-to-patch-in\n");
++	exit(1);
++}
++
++static size_t get_num(char *s)
++{
++	char *endp;
++	size_t v = strtoul(s, &endp, 0);
++	if (s == endp)
++		usage();
++	return v;
++}
++
++int main(int ac, char **av)
++{
++	char *patch;
++	size_t patchsize;
++	int infd;
++	size_t offset;
++
++	if (ac != 5 && ac != 4)
++		usage();
++	offset = get_num(av[2]);
++	patch = mmapfile(av[3], &patchsize);
++	if (av[4]) {
++		size_t newsize = get_num(av[4]);
++		if (newsize > patchsize)
++			fprintf(stderr, "kallsyms: warning, size larger than patch\n");
++		if (newsize < patchsize)
++			patchsize = newsize;
++	}
++	infd = open(av[1], O_RDWR);
++	if (infd < 0) {
++		fprintf(stderr, "Cannot open %s\n", av[1]);
++		exit(1);
++	}
++	if (pwrite(infd, patch, patchsize, offset) != patchsize) {
++		fprintf(stderr, "Cannot write patch to %s\n", av[1]);
++		exit(1);
++	}
++	close(infd);
++	return 0;
++}
+-- 
+2.28.0
+
