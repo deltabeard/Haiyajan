@@ -22,11 +22,12 @@
 #include <libretro.h>
 #include <retro-extensions.h>
 #include <rec.h>
+#include <tai.h>
 #include <timer.h>
 #include <ui.h>
 
 #define REL_VERSION_MAJOR 0
-#define REL_VERSION_MINOR 0
+#define REL_VERSION_MINOR 1
 
 struct settings_s
 {
@@ -188,6 +189,9 @@ struct haiyajan_ctx_s
 
 	/* Font */
 	font_ctx *font;
+
+	/* Tool assist context. */
+	tai *tai;
 
 	unsigned quit : 1;
 };

@@ -197,12 +197,12 @@ static void input_set_keyboard(input_device_s *dev, const SDL_Scancode sc,
 
 void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev)
 {
-	if(ev->type == SDL_KEYDOWN && in_ctx->player[0].hai_type == RETRO_INPUT_KEYBOARD)
+	if(ev->type == SDL_KEYDOWN)
 	{
 		input_set_keyboard(&in_ctx->player[0], ev->key.keysym.scancode,
 			  SDL_PRESSED, in_ctx->input_cmd_event);
 	}
-	else if(ev->type == SDL_KEYUP && in_ctx->player[0].hai_type == RETRO_INPUT_KEYBOARD)
+	else if(ev->type == SDL_KEYUP)
 	{
 		input_set_keyboard(&in_ctx->player[0], ev->key.keysym.scancode,
 			  SDL_RELEASED, in_ctx->input_cmd_event);

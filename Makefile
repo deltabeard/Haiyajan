@@ -10,7 +10,7 @@ SDL2_CONFIG := sdl2-config
 TARGETS := haiyajan
 DEBUG := 0
 STATIC := 0
-CFLAGS = -std=c99 -pedantic -g3 -fPIE -Wall -Wextra -pipe -flto -Iinc \
+CFLAGS = -std=c99 -pedantic -g3 -fPIE -Wall -Wextra -pipe -Iinc \
 		 $(shell $(SDL2_CONFIG) --cflags)
 LDFLAGS = $(shell $(SDL2_CONFIG) --libs)
 

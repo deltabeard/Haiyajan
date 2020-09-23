@@ -123,14 +123,15 @@ static void print_help(void)
 	fprintf(stderr, "\n"
 			"Usage: haiyajan [OPTIONS] -L CORE [FILE]\n"
 			"Options:\n"
-			"  -h, --help      Show this help message.\n"
-			"      --version   Print version information.\n"
-			"  -L, --libretro  Path to libretro core.\n"
-			"  -b, --benchmark Benchmark and print average frames"
-			" per second.\n"
-			"  -v, --verbose   Print verbose log messages.\n"
-			"  -V, --video     Video driver to use\n"
-			"  -R, --render    Render driver to use\n");
+			"  -h, --help       Show this help message.\n"
+			"      --version    Print version information.\n"
+			"  -L, --libretro   Path to libretro core.\n"
+			"  -b, --benchmark  Benchmark and print average frames per second.\n"
+			"  -v, --verbose    Print verbose log messages.\n"
+			"  -V, --video      Video driver to use\n"
+			"  -R, --render     Render driver to use\n"
+			"      --tai-record Record a new tool assist input file\n"
+			"      --tai-play   Play a tool assist input file\n");
 
 	for(i = 0; i < num_drivers; i++)
 	{
@@ -177,7 +178,7 @@ static void free_settings(struct core_ctx_s *ctx)
 	}
 }
 
-static void apply_settings(char **argv, struct settings_s *cfg)
+static void apply_settings(char **argv, struct haiyajan_ctx_s *h)
 {
 	const struct optparse_long longopts[] = {
 			{"libretro",  'L', OPTPARSE_REQUIRED},
@@ -187,12 +188,15 @@ static void apply_settings(char **argv, struct settings_s *cfg)
 			{"version",   1,   OPTPARSE_NONE},
 			{"benchmark", 'b', OPTPARSE_OPTIONAL},
 			{"help",      'h', OPTPARSE_NONE},
+			{"tai-play",   2,  OPTPARSE_REQUIRED},
+			{"tai-record", 3,  OPTPARSE_REQUIRED},
 			{0}
 		};
 	int option;
 	struct optparse options;
 	char *rem_arg;
 	Uint8 video_init = 0;
+	struct settings_s *cfg = &h->stngs;
 
 	optparse_init(&options, argv);
 
@@ -200,6 +204,34 @@ static void apply_settings(char **argv, struct settings_s *cfg)
 	{
 		switch(option)
 		{
+		case 2:
+		case 3:
+		{
+			SDL_RWops *tai_in;
+			const char *const mode[] = { "r", "w" };
+			int lut = option - 2;
+
+			tai_in = SDL_RWFromFile(options.optarg, mode[lut]);
+			if(tai_in == NULL)
+			{
+				SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
+					"Unable to open tool assist input file: %s",
+					SDL_GetError());
+				goto err;
+			}
+
+			h->tai = tai_init(tai_in, lut);
+			if(h->tai == NULL)
+			{
+				SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
+					"Unable to initialise tool assist input module: %s",
+					SDL_GetError());
+				goto err;
+			}
+
+			break;
+		}
+
 		case 'L':
 			cfg->core_filename = SDL_strdup(options.optarg);
 			break;
@@ -458,8 +490,14 @@ static void process_events(struct haiyajan_ctx_s *ctx)
 {
 	SDL_Event ev;
 
+	if(ctx->tai != NULL)
+		tai_process_event(ctx->tai, NULL);
+
 	while(SDL_PollEvent(&ev) != 0)
 	{
+		if(ctx->tai != NULL)
+			tai_process_event(ctx->tai, &ev);
+		
 		if(ev.type == SDL_QUIT)
 		{
 			ctx->quit = 1;
@@ -691,7 +729,8 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	apply_settings(argv, &h.stngs);
+	apply_settings(argv, &h);
+
 	h.win = SDL_CreateWindow(PROG_NAME, SDL_WINDOWPOS_UNDEFINED,
 				   SDL_WINDOWPOS_UNDEFINED, 320, 240,
 				   SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
@@ -785,6 +824,9 @@ int main(int argc, char *argv[])
 		}
 
 		h.core.env.frames++;
+		if(h.tai != NULL)
+			tai_next_frame(h.tai);
+
 		process_events(&h);
 		SDL_SetRenderDrawColor(h.rend, 0x00, 0x00, 0x00, 0x00);
 		SDL_RenderClear(h.rend);
@@ -851,6 +893,7 @@ int main(int argc, char *argv[])
 	while(h.ui_overlay != NULL)
 		ui_overlay_delete_all(&h.ui_overlay);
 
+	tai_exit(h.tai);
 	util_exit_all();
 	FontExit(h.font);
 	ret = EXIT_SUCCESS;

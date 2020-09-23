@@ -27,7 +27,7 @@ if errorlevel 1 (
 )
 
 set CC=cl
-set CFLAGS=/nologo /GL /O2 /Ob2 /fp:fast /Ot /GF /GT /Oi /MT /Iinc /I'%sdlincdir%' /D_UNICODE /DUNICODE
+set CFLAGS=/nologo /W3 /GL /O2 /Ob2 /fp:fast /Ot /GF /GT /Oi /MT /Iinc /I'%sdlincdir%' /D_UNICODE /DUNICODE
 
 if "%VSCMD_ARG_TGT_ARCH%"=="x64" (
 	set CFLAGS=%CFLAGS% /Fdvc142.pdb
