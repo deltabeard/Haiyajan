@@ -27,7 +27,8 @@ jobs:
         mkdir build
         cd build
         cmake ..
-        make install
+        make
+        sudo make install
     - name: Install x264
       run: sudo apt-get install libx264-dev
     - name: Install wavpack
