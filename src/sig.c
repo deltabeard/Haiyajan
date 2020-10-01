@@ -21,9 +21,9 @@
 
 static const struct haiyajan_ctx_s *ctx;
 
-static void log_out(void *ctx, int cat, SDL_LogPriority pri, const char *msg)
+static void log_out(void *priv, int cat, SDL_LogPriority pri, const char *msg)
 {
-	(void) ctx;
+	(void) priv;
 	(void) cat;
 	(void) pri;
 	fputs(msg, stderr);

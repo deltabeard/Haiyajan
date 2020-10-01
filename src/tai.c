@@ -7,6 +7,11 @@
 #define ALIGN(bits) __attribute__((aligned(bits)))
 #endif
 
+#if defined(__WIN32__)
+#undef SDL_PRIu64
+#define SDL_PRIu64 "I64u"
+#endif
+
 ALIGN(8) struct tai_frame_s {
 	Uint64 frame_num;
 	Uint8 command;
@@ -217,9 +222,7 @@ int tai_process_event(tai *ctx, SDL_Event *e)
 		case HTAI_CMD_KEYBOARD:
 		{
 			struct tai_dat_keyboard_s keydat;
-			size_t ret;
-			ret = SDL_RWread(ctx->f, &keydat, 1,
-				sizeof(keydat));
+			ret = SDL_RWread(ctx->f, &keydat, 1, sizeof(keydat));
 			if(ret < sizeof(keydat))
 			{
 				SDL_SetError("Tool assisted input: "
@@ -228,8 +231,7 @@ int tai_process_event(tai *ctx, SDL_Event *e)
 				goto err;
 			}
 
-			gen.type = keydat.state ?
-				SDL_KEYUP : SDL_KEYDOWN;
+			gen.type = keydat.state ? SDL_KEYUP : SDL_KEYDOWN;
 			gen.key.timestamp = SDL_GetTicks(); /* TODO */
 			gen.key.state = keydat.state;
 			gen.key.repeat = 0;
@@ -253,7 +255,7 @@ int tai_process_event(tai *ctx, SDL_Event *e)
 
 		default:
 			SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-				"TAI: Invalid command %hu read at %ld; exiting.",
+				"TAI: Invalid command %hu read at %" SDL_PRIs64 "; exiting.",
 				cmd, SDL_RWtell(ctx->f));
 			tai_exit(ctx);
 			goto err;

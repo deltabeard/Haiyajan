@@ -11,7 +11,10 @@ TARGETS := haiyajan
 DEBUG := 0
 STATIC := 0
 CFLAGS = -std=c99 -pedantic -g3 -fPIE -Wall -Wextra -pipe -Iinc \
-		 $(shell $(SDL2_CONFIG) --cflags)
+		 $(shell $(SDL2_CONFIG) --cflags) \
+		 -Wshadow -fno-common \
+		 -Wformat=2 -Wformat-truncation -Wformat-overflow -Wno-error=format \
+		 -ffunction-sections -fdata-sections -Wl,--gc-sections
 LDFLAGS = $(shell $(SDL2_CONFIG) --libs)
 
 define help_txt
@@ -51,7 +54,7 @@ ifeq ($(DEBUG),1)
 	OPT = -Og
 else
 	# I don't want any warnings in release builds
-	CFLAGS += -DSDL_ASSERT_LEVEL=1 -Werror -O2 -ffast-math
+	CFLAGS += -DSDL_ASSERT_LEVEL=1 -Werror -O2 -ffast-math -flto
 	TARGETS += $(call ccparam, haiyajan.sym,)
 endif
 
