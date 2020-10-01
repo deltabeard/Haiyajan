@@ -20,12 +20,19 @@ jobs:
     - name: Install GNU make
       run: sudo apt-get install make
     - name: Install sdl2
-      run: sudo apt-get install libsdl2-dev
+      # Using brew to get the latest version of sdl2
+      run: sudo brew install libsdl2-dev
     - name: Install x264
       run: sudo apt-get install libx264-dev
     - name: Install wavpack
       run: sudo apt-get install libwavpack-dev
     - name: make
-      run: make
+      run: make STATIC=1 DEBUG=1
     - name: Codecov
       uses: codecov/codecov-action@v1.0.13
+    - name: Upload a Build Artifact
+      uses: actions/upload-artifact@v2.2.0
+      with:
+        path: haiyajan
+        if-no-files-found: error
+        retention-days: 14
