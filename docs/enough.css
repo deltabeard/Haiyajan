@@ -1,11 +1,8 @@
-body{
+body {
   font: 22px/1.6 system-ui, sans-serif;
   margin: auto;
   max-width: 35em;
   padding: 0 1em;
-}
-footer {
-  font-size: 0.6em;
 }
 table {
   border-collapse: collapse;
@@ -38,5 +35,14 @@ nav a {
   padding-right: 0.4em;
 }
 footer {
+  font-size: 0.6em;
   margin-top: 2em;
+}
+header .logo {
+  float: right;
+  height: 6em;
+}
+footer .logo {
+  float: left;
+  padding: 0.6em;
 }
