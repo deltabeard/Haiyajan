@@ -58,14 +58,14 @@ project for brevity.
 The platforms that this project will be regularly tested on for
 major releases are currently:
 
-| OS           | Kernel                    | Architecture         | Test Platform   | C Library          | Additionally Tests Support For:                |
-|--------------|---------------------------|----------------------|-----------------|--------------------|------------------------------------------------|
-| Alpine Linux | Linux Latest Stable       | x86-64               | Various         | musl libc          | Generic Modern Linux System with OpenGL 3.3+   |
-| Alpine Linux | Linux Latest Stable       | ARM1176JZF-S         | Raspberry Pi 1A | musl libc          | Any Low Power Linux System with OpenGLES 2     |
-| Arch Linux   | Linux Latest Stable       | ARM Cortex-A72       | Raspberry Pi 4B | GNU libc           | Any High Power Linux System with OpenGLES 3    |
-| ReactOS      | Windows NT 5.1 Compatible | x86-32               | VM              | MSVC 2019, v141_xp | Wine, Windows XP/7/8.1/10                      |
-| Windows 10   | Windows NT 10.0           | x86-64               | Various         | MSVC 2019, v142    | Generic Modern Windows System with OpenGL 3.3+ |
-| Horizon OS   | Custom BSD                | ARM Cortex-A57 & A53 | Yuzu            | GNU libc           | Nintendo Switch via libNX with OpenGL 3.3+     |
+| OS           | Kernel          | Architecture         | Test Platform   | C Library          | Additionally Tests Support For:                |
+|--------------|-----------------|----------------------|-----------------|--------------------|------------------------------------------------|
+| Alpine Linux | Linux Longterm  | x86-64               | Various         | musl libc          | Generic Modern Linux System with OpenGL 3.3+   |
+| Alpine Linux | Linux Longterm  | ARM1176JZF-S         | Raspberry Pi 1A | musl libc          | Any Low Power Embedded Linux System with OpenGLES 2     |
+| Arch Linux   | Linux Mainline  | ARM Cortex-A72       | Raspberry Pi 4B | GNU libc           | Any High Power Embedded Linux System with OpenGLES 3    |
+| ReactOS      | Windows NT 5.1  | x86-32               | VirtualBox      | MSVC 2019, v141_xp | Wine, Windows XP/7/8.1/10                      |
+| Windows 10   | Windows NT 10.0 | x86-64               | Various         | MSVC 2019, v142    | Generic Modern Windows System with OpenGL 3.3+ |
+| Switch       | Horizon         | ARM Cortex-A57 & A53 | Yuzu            | GNU libc           | Nintendo Switch via libNX with OpenGL 3.3+     |
 
 
 Haiyajan *should* work on any platform supported by SDL2 and has a C99
@@ -81,7 +81,7 @@ may require the
 [Visual C++ 2015 Redistributable](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads).
 - Since the official SDL2 API for the Nintendo Switch is released under an NDA,
 it is not compatible with the AGPL license of Haiyajan. Consider using libnx.
-- Libretro cores may have different system requirements.
+- Libretro cores may have different system requirements and licenses.
 
 ## Building
 
