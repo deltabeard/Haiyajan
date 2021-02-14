@@ -77,9 +77,13 @@ bool cb_retro_environment(unsigned cmd, void *data)
 	switch(cmd)
 	{
 	case RETRO_ENVIRONMENT_GET_CAN_DUPE:
+	{
 		/* Passing NULL to the video callback will not update the
 		 * texture. */
+		bool *can_dupe = data;
+		*can_dupe = SDL_TRUE;
 		break;
+	}
 
 	case RETRO_ENVIRONMENT_SHUTDOWN:
 		ctx_retro->env.status.bits.shutdown = 1;
