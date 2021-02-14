@@ -268,7 +268,6 @@ int load_libretro_core(const char *so_file, struct core_ctx_s *ctx)
 		return 3;
 	}
 
-	ctx->fn.retro_set_controller_port_device(0, RETRO_INPUT_JOYPAD);
 	ctx->fn.retro_get_system_info(&ctx->sys_info);
 
 	/* Initialise ctx status information to zero. */

@@ -640,6 +640,9 @@ void play_init_cb(struct core_ctx_s *ctx)
 	/* Error in libretro core dev overview: retro_init() should be called
 	 * after retro_set_*() functions. */
 	ctx->fn.retro_init();
+
+	/* Set default input device. */
+	ctx->fn.retro_set_controller_port_device(0, RETRO_INPUT_JOYPAD);
 	SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION, "Core initialised");
 
 	ctx->env.status.bits.core_init = 1;
