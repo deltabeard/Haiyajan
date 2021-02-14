@@ -241,7 +241,10 @@ void input_handle_event(struct input_ctx_s *const in_ctx, const SDL_Event *ev)
 				RETRO_INPUT_ANALOG : RETRO_INPUT_JOYPAD;
 
 		in_ctx->player[0].type.pad.ctx = gc;
-		SDL_GameControllerSetPlayerIndex(gc, 1);
+
+		#if SDL_VERSION_ATLEAST(2, 0, 12)
+			SDL_GameControllerSetPlayerIndex(gc, 1);
+		#endif
 
 		/* FIXME: assign controller mapping to core. */
 
