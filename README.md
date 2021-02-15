@@ -2,7 +2,7 @@
 
 # Haiyajan
 
-Haiyajan (هیجان) is an entertainment interface that is designed to
+Haiyajan (هیجان; /ˈhaɪəʤɑːn/ *Haiya-jahn*) is an entertainment interface that is designed to
 be small, fast, and simple to use. It uses plugins named "Libretro cores" to
 provide various emulation and multimedia features. It is written in C99
 language and depends only on the SDL2 library and the Libretro cores you wish
