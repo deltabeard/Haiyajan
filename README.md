@@ -37,6 +37,14 @@ License Version 3 (AGPL v3)**; see the LICENSE file for copying conditions.
 There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A
 PARTICULAR PURPOSE.
 
+The following exception applies:
+
+* Third party compiled objects, including libretro cores, may be statically linked with Haiyajan if all of the said static objects are released under a license that is compatible with either *CC BY-NC-SA 4.0*, or *CC BY-SA 4.0*. This means that:
+  * A binary of Haiyajan that is statically linked with any non-commercial licensed object will also be non-commercial. This means that the binary must not be included within any product that is exchanged for any currency. The source code of Haiyajan must still be made available under the AGPLv3 license. If commercial use (as allowed by the AGPLv3 license) is required, do not statically link third party objects that are licensed under a non-commercial license agreement.
+  * The source code of the statically linked object *must* be made available to the users of that Haiyajan binary, even if the binary is presented over a network. Note that the source code of Haiyajan must always be available to users under the AGPLv3. The source of the statically linked objects may be released under their original licensed, and need not be relicensed to AGPLv3. However, these statically linked objects must be compatible with *CC BY-NC-SA 4.0*, or *CC BY-SA 4.0*.
+
+This means that a build of Haiyajan (AGPLv3) that is statically linked with SNES9X (non-commercial)
+
 The Haiyajan icon was created by Cher at https://ko-fi.com/staticevent.
 
 # Development
