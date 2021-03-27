@@ -39,11 +39,9 @@ PARTICULAR PURPOSE.
 
 The following exception applies:
 
-* Third party compiled objects, including libretro cores, may be statically linked with Haiyajan if all of the said static objects are released under a license that is compatible with either *CC BY-NC-SA 4.0*, or *CC BY-SA 4.0*. This means that:
-  * A binary of Haiyajan that is statically linked with any non-commercial licensed object will also be non-commercial. This means that the binary must not be included within any product that is exchanged for any currency. The source code of Haiyajan must still be made available under the AGPLv3 license. If commercial use (as allowed by the AGPLv3 license) is required, do not statically link third party objects that are licensed under a non-commercial license agreement.
-  * The source code of the statically linked object *must* be made available to the users of that Haiyajan binary, even if the binary is presented over a network. Note that the source code of Haiyajan must always be available to users under the AGPLv3. The source of the statically linked objects may be released under their original licensed, and need not be relicensed to AGPLv3. However, these statically linked objects must be compatible with *CC BY-NC-SA 4.0*, or *CC BY-SA 4.0*.
-
-This means that a build of Haiyajan (AGPLv3) that is statically linked with SNES9X (non-commercial)
+1. Libretro cores that are released under a non-commercial license may be statically linked with Haiyajan, provided that:
+  * the source code used to build the Haiyajan binary, including statically linked libraries (such as libretro cores), are released to the user, each under their own respective license, even if the statically linked library does not require the release of source code.
+  * the resultant Haiyajan binary is released under the AGPLv3 license, but is also bound by the non-commercial terms of statically linked libretro cores. 
 
 The Haiyajan icon was created by Cher at https://ko-fi.com/staticevent.
 
@@ -66,14 +64,14 @@ project for brevity.
 The platforms that this project will be regularly tested on for
 major releases are currently:
 
-| OS           | Kernel          | Architecture         | Test Platform   | C Library          | Additionally Tests Support For:                |
-|--------------|-----------------|----------------------|-----------------|--------------------|------------------------------------------------|
-| Alpine Linux | Linux Longterm  | x86-64               | Various         | musl libc          | Generic Modern Linux System with OpenGL 3.3+   |
-| Alpine Linux | Linux Longterm  | ARM1176JZF-S         | Raspberry Pi 1A | musl libc          | Any Low Power Embedded Linux System with OpenGLES 2     |
-| Arch Linux   | Linux Mainline  | ARM Cortex-A72       | Raspberry Pi 4B | GNU libc           | Any High Power Embedded Linux System with OpenGLES 3    |
-| ReactOS      | Windows NT 5.1  | x86-32               | VirtualBox      | MSVC 2019, v141_xp | Wine, Windows XP/7/8.1/10                      |
-| Windows 10   | Windows NT 10.0 | x86-64               | Various         | MSVC 2019, v142    | Generic Modern Windows System with OpenGL 3.3+ |
-| Switch       | Horizon         | ARM Cortex-A57 & A53 | Yuzu            | GNU libc           | Nintendo Switch via libNX with OpenGL 3.3+     |
+| OS           | Kernel          | Architecture         | Test Platform   | C Library          | Additionally Tests Support For:                        |
+|--------------|-----------------|----------------------|-----------------|--------------------|--------------------------------------------------------|
+| Alpine Linux | Linux Longterm  | x86-64               | Various         | musl libc          | Generic Modern Linux System with OpenGL 3.3+           |
+| Alpine Linux | Linux Longterm  | ARM1176JZF-S         | Raspberry Pi 1A | musl libc          | Any Low Power Embedded Linux System with OpenGLES 2    |
+| Arch Linux   | Linux Mainline  | ARM Cortex-A72       | Raspberry Pi 4B | GNU libc           | Any High Power Embedded Linux System with OpenGLES 3   |
+| ReactOS      | Windows NT 5.1  | x86-32               | VirtualBox      | MSVC 2019, v141_xp | Wine, Windows XP/7/8.1/10, with DirectX 9              |
+| Windows 10   | Windows NT 10.0 | x86-64               | Various         | MSVC 2019, v142    | Generic Modern Windows System with OpenGL 3.3+, Vulkan |
+| Switch       | Horizon         | ARM Cortex-A57 & A53 | Yuzu            | GNU libc           | Nintendo Switch via libNX with OpenGL 3.3+             |
 
 
 Haiyajan *should* work on any platform supported by SDL2 and has a C99
