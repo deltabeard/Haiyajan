@@ -1,3 +1,7 @@
+# Build directory
+cmake-*/
+build-*/
+
 # Compiler output
 *.s
 
@@ -30,3 +34,30 @@ callgrind.out*
 # IDE files
 *.kdev*
 *.json
+
+# Game controller script
+tools/gamecontrollerdb_*.txt
+tools/gcdb_*.h
+tools/gcdb_bin
+
+## Vim
+*~
+# Swap
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+
+# Session
+Session.vim
+Sessionx.vim
+
+# Temporary
+.netrwhist
+*~
+[._]*.un~
+
+# Tags
+tags
+
