@@ -50,7 +50,7 @@ do
 		exit $?
 	fi
 
-	TXTSZ=$(stat --format=%s ${FILESRC}_${os}.txt)
+	TXTSZ=$(stat -c %s ${FILESRC}_${os}.txt)
 	echo "const unsigned long gcdb_txt_len = $TXTSZ;" >> ${FILEDEF}_${os}.h
 	sed -i "1s/.*/const\ unsigned\ char\ gcdb_bin\[\]\ \=\ \{/" ${FILEDEF}_${os}.h
 	sed -i "s/unsigned\ int\ /const\ unsigned\ long\ /" ${FILEDEF}_${os}.h
