@@ -27,17 +27,14 @@ jobs:
             build_type: RelWithDebInfo
             generator: "NMake Makefiles"
             arch: amd64
-            sdk: 8.1
           - os: windows-2022
             build_type: RelWithDebInfo
             generator: "NMake Makefiles"
             arch: amd64_arm64
-            sdk: 8.1
           - os: windows-2019
             build_type: RelWithDebInfo
             generator: "NMake Makefiles"
             arch: amd64_x86
-            sdk: 7.1
 
     steps:
       - uses: actions/checkout@v3
@@ -49,7 +46,6 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: ${{ matrix.arch }}
-          sdk: ${{ matrix.sdk }}
 
       - uses: lukka/get-cmake@latest
 
