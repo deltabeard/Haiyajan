@@ -62,7 +62,7 @@ void play_libretro_log(enum retro_log_level level, const char *fmt, ...)
 
 	va_end(ap);
 
-	SDL_LogMessage(PLAY_LOG_CATEGORY_CORE, priority,
+	SDL_LogMessage(HAIYAJAN_LOG_CATEGORY_PLAY, priority,
 		"%.*s: %s",
 		(int)sizeof(ctx_retro->core_short_name),
 		ctx_retro->core_short_name, buf);

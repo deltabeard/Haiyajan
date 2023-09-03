@@ -119,9 +119,9 @@ static void print_help(void)
 	const int num_rends = SDL_GetNumRenderDrivers();
 	const int num_audio = SDL_GetNumAudioDrivers();
 	int i;
+	char str[512];
 
-	fprintf(stderr, "\n"
-			"Usage: haiyajan [OPTIONS] -L CORE [FILE]\n"
+	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Usage: haiyajan [OPTIONS] -L CORE [FILE]\n"
 			"Options:\n"
 			"  -h, --help       Show this help message.\n"
 			"      --version    Print version information.\n"
@@ -133,30 +133,41 @@ static void print_help(void)
 			"      --tai-record Record a new tool assist input file\n"
 			"      --tai-play   Play a tool assist input file\n");
 
+	str[0] = '\0';
 	for(i = 0; i < num_drivers; i++)
 	{
-		fprintf(stderr, "%s%s", i != 0 ?
-					", " : "\nAvailable video drivers: ",
-			SDL_GetVideoDriver(i));
-	}
+		const char *drv = SDL_GetVideoDriver(i);
 
+		/* drv shouldn't be null, but there could be a possibility of the video drivers changing. */
+		if(drv == NULL)
+			continue;
+
+		SDL_snprintf(str, sizeof(str), "%s%s%s", str, str[0] == '\0' ? "" : ", ", drv);
+	}
+	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Available video drivers: %s", str);
+
+	str[0] = '\0';
 	for(i = 0; i < num_rends; i++)
 	{
 		SDL_RendererInfo info;
 		SDL_GetRenderDriverInfo(i, &info);
-		fprintf(stderr, "%s%s", i != 0 ?
-					", " : "\nAvailable render drivers: ",
-			info.name);
+		SDL_snprintf(str, sizeof(str), "%s%s%s", str, str[0] == '\0' ? "" : ", ", info.name);
 	}
+	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Available render drivers: %s", str);
 
+	str[0] = '\0';
 	for(i = 0; i < num_audio; i++)
 	{
-		fprintf(stderr, "%s%s", i != 0 ?
-					", " : "\nAvailable audio drivers: ",
-			SDL_GetAudioDriver(i));
-	}
+		const char *drv = SDL_GetAudioDriver(i);
 
-	fprintf(stderr, "\nThe following environment variables may be used to "
+		if(drv == NULL)
+			continue;
+
+		SDL_snprintf(str, sizeof(str), "%s%s%s", str, str[0] == '\0' ? "" : ", ", drv);
+	}
+	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Available audio drivers: %s", str);
+
+	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "The following environment variables may be used to "
 			"select a specific driver:\n"
 			"  SDL_VIDEODRIVER\n"
 			"  SDL_RENDER_DRIVER\n"
@@ -792,7 +803,15 @@ int main(int argc, char *argv[])
 	input_init(&h.core.inp);
 	/* TODO: Add return check. */
 	timer_init(&h.core.tim, h.core.av_info.timing.fps);
+
 	h.font = FontStartup(h.rend);
+	if(h.font == NULL)
+	{
+		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
+				"Font initialisation failed: %s",
+				SDL_GetError());
+		goto err;
+	}
 
 	while(h.core.env.status.bits.shutdown == 0 && h.quit == 0)
 	{
