@@ -5,7 +5,7 @@
 #define IDI_ICON1                       101
 
 #ifndef ICON_FILE
-#define ICON_FILE icon.ico
+#define ICON_FILE icon_hi.ico
 #endif
 
 #ifndef SRC_FILE
