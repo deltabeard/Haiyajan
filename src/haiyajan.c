@@ -774,6 +774,15 @@ int main(int argc, char *argv[])
 		ui_open_menu();
 #endif
 
+	h.font = FontStartup(h.rend);
+	if (h.font == NULL)
+	{
+		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
+			"Font initialisation failed: %s",
+			SDL_GetError());
+		goto err;
+	}
+
 	if(haiyajan_init_core(&h, h.stngs.core_filename,
 				h.stngs.content_filename) != 0)
 	{
@@ -803,14 +812,13 @@ int main(int argc, char *argv[])
 	/* TODO: Add return check. */
 	timer_init(&h.core.tim, h.core.av_info.timing.fps);
 
-	h.font = FontStartup(h.rend);
-	if(h.font == NULL)
-	{
-		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-				"Font initialisation failed: %s",
-				SDL_GetError());
-		goto err;
-	}
+#if _WIN32
+	/* This is a workaround to an issue whereby the screen remains blank
+	 * until fullscreen is toggled or the windows is resized. */
+	SDL_SetWindowFullscreen(h.win,
+		SDL_WINDOW_FULLSCREEN_DESKTOP);
+	SDL_SetWindowFullscreen(h.win, 0);
+#endif
 
 	while(h.core.env.status.bits.shutdown == 0 && h.quit == 0)
 	{
