@@ -424,15 +424,9 @@ void cb_retro_video_refresh(const void *data, unsigned width, unsigned height,
 	SDL_assert(height <= ctx_retro->av_info.geometry.max_height);
 
 #if SDL_ASSERT_LEVEL == 3
-	size_t tex_pitch;
-	int tex_w, tex_h;
 	Uint32 format;
-
-	SDL_QueryTexture(ctx_retro->sdl.core_tex, &format, NULL, &tex_w,
-		&tex_h);
-	tex_pitch = tex_w * SDL_BYTESPERPIXEL(format);
-
-	SDL_assert_paranoid(pitch <= tex_pitch);
+	SDL_QueryTexture(ctx_retro->sdl.core_tex, &format, NULL, NULL,
+		NULL);
 	SDL_assert_paranoid(format == ctx_retro->env.pixel_fmt);
 #endif
 
