@@ -31,12 +31,12 @@
 
 struct settings_s
 {
-	unsigned vid_info : 1;
-	unsigned fullscreen : 1;
-	unsigned benchmark : 1;
-	unsigned start_core : 1;
-	Uint32 benchmark_dur;
+	Uint8 vid_info : 1;
+	Uint8 fullscreen : 1;
+	Uint8 benchmark : 1;
+	Uint8 start_core : 1;
 	Uint8 frameskip_limit;
+	Uint32 benchmark_dur;
 	char *core_filename;
 	char *content_filename;
 };
@@ -135,15 +135,15 @@ struct core_ctx_s
 		{
 			struct
 			{
-				unsigned core_init : 1;
-				unsigned shutdown : 1;
-				unsigned game_loaded : 1;
-				unsigned av_init : 1;
-				unsigned opengl_required : 1;
-				unsigned playing : 1;
-				unsigned video_disabled : 1;
-				unsigned valid_frame : 1;
-				unsigned support_no_game : 1;
+				Uint8 core_init : 1;
+				Uint8 shutdown : 1;
+				Uint8 game_loaded : 1;
+				Uint8 av_init : 1;
+				Uint8 opengl_required : 1;
+				Uint8 playing : 1;
+				Uint8 video_disabled : 1;
+				Uint8 valid_frame : 1;
+				Uint8 support_no_game : 1;
 			} bits;
 			Uint16 all;
 		} status;
@@ -193,6 +193,6 @@ struct haiyajan_ctx_s
 	/* Tool assist context. */
 	tai *tai;
 
-	unsigned quit : 1;
+	Uint8 quit : 1;
 };
 
