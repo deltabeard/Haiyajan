@@ -135,7 +135,7 @@ ELSEIF(${LIBRARY_DISCOVER_METHOD} STREQUAL "CPM")
     INCLUDE(meta/CPM.cmake)
     CPMADDPACKAGE(GITHUB_REPOSITORY libsdl-org/SDL
             NAME SDL2
-            GIT_TAG release-2.26.3
+            GIT_TAG release-2.28.3
             OPTIONS
             "SDL_SHARED_ENABLED_BY_DEFAULT OFF"
             "SDL_STATIC_ENABLED_BY_DEFAULT ON"
