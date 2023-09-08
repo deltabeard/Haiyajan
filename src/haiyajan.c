@@ -749,8 +749,7 @@ int main(int argc, char *argv[])
 		goto err;
 
 	{
-		Uint32 flags =
-			SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE;
+		Uint32 flags = SDL_RENDERER_TARGETTEXTURE;
 		if(!h.stngs.benchmark)
 			flags |= SDL_RENDERER_PRESENTVSYNC;
 
