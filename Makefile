@@ -40,23 +40,24 @@ ENABLE_WEBP_SCREENSHOTS := 0
 ENABLE_VIDEO_RECORDING := 0
 
 PKGCONFIG := pkg-config
-CFLAGS := $(shell $(PKGCONFIG) sdl2 --cflags)
+override CFLAGS += $(shell $(PKGCONFIG) sdl2 --cflags)
 
 ifeq ($(DEBUG),1)
 	CFLAGS += -DDEBUG=1 -DSDL_ASSERT_LEVEL=3 -O0 \
 		  -Wconversion -Wdouble-promotion -Wno-unused-parameter \
 		  -Wno-unused-function -Wno-sign-conversion \
 		  -fsanitize=undefined -fsanitize-trap
+#		  -nostdlib -fno-builtin -fno-asynchronous-unwind-tables
 else
 	# I don't want any warnings in release builds
 	CFLAGS += -DSDL_ASSERT_LEVEL=1 -Werror -O2
 endif
 
 ifeq ($(STATIC),1)
-	CFLAGS += -static
-	LDLIBS += $(shell $(PKGCONFIG) sdl2 --libs --static)
+	override CFLAGS += -static
+	override LDLIBS += $(shell $(PKGCONFIG) sdl2 --libs --static)
 else
-	LDLIBS += $(shell $(PKGCONFIG) sdl2 --libs)
+	override LDLIBS += $(shell $(PKGCONFIG) sdl2 --libs)
 endif
 
 # Obtain program version from git

@@ -42,7 +42,10 @@
 
 #define NOTIF_TIMEOUT_MS	1000 * 4
 
-static void prerun_checks(void)
+/**
+ * Check SDL2 version.
+ */
+static int prerun_checks(void)
 {
 	SDL_version compiled;
 	SDL_version linked;
@@ -58,7 +61,7 @@ static void prerun_checks(void)
 				"compiled with (%d). "
 				"Please recompile Haiyajan and try again.",
 				linked.major, compiled.major);
-		exit(EXIT_FAILURE);
+		return -1;
 	}
 
 	if(SDL_VERSIONNUM(compiled.major, compiled.minor, compiled.patch) !=
@@ -72,6 +75,8 @@ static void prerun_checks(void)
 			linked.major, linked.minor, linked.patch,
 			compiled.major, compiled.minor, compiled.patch);
 	}
+
+	return 0;
 }
 
 static void print_info(void)
@@ -189,7 +194,12 @@ static void free_settings(struct core_ctx_s *ctx)
 	}
 }
 
-static void apply_settings(char **argv, struct haiyajan_ctx_s *h)
+/**
+ * Apply settings based on command-line arguments.
+ * \return -1 if an error occured, 1 if the program should successfully exit, 0
+ *		if the program should continue.
+ */
+static int apply_settings(char **argv, struct haiyajan_ctx_s *h)
 {
 	const struct optparse_long longopts[] = {
 			{"libretro",  'L', OPTPARSE_REQUIRED},
@@ -285,7 +295,7 @@ static void apply_settings(char **argv, struct haiyajan_ctx_s *h)
 
 		case 1:
 			/* Version information has already been printed. */
-			exit(EXIT_SUCCESS);
+			return 1;
 
 		case 'b':
 			cfg->benchmark = 1;
@@ -304,7 +314,7 @@ static void apply_settings(char **argv, struct haiyajan_ctx_s *h)
 
 		case 'h':
 			print_help();
-			exit(EXIT_SUCCESS);
+			return 1;
 
 		case '?':
 			SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "%s",
@@ -339,11 +349,11 @@ static void apply_settings(char **argv, struct haiyajan_ctx_s *h)
 	}
 
 	cfg->frameskip_limit = 4;
-	return;
+	return 0;
 
 err:
 	print_help();
-	exit(EXIT_FAILURE);
+	return -1;
 }
 
 #if ENABLE_VIDEO_RECORDING == 1
@@ -725,7 +735,8 @@ int main(int argc, char *argv[])
 
 	init_sig(&h);
 	print_info();
-	prerun_checks();
+	if(prerun_checks() != 0)
+		return EXIT_FAILURE;
 
 #if SDL_VERSION_ATLEAST(2, 0, 13)
 	SDL_SetHint(SDL_HINT_AUDIO_DEVICE_APP_NAME, PROG_NAME);
@@ -737,10 +748,16 @@ int main(int argc, char *argv[])
 		SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
 				"SDL initialisation failed: %s",
 				SDL_GetError());
-		exit(EXIT_FAILURE);
+		return EXIT_FAILURE;
 	}
 
-	apply_settings(argv, &h);
+	{
+		int app_ret = apply_settings(argv, &h);
+		if(app_ret < 0)
+			return EXIT_FAILURE;
+		else if(app_ret > 0)
+			return EXIT_SUCCESS;
+	}
 
 	h.win = SDL_CreateWindow(PROG_NAME, SDL_WINDOWPOS_UNDEFINED,
 				   SDL_WINDOWPOS_UNDEFINED, 320, 240,
@@ -936,8 +953,12 @@ out:
 		play_deinit_cb(&h.core);
 	}
 
-	SDL_DestroyRenderer(h.rend);
-	SDL_DestroyWindow(h.win);
+	if(h.rend != NULL)
+		SDL_DestroyRenderer(h.rend);
+
+	if(h.win != NULL)
+		SDL_DestroyWindow(h.win);
+
 	SDL_VideoQuit();
 	SDL_Quit();
 	free_settings(&h.core);
@@ -948,7 +969,7 @@ out:
 			    "Exiting gracefully.");
 	}
 
-	exit(ret);
+	return ret;
 
 err:
 	SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
