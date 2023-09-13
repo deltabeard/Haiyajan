@@ -36,17 +36,19 @@ endif
 
 DEBUG := 0
 STATIC := 0
+CFLAGS :=
 ENABLE_WEBP_SCREENSHOTS := 0
 ENABLE_VIDEO_RECORDING := 0
 
 PKGCONFIG := pkg-config
-override CFLAGS += $(shell $(PKGCONFIG) sdl2 --cflags)
+SDL2_CFLAGS += $(shell $(PKGCONFIG) sdl2 --cflags)
 
 ifeq ($(DEBUG),1)
 	CFLAGS += -DDEBUG=1 -DSDL_ASSERT_LEVEL=3 -O0 \
 		  -Wconversion -Wdouble-promotion -Wno-unused-parameter \
 		  -Wno-unused-function -Wno-sign-conversion \
-		  -fsanitize=undefined -fsanitize-trap
+		  -fsanitize=undefined -fsanitize-trap \
+		  -fanalyzer
 #		  -nostdlib -fno-builtin -fno-asynchronous-unwind-tables
 else
 	# I don't want any warnings in release builds
@@ -54,10 +56,10 @@ else
 endif
 
 ifeq ($(STATIC),1)
-	override CFLAGS += -static
-	override LDLIBS += $(shell $(PKGCONFIG) sdl2 --libs --static)
+	SDL2_CFLAGS += -static
+	SDL2_LDLIBS += $(shell $(PKGCONFIG) sdl2 --libs --static)
 else
-	override LDLIBS += $(shell $(PKGCONFIG) sdl2 --libs)
+	SDL2_LDLIBS += $(shell $(PKGCONFIG) sdl2 --libs)
 endif
 
 # Obtain program version from git
@@ -89,7 +91,10 @@ endif
 override CFLAGS += -std=c99 -pedantic -g3 -Wall -Wextra -pipe -Iinc \
 		 -Wshadow -fno-common -Wformat=2 -Wformat-truncation \
 		 -Wformat-overflow -Wno-error=format -ffunction-sections \
+		 -Wvla -fno-asm \
 		 -fdata-sections -Wl,--gc-sections
+override CFLAGS += $(SDL2_CFLAGS)
+override LDLIBS += $(SDL2_LDLIBS)
 
 SRCS := $(wildcard src/*.c)
 OBJS := $(SRCS:.c=.o)
