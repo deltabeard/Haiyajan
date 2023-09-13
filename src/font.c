@@ -17,7 +17,8 @@
 
 #include <SDL.h>
 
-#include <font.h>
+#include "all.h"
+#include "font.h"
 
 struct font_ctx_s {
 	SDL_Texture *tex;

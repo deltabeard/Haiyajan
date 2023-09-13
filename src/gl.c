@@ -47,8 +47,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <SDL.h>
 #include <SDL_opengl.h>
-#include <libretro.h>
-#include <gl.h>
+
+#include "all.h"
+#include "gl.h"
+#include "libretro.h"
 
 /**
  * FIXME: Fix OpenGL ES2 in haiyajan.

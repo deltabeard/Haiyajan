@@ -14,9 +14,10 @@
 
 #include <SDL.h>
 
-#include <haiyajan.h>
-#include <libretro.h>
-#include <load.h>
+#include "all.h"
+#include "haiyajan.h"
+#include "libretro.h"
+#include "load.h"
 
 static void save_sram_file(struct core_ctx_s *ctx)
 {

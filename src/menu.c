@@ -13,9 +13,8 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
+#include "all.h"
 #include "menu.h"
-
-#include <stdlib.h>
 
 void menu_init(menu_ctx *menu, menu_ctx *parent, const char *title,
 		const char *help, unsigned long items_nmemb,

@@ -13,26 +13,22 @@
  */
 
 #include <SDL.h>
-#include <stdlib.h>
-
-#ifdef _WIN32
-#include <stdio.h>
-#endif
 
 #define OPTPARSE_IMPLEMENTATION
 #define OPTPARSE_API static
-#include <optparse.h>
+#include "optparse.h"
 
-#include <haiyajan.h>
-#include <font.h>
-#include <input.h>
-#include <load.h>
-#include <play.h>
-#include <rec.h>
-#include <sig.h>
-#include <timer.h>
-#include <ui.h>
-#include <util.h>
+#include "all.h"
+#include "font.h"
+#include "haiyajan.h"
+#include "input.h"
+#include "load.h"
+#include "play.h"
+#include "rec.h"
+#include "sig.h"
+#include "timer.h"
+#include "ui.h"
+#include "util.h"
 
 #define PROG_NAME       "Haiyajan"
 
@@ -722,11 +718,6 @@ int main(int argc, char *argv[])
 	(void)argc;
 
 	SDL_SetMainReady();
-
-#ifdef _WIN32
-	/* Windows (MinGW) does not unbuffer stderr by default. */
-	setvbuf(stderr, NULL, _IOLBF, BUFSIZ);
-#endif
 
 	SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO);
 	SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,

@@ -14,11 +14,12 @@
 
 #include <SDL.h>
 
-#include <libretro.h>
-#include <haiyajan.h>
-#include <play.h>
-#include <input.h>
-#include <rec.h>
+#include "all.h"
+#include "haiyajan.h"
+#include "input.h"
+#include "libretro.h"
+#include "play.h"
+#include "rec.h"
 
 #define NUM_ELEMS(x) (sizeof(x) / sizeof(*x))
 

@@ -12,10 +12,12 @@
  * See the LICENSE file for more details.
  */
 
-#include <menu.h>
-#include <font.h>
-#include <ui.h>
 #include <SDL.h>
+
+#include "all.h"
+#include "font.h"
+#include "menu.h"
+#include "ui.h"
 
 #define UI_OVERLAY_BG_ALPHA	0x40
 

@@ -64,3 +64,17 @@ void util_exit_all(void);
 SDL_Surface *util_tex_to_surf(SDL_Renderer *rend, SDL_Texture *tex,
 			      const SDL_Rect *const src,
 			      const SDL_RendererFlip flip);
+
+/**
+ * Copies bytes from src to dest, stopping after the first occurance of byte c
+ * is copied, or after n bytes are copied. Source and destination must not
+ * overlap.
+ * \param dest	Destination to copy bytes to.
+ * \param src	Source to copy bytes from.
+ * \param c	Character to check on each byte copy and to terminate on.
+ * \param n	Maximum number of bytes to copy.
+ * \return	Null if c was not found, or pointer to byte after the occurance
+ * 		of c at the destination.
+ */
+void *util_memccpy(void *restrict dest, const void *restrict src, int c,
+		size_t n);

@@ -1,5 +1,7 @@
 ﻿#include <SDL.h>
-#include <tai.h>
+
+#include "all.h"
+#include "tai.h"
 
 #ifdef _MSC_VER
 #define ALIGN(bits) __declspec(align(bits))

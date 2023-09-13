@@ -23,13 +23,10 @@
  *      distribution.
  */
 
-#include "tinf.h"
-
-#include <assert.h>
-#include <limits.h>
-#include <stddef.h>
-
 #include <SDL_assert.h>
+
+#include "all.h"
+#include "tinf.h"
 
 /* -- Internal data structures -- */
 
@@ -62,7 +59,7 @@ static tinf_error_code tinf_build_tree(struct tinf_tree *t,
 	unsigned long i, available;
 	unsigned short num_codes;
 
-	assert(num <= 288);
+	SDL_assert(num <= 288);
 
 	for (i = 0; i < 16; ++i) {
 		t->counts[i] = 0;
@@ -72,7 +69,7 @@ static tinf_error_code tinf_build_tree(struct tinf_tree *t,
 
 	/* Count number of codes for each non-zero length */
 	for (i = 0; i < num; ++i) {
-		assert(lengths[i] <= 15);
+		SDL_assert(lengths[i] <= 15);
 
 		if (lengths[i]) {
 			t->max_sym = i;
@@ -126,7 +123,7 @@ static tinf_error_code tinf_build_tree(struct tinf_tree *t,
 
 static void tinf_refill(struct tinf_data *d, unsigned char num)
 {
-	assert(num <= 32);
+	SDL_assert(num <= 32);
 
 	/* Read bytes until at least num bits available */
 	while (d->bitcount < num) {
@@ -139,7 +136,7 @@ static void tinf_refill(struct tinf_data *d, unsigned char num)
 		d->bitcount += 8;
 	}
 
-	assert(d->bitcount <= 32);
+	SDL_assert(d->bitcount <= 32);
 }
 
 static unsigned long tinf_getbits_no_refill(struct tinf_data *d,
@@ -147,7 +144,7 @@ static unsigned long tinf_getbits_no_refill(struct tinf_data *d,
 {
 	unsigned long bits;
 
-	assert(num <= d->bitcount);
+	SDL_assert(num <= d->bitcount);
 
 	/* Get bits from tag */
 	bits = d->tag & ((1UL << num) - 1);
@@ -195,7 +192,7 @@ static int tinf_decode_symbol(struct tinf_data *d, const struct tinf_tree *t)
 	for (len = 1; ; ++len) {
 		offs = 2 * offs + tinf_getbits(d, 1);
 
-		assert(len <= 15);
+		SDL_assert(len <= 15);
 
 		if (offs < t->counts[len]) {
 			break;
@@ -205,7 +202,7 @@ static int tinf_decode_symbol(struct tinf_data *d, const struct tinf_tree *t)
 		offs -= t->counts[len];
 	}
 
-	assert(base + offs >= 0 && base + offs < 288);
+	SDL_assert(base + offs >= 0 && base + offs < 288);
 
 	return t->symbols[base + offs];
 }

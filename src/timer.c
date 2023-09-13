@@ -14,7 +14,8 @@
 
 #include <SDL.h>
 
-#include <timer.h>
+#include "all.h"
+#include "timer.h"
 
 int timer_init(struct timer_ctx_s *const tim, double emulated_rate)
 {

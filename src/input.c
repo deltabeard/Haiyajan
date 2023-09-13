@@ -13,9 +13,11 @@
  */
 
 #include <SDL.h>
-#include <libretro.h>
-#include <input.h>
-#include <tinf.h>
+
+#include "all.h"
+#include "input.h"
+#include "libretro.h"
+#include "tinf.h"
 
 struct keymap_info_s
 {

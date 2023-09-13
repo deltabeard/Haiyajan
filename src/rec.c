@@ -13,8 +13,10 @@
  */
 
 #include <SDL.h>
-#include <rec.h>
-#include <util.h>
+
+#include "all.h"
+#include "rec.h"
+#include "util.h"
 
 #if ENABLE_WEBP_SCREENSHOTS == 1
 #include <webp/encode.h>

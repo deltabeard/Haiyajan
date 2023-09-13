@@ -16,8 +16,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <haiyajan.h>
-#include <sig.h>
+#include "all.h"
+#include "haiyajan.h"
+#include "sig.h"
 
 static const struct haiyajan_ctx_s *ctx;
 
@@ -29,7 +30,6 @@ static void log_out(void *priv, int cat, SDL_LogPriority pri, const char *msg)
 	fputs(msg, stderr);
 	putc('\n', stderr);
 }
-
 
 static void sig_handler(int sig)
 {
