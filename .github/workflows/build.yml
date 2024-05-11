@@ -37,7 +37,7 @@ jobs:
             arch: amd64_x86
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           
@@ -52,7 +52,7 @@ jobs:
       - run: mkdir ${{ env.CPM_SOURCE_CACHE }}
 
       - name: Cache multiple paths
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ${{ env.CPM_SOURCE_CACHE }}
@@ -73,10 +73,10 @@ jobs:
 
       - name: Get Short SHA
         id: vars
-        run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+        run: echo "{sha_short}=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Upload output
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}${{ matrix.arch}}-${{ matrix.build_type }}-${{ steps.vars.outputs.sha_short }}
           path: |
