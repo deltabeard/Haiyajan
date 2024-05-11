@@ -1,4 +1,5 @@
 <img align="right" width="128" height="128" alt="The Haiyajan Icon: Haiya Dragon" src="meta/haiya_dragon_bg_rounded.svg">
+<br/><br/>
 
 # Haiyajan
 
@@ -60,8 +61,8 @@ major releases are currently:
 | OS           | Kernel          | Architecture         | Test Platform   | C Library          | Additionally Tests Support For:                |
 |--------------|-----------------|----------------------|-----------------|--------------------|------------------------------------------------|
 | Alpine Linux | Linux Longterm  | x86-64               | Various         | musl libc          | Generic Modern Linux System with OpenGL 3.3+   |
-| Alpine Linux | Linux Longterm  | ARM1176JZF-S         | Raspberry Pi 1A | musl libc          | Any Low Power Embedded Linux System with OpenGLES 2     |
-| Arch Linux   | Linux Mainline  | ARM Cortex-A72       | Raspberry Pi 4B | GNU libc           | Any High Power Embedded Linux System with OpenGLES 3    |
+| Alpine Linux | Linux Longterm  | ARM1176JZF-S         | Raspberry Pi 1A | musl libc          | Any Low Power Embedded Linux System with OpenGLES 2 |
+| Arch Linux   | Linux Mainline  | ARM Cortex-A72       | Raspberry Pi 4B | GNU libc           | Any High Power Embedded Linux System with OpenGLES 3 |
 | ReactOS      | Windows NT 5.1  | x86-32               | VirtualBox      | MSVC 2019, v141_xp | Wine, Windows XP/7/8.1/10                      |
 | Windows 10   | Windows NT 10.0 | x86-64               | Various         | MSVC 2019, v142    | Generic Modern Windows System with OpenGL 3.3+ |
 | Switch       | Horizon         | ARM Cortex-A57 & A53 | Yuzu            | GNU libc           | Nintendo Switch via libNX with OpenGL 3.3+     |
